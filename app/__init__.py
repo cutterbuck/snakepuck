@@ -57,9 +57,9 @@ def create_app():
     dash_app.index_string = """<!DOCTYPE html>
 <html>
     <head>
-        <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+        <link rel="icon" type="image/svg+xml" href="/assets/favicon.ico">
         {%metas%}
-        <title>{%title%}</title>
+        <title>SnakePuck</title>
         {%css%}
     </head>
     <body>
