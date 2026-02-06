@@ -5,6 +5,7 @@ class Game(db.Model):
     __tablename__ = "games"
 
     id = db.Column(db.Integer, primary_key=True)
+    league_id = db.Column(db.Integer, db.ForeignKey("leagues.id"), nullable=False)
     date = db.Column(db.Date, nullable=False)
     home_team_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=False)
     away_team_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=False)
@@ -13,6 +14,7 @@ class Game(db.Model):
     last_period = db.Column(db.Integer, nullable=True)
     source_game_id = db.Column(db.Integer, nullable=True)
 
+    league = db.relationship("League", back_populates="games")
     home_team = db.relationship(
         "Team", foreign_keys=[home_team_id], back_populates="home_games"
     )

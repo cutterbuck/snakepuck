@@ -10,7 +10,7 @@ import pandas as pd
 
 from app import create_app
 from app.extensions import db
-from app.models import Game, Organization, Player, Season, Team, User
+from app.models import Game, League, Organization, Player, Season, Team, User
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 
@@ -19,6 +19,22 @@ def seed():
     app = create_app()
     with app.app_context():
         db.create_all()
+
+        # --- Leagues ---
+        leagues = {}
+        for league_name, league_abbrev in [
+            ("National Hockey League", "NHL"),
+            ("American Hockey League", "AHL"),
+        ]:
+            league_obj = League.query.filter_by(abbrev=league_abbrev).first()
+            if not league_obj:
+                league_obj = League(name=league_name, abbrev=league_abbrev)
+                db.session.add(league_obj)
+                db.session.flush()
+                print(f"Created league: {league_name} ({league_abbrev})")
+            leagues[league_abbrev] = league_obj
+
+        ahl = leagues["AHL"]
 
         # --- Season ---
         season = Season.query.filter_by(name="2023-24").first()
@@ -33,11 +49,10 @@ def seed():
         games_df = pd.read_parquet(os.path.join(DATA_DIR, "games.parquet"))
 
         # Get unique team abbreviations from both parquets
-        player_teams = set(players_df["team"].dropna().unique())
-        game_teams = set(games_df["home_team_abbrev"].dropna().unique()) | set(
-            games_df["away_team_abbrev"].dropna().unique()
+        game_teams = set(games_df["home_team"].dropna().unique()) | set(
+            games_df["away_team"].dropna().unique()
         )
-        all_team_abbrs = sorted(player_teams | game_teams)
+        all_team_abbrs = sorted(game_teams)
         team_map = {}  # team abbreviation -> Team ORM object
 
         for abbr in all_team_abbrs:
@@ -57,6 +72,7 @@ def seed():
                 team_obj = Team(
                     organization_id=org.id,
                     season_id=season.id,
+                    league_id=ahl.id,
                     name=abbr,
                     source_team_id=None,
                 )
@@ -65,7 +81,6 @@ def seed():
                 print(f"Created team: {abbr}")
 
             team_map[abbr] = team_obj
-
         # --- Players ---
         existing_player_ids = {
             p.playerId for p in Player.query.with_entities(Player.playerId).all()
@@ -123,6 +138,7 @@ def seed():
                 )
                 continue
             game = Game(
+                league_id=ahl.id,
                 date=pd.to_datetime(row["game_date"]).date(),
                 home_team_id=home_team.id,
                 away_team_id=away_team.id,

@@ -9,6 +9,7 @@ class Team(db.Model):
         db.Integer, db.ForeignKey("organizations.id"), nullable=False
     )
     season_id = db.Column(db.Integer, db.ForeignKey("seasons.id"), nullable=False)
+    league_id = db.Column(db.Integer, db.ForeignKey("leagues.id"), nullable=False)
     name = db.Column(db.String(120), nullable=False)
     source_team_id = db.Column(db.Integer, nullable=True)
 
@@ -18,6 +19,7 @@ class Team(db.Model):
 
     organization = db.relationship("Organization", back_populates="teams")
     season = db.relationship("Season", back_populates="teams")
+    league = db.relationship("League", back_populates="teams")
     players = db.relationship("Player", back_populates="team_rel", lazy="dynamic")
     home_games = db.relationship(
         "Game",
