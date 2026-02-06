@@ -119,31 +119,30 @@ def seed():
             print(f"Created {new_players} players")
 
         # --- Games ---
-        existing_game_ids = {
-            g[0] for g in Game.query.with_entities(Game.source_game_id).all()
-        }
-
+        existing_game_ids = {g[0] for g in Game.query.with_entities(Game.game_id).all()}
         new_games = 0
         for _, row in games_df.iterrows():
-            if row["id"] in existing_game_ids:
+            if row["game_id"] in existing_game_ids:
                 continue
-            home_team = team_map.get(row["home_team_abbrev"])
-            away_team = team_map.get(row["away_team_abbrev"])
+            home_team = team_map.get(row["home_team"])
+            away_team = team_map.get(row["away_team"])
             if not home_team or not away_team:
                 print(
                     f"Skipping game {row['id']}: "
                     f"missing team mapping for {row['home_team_abbrev']} or {row['away_team_abbrev']}"
                 )
                 continue
+
             game = Game(
                 league_id=ahl.id,
                 date=pd.to_datetime(row["game_date"]).date(),
                 home_team_id=home_team.id,
                 away_team_id=away_team.id,
-                home_team_score=row["home_team_score"],
-                away_team_score=row["away_team_score"],
-                last_period=row["period"],
-                source_game_id=row["id"],
+                home_score=row["home_score"],
+                away_score=row["away_score"],
+                game_id=row["game_id"],
+                game_outcome=row["game_outcome"],
+                home_start_net=row["home_start_net"],
             )
             db.session.add(game)
             new_games += 1

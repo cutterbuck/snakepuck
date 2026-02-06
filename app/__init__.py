@@ -1,3 +1,5 @@
+import os
+
 import dash
 import dash_bootstrap_components as dbc
 from dash import dcc, html
@@ -43,13 +45,32 @@ def create_app():
             return redirect("/auth/login")
 
     # Create Dash app
+    assets_path = os.path.join(os.path.dirname(__file__), "assets")
     dash_app = dash.Dash(
         __name__,
         server=server,
         url_base_pathname="/",
+        assets_folder=assets_path,
         external_stylesheets=[dbc.themes.BOOTSTRAP],
         suppress_callback_exceptions=True,
     )
+    dash_app.index_string = """<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+        {%metas%}
+        <title>{%title%}</title>
+        {%css%}
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>"""
 
     # Import layouts
     from app.layouts.games import create_games_layout
