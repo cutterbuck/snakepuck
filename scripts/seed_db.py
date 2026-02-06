@@ -81,35 +81,34 @@ def seed():
                 print(f"Created team: {abbr}")
 
             team_map[abbr] = team_obj
+
         # --- Players ---
         existing_player_ids = {
-            p.playerId for p in Player.query.with_entities(Player.playerId).all()
+            p[0] for p in Player.query.with_entities(Player.playerId).all()
         }
-
         new_players = 0
         for _, row in players_df.iterrows():
-            if row["playerId"] in existing_player_ids:
+            if row["player_id"] in existing_player_ids:
                 continue
+
             # Map the team abbreviation to a Team ORM object if possible
             team_abbr = row.get("team")
             team_obj = team_map.get(team_abbr) if pd.notna(team_abbr) else None
             player = Player(
                 team_id=team_obj.id if team_obj else None,
-                playerId=row["playerId"],
-                firstName=row["firstName"],
-                lastName=row["lastName"],
-                nationality=row.get("nationality")
-                if pd.notna(row.get("nationality"))
+                playerId=row["player_id"],
+                firstName=row["first_name"],
+                lastName=row["last_name"],
+                birthDate=pd.to_datetime(row.get("birth_date")).date()
+                if pd.notna(row.get("birth_date"))
                 else None,
-                birthDate=row.get("birthDate")
-                if pd.notna(row.get("birthDate"))
+                position=row.get("primary_position")
+                if pd.notna(row.get("primary_position"))
                 else None,
-                height=int(row["height"]) if pd.notna(row.get("height")) else None,
-                weight=int(row["weight"]) if pd.notna(row.get("weight")) else None,
-                position=row.get("position") if pd.notna(row.get("position")) else None,
-                shootsCatches=row.get("shootsCatches")
-                if pd.notna(row.get("shootsCatches"))
+                position_group=row.get("position_group")
+                if pd.notna(row.get("position_group"))
                 else None,
+                handed=row.get("handed") if pd.notna(row.get("handed")) else None,
                 team=team_abbr if pd.notna(team_abbr) else None,
             )
             db.session.add(player)
@@ -121,8 +120,7 @@ def seed():
 
         # --- Games ---
         existing_game_ids = {
-            g.source_game_id
-            for g in Game.query.with_entities(Game.source_game_id).all()
+            g[0] for g in Game.query.with_entities(Game.source_game_id).all()
         }
 
         new_games = 0
