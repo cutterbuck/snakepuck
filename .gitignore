@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.env
+*.db
+migrations/
+.DS_Store
+hockey_hackathon_env/
+.hockey_hackathon_env/
+data/
+.data/
+*.parquet
