@@ -45,7 +45,9 @@ def create_app():
             return redirect("/auth/login")
 
     # Create Dash app
-    assets_path = os.path.join(os.path.dirname(__file__), "assets")
+    assets_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), os.pardir, "assets")
+    )
     dash_app = dash.Dash(
         __name__,
         server=server,
@@ -53,13 +55,14 @@ def create_app():
         assets_folder=assets_path,
         external_stylesheets=[dbc.themes.BOOTSTRAP],
         suppress_callback_exceptions=True,
+        title="SnakePuck Analytics",
     )
     dash_app.index_string = """<!DOCTYPE html>
 <html>
     <head>
-        <link rel="icon" type="image/svg+xml" href="/assets/favicon.ico">
         {%metas%}
-        <title>SnakePuck</title>
+        <title>{%title%}</title>
+        {%favicon%}
         {%css%}
     </head>
     <body>
