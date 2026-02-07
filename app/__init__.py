@@ -55,7 +55,7 @@ def create_app():
         assets_folder=assets_path,
         external_stylesheets=[dbc.themes.BOOTSTRAP],
         suppress_callback_exceptions=True,
-        title="SnakePuck Analytics",
+        title="SnakePuck",
     )
     dash_app.index_string = """<!DOCTYPE html>
 <html>
