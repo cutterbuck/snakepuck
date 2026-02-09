@@ -33,6 +33,7 @@ class Team(db.Model):
         back_populates="away_team",
         lazy="dynamic",
     )
+    team_stats = db.relationship("TeamStats", back_populates="team", lazy="dynamic")
 
     def __repr__(self):
         return f"<Team {self.name}>"

@@ -9,6 +9,7 @@ class Season(db.Model):
     league = db.Column(db.String(50), nullable=True)
 
     teams = db.relationship("Team", back_populates="season", lazy="dynamic")
+    team_stats = db.relationship("TeamStats", back_populates="season", lazy="dynamic")
 
     def __repr__(self):
         return f"<Season {self.name}>"

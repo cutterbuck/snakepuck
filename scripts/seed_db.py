@@ -10,7 +10,7 @@ import pandas as pd
 
 from app import create_app
 from app.extensions import db
-from app.models import Game, League, Organization, Player, Season, Team, User
+from app.models import Game, League, Organization, Player, Season, Team, TeamStats, User
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 
@@ -150,6 +150,108 @@ def seed():
         if new_games:
             db.session.flush()
             print(f"Created {new_games} games")
+
+        # --- TeamStats ---
+        print("Computing team stats...")
+        team_stats_map = {}
+
+        for team_obj in team_map.values():
+            team_stats_map[team_obj.id] = {
+                "team_id": team_obj.id,
+                "season_id": season.id,
+                "games_played": 0,
+                "wins": 0,
+                "losses": 0,
+                "ot_losses": 0,
+                "points": 0,
+                "regulation_wins": 0,
+                "regulation_or_ot_wins": 0,
+                "goals_forward": 0,
+                "goals_against": 0,
+                "so_wins": 0,
+                "so_losses": 0,
+            }
+
+        all_games = Game.query.filter_by(league_id=ahl.id).all()
+        for game in all_games:
+            home_id = game.home_team_id
+            away_id = game.away_team_id
+            outcome = (game.game_outcome or "").lower().strip()
+
+            # Outcome values: home_win, away_win, home_ot_win, away_ot_win,
+            #                 home_so_win, away_so_win
+            is_overtime = "_ot_" in outcome
+            is_shootout = "_so_" in outcome
+            is_regulation = not is_overtime and not is_shootout
+
+            if outcome.startswith("home"):
+                winner_id, loser_id = home_id, away_id
+            else:
+                winner_id, loser_id = away_id, home_id
+
+            for tid in [home_id, away_id]:
+                if tid in team_stats_map:
+                    team_stats_map[tid]["games_played"] += 1
+
+            if home_id in team_stats_map:
+                team_stats_map[home_id]["goals_forward"] += game.home_score
+                team_stats_map[home_id]["goals_against"] += game.away_score
+            if away_id in team_stats_map:
+                team_stats_map[away_id]["goals_forward"] += game.away_score
+                team_stats_map[away_id]["goals_against"] += game.home_score
+
+            # Winner gets 2 points
+            if winner_id in team_stats_map:
+                team_stats_map[winner_id]["wins"] += 1
+                team_stats_map[winner_id]["points"] += 2
+                if is_regulation:
+                    team_stats_map[winner_id]["regulation_wins"] += 1
+                    team_stats_map[winner_id]["regulation_or_ot_wins"] += 1
+                elif is_overtime:
+                    team_stats_map[winner_id]["regulation_or_ot_wins"] += 1
+                elif is_shootout:
+                    team_stats_map[winner_id]["so_wins"] += 1
+
+            # Loser: regulation loss (0 pts) or OT/SO loss (1 pt)
+            if loser_id in team_stats_map:
+                if is_regulation:
+                    team_stats_map[loser_id]["losses"] += 1
+                else:
+                    team_stats_map[loser_id]["ot_losses"] += 1
+                    team_stats_map[loser_id]["points"] += 1
+                    if is_shootout:
+                        team_stats_map[loser_id]["so_losses"] += 1
+
+        new_team_stats = 0
+        for tid, s in team_stats_map.items():
+            gp = s["games_played"]
+            possible_points = gp * 2 if gp > 0 else 1
+            pts_pct = round(s["points"] / possible_points, 3) if gp > 0 else 0.0
+            goal_diff = s["goals_forward"] - s["goals_against"]
+            so_record = f"{s['so_wins']}-{s['so_losses']}"
+
+            ts = TeamStats.query.filter_by(team_id=tid, season_id=season.id).first()
+            if not ts:
+                ts = TeamStats(team_id=tid, season_id=season.id)
+                db.session.add(ts)
+
+            ts.games_played = gp
+            ts.wins = s["wins"]
+            ts.losses = s["losses"]
+            ts.ot_losses = s["ot_losses"]
+            ts.points = s["points"]
+            ts.points_percentage = pts_pct
+            ts.regulation_wins = s["regulation_wins"]
+            ts.regulation_or_ot_wins = s["regulation_or_ot_wins"]
+            ts.goals_forward = s["goals_forward"]
+            ts.goals_against = s["goals_against"]
+            ts.goal_diff = goal_diff
+            ts.so_record = so_record
+            new_team_stats += 1
+
+        if new_team_stats:
+            db.session.flush()
+            print(f"Upserted {new_team_stats} team stats records")
 
         # --- Default User ---
         user = User.query.filter_by(username="snakepuck").first()
