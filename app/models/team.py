@@ -10,7 +10,9 @@ class Team(db.Model):
     )
     season_id = db.Column(db.Integer, db.ForeignKey("seasons.id"), nullable=False)
     league_id = db.Column(db.Integer, db.ForeignKey("leagues.id"), nullable=False)
-    name = db.Column(db.String(120), nullable=False)
+    abbrev = db.Column(db.String(10), nullable=False)
+    name = db.Column(db.String(120), nullable=True)
+    logo = db.Column(db.String(255), nullable=True)
     source_team_id = db.Column(db.Integer, nullable=True)
 
     __table_args__ = (

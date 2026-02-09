@@ -9,8 +9,8 @@ def register_players_callbacks(dash_app):
         Input("url", "pathname"),
     )
     def populate_team_filter(pathname):
-        teams = Team.query.order_by(Team.name).all()
-        return [{"label": t.name, "value": t.id} for t in teams]
+        teams = Team.query.order_by(Team.abbrev).all()
+        return [{"label": t.abbrev, "value": t.id} for t in teams]
 
     @dash_app.callback(
         Output("players-table", "data"),

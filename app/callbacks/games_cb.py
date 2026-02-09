@@ -17,8 +17,12 @@ def register_games_callbacks(dash_app):
                     "date": g.date.strftime("%Y-%m-%d"),
                     "id": g.id,
                     "game_id": g.game_id,
-                    "home_team_id": g.home_team.name if g.home_team else g.home_team_id,
-                    "away_team_id": g.away_team.name if g.away_team else g.away_team_id,
+                    "home_team_id": g.home_team.abbrev
+                    if g.home_team
+                    else g.home_team_id,
+                    "away_team_id": g.away_team.abbrev
+                    if g.away_team
+                    else g.away_team_id,
                     "home_score": g.home_score,
                     "away_score": g.away_score,
                     "game_outcome": g.game_outcome,
