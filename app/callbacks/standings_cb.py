@@ -1,8 +1,19 @@
-from dash import Input, Output, html
+from dash import Input, Output, State, callback_context, html, no_update
 
 from app.models import Team, TeamStats
 
 HEADER_STYLE = {
+    "backgroundColor": "#343a40",
+    "color": "white",
+    "fontWeight": "bold",
+    "textAlign": "center",
+    "padding": "8px",
+    "cursor": "pointer",
+    "userSelect": "none",
+    "whiteSpace": "nowrap",
+}
+
+HEADER_STYLE_NO_SORT = {
     "backgroundColor": "#343a40",
     "color": "white",
     "fontWeight": "bold",
@@ -15,39 +26,102 @@ CELL_STYLE = {
     "padding": "8px",
 }
 
+SORTABLE_COLUMNS = ["GP", "W", "L", "OTL", "PTS", "P%", "RW", "ROW", "GF", "GA", "DIFF"]
+
+COLUMN_TO_FIELD = {
+    "GP": "games_played",
+    "W": "wins",
+    "L": "losses",
+    "OTL": "ot_losses",
+    "PTS": "points",
+    "P%": "points_percentage",
+    "RW": "regulation_wins",
+    "ROW": "regulation_or_ot_wins",
+    "GF": "goals_forward",
+    "GA": "goals_against",
+    "DIFF": "goal_diff",
+}
+
+ALL_HEADERS = [
+    "Team",
+    "GP",
+    "W",
+    "L",
+    "OTL",
+    "PTS",
+    "P%",
+    "RW",
+    "ROW",
+    "GF",
+    "GA",
+    "DIFF",
+    "SO",
+]
+
 
 def register_standings_callbacks(dash_app):
     @dash_app.callback(
-        Output("standings-table", "children"),
-        Input("url", "pathname"),
+        Output("standings-sort", "data"),
+        [Input(f"sort-{h}", "n_clicks") for h in SORTABLE_COLUMNS],
+        State("standings-sort", "data"),
     )
-    def update_standings(pathname):
-        if pathname != "/":
-            from dash import no_update
-
+    def update_sort(*args):
+        ctx = callback_context
+        if not ctx.triggered or ctx.triggered[0]["prop_id"] == ".":
             return no_update
 
-        headers = [
-            "Team",
-            "GP",
-            "W",
-            "L",
-            "OTL",
-            "PTS",
-            "P%",
-            "RW",
-            "ROW",
-            "GF",
-            "GA",
-            "DIFF",
-            "SO",
-        ]
-        thead = html.Thead(html.Tr([html.Th(h, style=HEADER_STYLE) for h in headers]))
+        prop_id = ctx.triggered[0]["prop_id"]
+        col_name = prop_id.replace("sort-", "").replace(".n_clicks", "")
+
+        current = args[-1]
+        if current["column"] == col_name:
+            new_dir = "asc" if current["direction"] == "desc" else "desc"
+        else:
+            new_dir = "desc"
+
+        return {"column": col_name, "direction": new_dir}
+
+    @dash_app.callback(
+        Output("standings-table", "children"),
+        [Input("url", "pathname"), Input("standings-sort", "data")],
+    )
+    def update_standings(pathname, sort_data):
+        if pathname != "/":
+            return no_update
+
+        sort_col = sort_data.get("column", "PTS") if sort_data else "PTS"
+        sort_dir = sort_data.get("direction", "desc") if sort_data else "desc"
+
+        # Build header row with sort indicators
+        header_cells = []
+        for h in ALL_HEADERS:
+            if h in SORTABLE_COLUMNS:
+                indicator = ""
+                if sort_col == h:
+                    indicator = " \u25bc" if sort_dir == "desc" else " \u25b2"
+                header_cells.append(
+                    html.Th(
+                        h + indicator,
+                        id=f"sort-{h}",
+                        n_clicks=0,
+                        style=HEADER_STYLE,
+                    )
+                )
+            else:
+                header_cells.append(html.Th(h, style=HEADER_STYLE_NO_SORT))
+
+        thead = html.Thead(html.Tr(header_cells))
+
+        # Query and sort
+        field = COLUMN_TO_FIELD.get(sort_col, "points")
+        order_col = getattr(TeamStats, field)
+        if sort_dir == "desc":
+            order_col = order_col.desc()
 
         results = (
             TeamStats.query.join(Team, TeamStats.team_id == Team.id)
             .add_columns(Team.name, Team.logo)
-            .order_by(TeamStats.points.desc())
+            .order_by(order_col)
             .all()
         )
 
