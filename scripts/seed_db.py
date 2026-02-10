@@ -55,47 +55,47 @@ def seed():
         team_names = {
             "ABB": [
                 "Abbotsford Canucks",
-                "https://assets.leaguestat.com/ahl/logos/50x50/319_81.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/440.png",
             ],
             "BAK": [
                 "Bakersfield Condors",
-                "https://assets.leaguestat.com/ahl/logos/50x50/319_81.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/402_81.png",
             ],
             "BEL": [
                 "Belleville Senators",
-                "https://assets.leaguestat.com/ahl/logos/50x50/319_81.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/413.png",
             ],
             "BRI": [
                 "Bridgeport Islanders",
-                "https://assets.leaguestat.com/ahl/logos/50x50/319_81.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/317_81.png",
             ],
             "CAL": [
                 "Calgary Wranglers",
-                "https://assets.leaguestat.com/ahl/logos/50x50/319_81.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/444_81.png",
             ],
             "CHI": [
                 "Chicago Wolves",
-                "https://assets.leaguestat.com/ahl/logos/50x50/319_81.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/330.png",
             ],
             "CLE": [
                 "Cleveland Monsters",
-                "https://assets.leaguestat.com/ahl/logos/50x50/319_81.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/373_81.png",
             ],
             "CLT": [
                 "Charlotte Checkers",
-                "https://assets.leaguestat.com/ahl/logos/50x50/319_81.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/384.png",
             ],
             "COL": [
                 "Colorado Eagles",
-                "https://assets.leaguestat.com/ahl/logos/50x50/319_81.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/419.png",
             ],
             "CVF": [
                 "Coachella Valley Firebirds",
-                "https://assets.leaguestat.com/ahl/logos/50x50/319_81.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/445.png",
             ],
             "GR": [
                 "Grand Rapids Griffins",
-                "https://assets.leaguestat.com/ahl/logos/50x50/319_81.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/328_81.png",
             ],
             "HER": [
                 "Hershey Bears",
@@ -103,83 +103,83 @@ def seed():
             ],
             "HFD": [
                 "Hartford Wolf Pack",
-                "https://assets.leaguestat.com/ahl/logos/50x50/320_82.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/307.png",
             ],
             "HEN": [
                 "Henderson Silver Knights",
-                "https://assets.leaguestat.com/ahl/logos/50x50/321_83.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/437.png",
             ],
             "IA": [
                 "Iowa Wild",
-                "https://assets.leaguestat.com/ahl/logos/50x50/322_84.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/389.png",
             ],
             "LAV": [
                 "Laval Rocket",
-                "https://assets.leaguestat.com/ahl/logos/50x50/323_85.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/415.png",
             ],
             "LV": [
                 "Lehigh Valley Phantoms",
-                "https://assets.leaguestat.com/ahl/logos/50x50/324_86.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/313.png",
             ],
             "MB": [
                 "Manitoba Moose",
-                "https://assets.leaguestat.com/ahl/logos/50x50/325_87.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/321_81.png",
             ],
             "MIL": [
                 "Milwaukee Admirals",
-                "https://assets.leaguestat.com/ahl/logos/50x50/326_88.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/327_81.png",
             ],
             "ONT": [
                 "Ontario Reign",
-                "https://assets.leaguestat.com/ahl/logos/50x50/327_89.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/403.png",
             ],
             "PRO": [
                 "Providence Bruins",
-                "https://assets.leaguestat.com/ahl/logos/50x50/328_90.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/309.png",
             ],
             "RFD": [
                 "Rockford IceHogs",
-                "https://assets.leaguestat.com/ahl/logos/50x50/329_91.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/372_81.png",
             ],
             "RCH": [
                 "Rochester Americans",
-                "https://assets.leaguestat.com/ahl/logos/50x50/330_92.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/323_81.png",
             ],
             "SD": [
                 "San Diego Gulls",
-                "https://assets.leaguestat.com/ahl/logos/50x50/331_93.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/404.png",
             ],
             "SJ": [
                 "San Jose Barracuda",
-                "https://assets.leaguestat.com/ahl/logos/50x50/332_94.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/405_81.png",
             ],
             "SPR": [
                 "Springfield Thunderbirds",
-                "https://assets.leaguestat.com/ahl/logos/50x50/333_95.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/411_81.png",
             ],
             "SYC": [
                 "Syracuse Crunch",
-                "https://assets.leaguestat.com/ahl/logos/50x50/334_96.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/324.png",
             ],
             "TEX": [
                 "Texas Stars",
-                "https://assets.leaguestat.com/ahl/logos/50x50/335_97.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/380_81.png",
             ],
             "TOR": [
                 "Toronto Marlies",
-                "https://assets.leaguestat.com/ahl/logos/50x50/336_98.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/335_81.png",
             ],
             "TUC": [
                 "Tucson Roadrunners",
-                "https://assets.leaguestat.com/ahl/logos/50x50/337_99.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/412.png",
             ],
             "UTC": [
                 "Utica Comets",
-                "https://assets.leaguestat.com/ahl/logos/50x50/338_100.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/390_81.png",
             ],
             "WBS": [
                 "Wilkes-Barre/Scranton Penguins",
-                "https://assets.leaguestat.com/ahl/logos/50x50/339_101.png",
+                "https://assets.leaguestat.com/ahl/logos/50x50/316_81.png",
             ],
         }
 

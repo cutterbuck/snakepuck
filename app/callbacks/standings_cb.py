@@ -1,6 +1,6 @@
 from dash import Input, Output, State, callback_context, html, no_update
 
-from app.models import Team, TeamStats
+from app.models import League, Season, Team, TeamStats
 
 HEADER_STYLE = {
     "backgroundColor": "#343a40",
@@ -60,6 +60,54 @@ ALL_HEADERS = [
 
 
 def register_standings_callbacks(dash_app):
+    # Populate League dropdown
+    @dash_app.callback(
+        Output("standings-league", "options"),
+        Output("standings-league", "value"),
+        Input("url", "pathname"),
+    )
+    def populate_league_dropdown(pathname):
+        leagues = League.query.order_by(League.abbrev.desc()).all()
+        options = [{"label": l.name, "value": l.id} for l in leagues]
+        # Default to AHL
+        default = None
+        for l in leagues:
+            if l.abbrev == "AHL":
+                default = l.id
+                break
+        if default is None and leagues:
+            default = leagues[0].id
+        return options, default
+
+    # Populate Season dropdown based on selected league
+    @dash_app.callback(
+        Output("standings-season", "options"),
+        Output("standings-season", "value"),
+        Input("standings-league", "value"),
+    )
+    def populate_season_dropdown(league_id):
+        if not league_id:
+            return [], None
+        # Get seasons that have teams in this league
+        seasons = (
+            Season.query.join(Team, Team.season_id == Season.id)
+            .filter(Team.league_id == league_id)
+            .distinct()
+            .order_by(Season.name.desc())
+            .all()
+        )
+        options = [{"label": s.name, "value": s.id} for s in seasons]
+        # Default to 2023-24
+        default = None
+        for s in seasons:
+            if s.name == "2023-24":
+                default = s.id
+                break
+        if default is None and seasons:
+            default = seasons[0].id
+        return options, default
+
+    # Sort state callback
     @dash_app.callback(
         Output("standings-sort", "data"),
         [Input(f"sort-{h}", "n_clicks") for h in SORTABLE_COLUMNS],
@@ -81,12 +129,17 @@ def register_standings_callbacks(dash_app):
 
         return {"column": col_name, "direction": new_dir}
 
+    # Render standings table filtered by league + season
     @dash_app.callback(
         Output("standings-table", "children"),
-        [Input("url", "pathname"), Input("standings-sort", "data")],
+        [
+            Input("standings-league", "value"),
+            Input("standings-season", "value"),
+            Input("standings-sort", "data"),
+        ],
     )
-    def update_standings(pathname, sort_data):
-        if pathname != "/":
+    def update_standings(league_id, season_id, sort_data):
+        if not league_id or not season_id:
             return no_update
 
         sort_col = sort_data.get("column", "PTS") if sort_data else "PTS"
@@ -120,6 +173,7 @@ def register_standings_callbacks(dash_app):
 
         results = (
             TeamStats.query.join(Team, TeamStats.team_id == Team.id)
+            .filter(Team.league_id == league_id, TeamStats.season_id == season_id)
             .add_columns(Team.name, Team.logo)
             .order_by(order_col)
             .all()
@@ -139,14 +193,17 @@ def register_standings_callbacks(dash_app):
                     html.Img(
                         src=team_logo,
                         style={
-                            "width": "36px",
-                            "height": "24px",
+                            "width": "32px",
+                            "height": "32px",
                             "verticalAlign": "middle",
-                            "paddingRight": "8px",
                         },
                     )
                 )
-            team_children.append(html.Div(team_name, style={"display": "inline-block"}))
+            team_children.append(
+                html.Div(
+                    team_name, style={"display": "inline-block", "paddingLeft": "8px"}
+                )
+            )
 
             team_cell = html.Td(
                 html.Div(children=team_children),
