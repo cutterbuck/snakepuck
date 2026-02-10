@@ -1,3 +1,4 @@
+from app.models.division import Division
 from app.models.game import Game
 from app.models.league import League
 from app.models.organization import Organization
@@ -10,6 +11,7 @@ from app.models.user import User
 __all__ = [
     "User",
     "League",
+    "Division",
     "Organization",
     "Season",
     "Team",

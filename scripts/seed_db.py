@@ -10,7 +10,17 @@ import pandas as pd
 
 from app import create_app
 from app.extensions import db
-from app.models import Game, League, Organization, Player, Season, Team, TeamStats, User
+from app.models import (
+    Division,
+    Game,
+    League,
+    Organization,
+    Player,
+    Season,
+    Team,
+    TeamStats,
+    User,
+)
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 
@@ -35,6 +45,53 @@ def seed():
             leagues[league_abbrev] = league_obj
 
         ahl = leagues["AHL"]
+
+        # --- Divisions ---
+        ahl_division_names = ["Atlantic", "North", "Central", "Pacific"]
+        division_map = {}  # division name -> Division ORM object
+        for div_name in ahl_division_names:
+            div = Division.query.filter_by(name=div_name, league_id=ahl.id).first()
+            if not div:
+                div = Division(name=div_name, league_id=ahl.id)
+                db.session.add(div)
+                db.session.flush()
+                print(f"Created division: {div_name}")
+            division_map[div_name] = div
+
+        ahl_team_divisions = {
+            "HER": "Atlantic",
+            "PRO": "Atlantic",
+            "WBS": "Atlantic",
+            "CLT": "Atlantic",
+            "HFD": "Atlantic",
+            "LV": "Atlantic",
+            "SPR": "Atlantic",
+            "BRI": "Atlantic",
+            "CLE": "North",
+            "RCH": "North",
+            "SYC": "North",
+            "BEL": "North",
+            "TOR": "North",
+            "UTC": "North",
+            "LAV": "North",
+            "MIL": "Central",
+            "GR": "Central",
+            "RFD": "Central",
+            "TEX": "Central",
+            "MB": "Central",
+            "IA": "Central",
+            "CHI": "Central",
+            "CVF": "Pacific",
+            "TUC": "Pacific",
+            "ONT": "Pacific",
+            "COL": "Pacific",
+            "ABB": "Pacific",
+            "BAK": "Pacific",
+            "CAL": "Pacific",
+            "HEN": "Pacific",
+            "SD": "Pacific",
+            "SJ": "Pacific",
+        }
 
         # --- Season ---
         season = Season.query.filter_by(name="2023-24").first()
@@ -368,6 +425,16 @@ def seed():
             if not ts:
                 ts = TeamStats(team_id=tid, season_id=season.id)
                 db.session.add(ts)
+
+            # Look up division for this team
+            team_abbr = None
+            for abbr, t in team_map.items():
+                if t.id == tid:
+                    team_abbr = abbr
+                    break
+            div_name = ahl_team_divisions.get(team_abbr)
+            if div_name:
+                ts.division_id = division_map[div_name].id
 
             ts.games_played = gp
             ts.wins = s["wins"]

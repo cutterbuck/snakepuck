@@ -7,6 +7,7 @@ class TeamStats(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     team_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=False)
     season_id = db.Column(db.Integer, db.ForeignKey("seasons.id"), nullable=False)
+    division_id = db.Column(db.Integer, db.ForeignKey("divisions.id"), nullable=True)
 
     games_played = db.Column(db.Integer, nullable=False, default=0)
     wins = db.Column(db.Integer, nullable=False, default=0)
@@ -27,6 +28,7 @@ class TeamStats(db.Model):
 
     team = db.relationship("Team", back_populates="team_stats")
     season = db.relationship("Season", back_populates="team_stats")
+    division = db.relationship("Division", back_populates="team_stats")
 
     def __repr__(self):
         return f"<TeamStats team_id={self.team_id} season_id={self.season_id}>"

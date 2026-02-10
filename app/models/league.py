@@ -10,6 +10,7 @@ class League(db.Model):
 
     teams = db.relationship("Team", back_populates="league", lazy="dynamic")
     games = db.relationship("Game", back_populates="league", lazy="dynamic")
+    divisions = db.relationship("Division", back_populates="league", lazy="dynamic")
 
     def __repr__(self):
         return f"<League {self.abbrev}>"
