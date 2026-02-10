@@ -1,6 +1,6 @@
 from dash import Input, Output
 
-from app.models import Player, Team
+from app.models import Player, PlayerStats, Team
 
 
 def register_players_callbacks(dash_app):
@@ -10,38 +10,57 @@ def register_players_callbacks(dash_app):
     )
     def populate_team_filter(pathname):
         teams = Team.query.order_by(Team.abbrev).all()
-        return [{"label": t.abbrev, "value": t.id} for t in teams]
+        return [{"label": t.name or t.abbrev, "value": t.id} for t in teams]
 
     @dash_app.callback(
         Output("players-table", "data"),
         [
+            Input("url", "pathname"),
             Input("players-team-filter", "value"),
             Input("players-position-filter", "value"),
         ],
     )
-    def update_players(team_id, position):
-        query = Player.query.join(Team)
+    def update_players(pathname, team_id, position):
+        query = (
+            PlayerStats.query.join(Player, PlayerStats.player_id == Player.playerId)
+            .outerjoin(Team, Player.team_id == Team.id)
+            .add_columns(
+                Player.firstName,
+                Player.lastName,
+                Player.position,
+                Team.name.label("team_name"),
+            )
+        )
 
         if team_id:
             query = query.filter(Player.team_id == team_id)
         if position:
             query = query.filter(Player.position == position)
 
-        query = query.order_by(Player.lastName, Player.firstName)
-        players = query.all()
+        query = query.order_by(PlayerStats.points.desc(), PlayerStats.goals.desc())
+        results = query.all()
 
         rows = []
-        for p in players:
+        for ps, first_name, last_name, pos, team_name in results:
             rows.append(
                 {
-                    "name": f"{p.firstName} {p.lastName}",
-                    "team": p.team,
-                    "position": p.position,
-                    "nationality": p.nationality,
-                    "birthDate": p.birthDate,
-                    "height": p.height,
-                    "weight": p.weight,
-                    "shootsCatches": p.shootsCatches,
+                    "name": f"{first_name} {last_name}",
+                    "team": team_name,
+                    "position": pos,
+                    "gp": ps.games_played,
+                    "goals": ps.goals,
+                    "assists": ps.assists,
+                    "points": ps.points,
+                    "shots": ps.shots,
+                    "shooting_pct": ps.shooting_pct,
+                    "fow": ps.faceoffs_won,
+                    "fol": ps.faceoffs_lost,
+                    "fo_pct": ps.faceoff_pct,
+                    "penalties": ps.penalties,
+                    "penalties_drawn": ps.penalties_drawn,
+                    "blocks": ps.blocks,
+                    "checks": ps.checks,
+                    "xg": ps.xg,
                 }
             )
         return rows

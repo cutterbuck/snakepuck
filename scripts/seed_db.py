@@ -12,11 +12,14 @@ from app import create_app
 from app.extensions import db
 from app.models import (
     Division,
+    Event,
     Game,
     League,
     Organization,
     Player,
+    PlayerStats,
     Season,
+    Stint,
     Team,
     TeamStats,
     User,
@@ -104,6 +107,17 @@ def seed():
         # --- Organizations & Teams ---
         players_df = pd.read_parquet(os.path.join(DATA_DIR, "players.parquet"))
         games_df = pd.read_parquet(os.path.join(DATA_DIR, "games.parquet"))
+        stints_df = pd.read_parquet(os.path.join(DATA_DIR, "stints.parquet"))
+
+        # Build player_id -> team abbreviation mapping from stints
+        # Use the most frequent team per player
+        player_team_map = (
+            stints_df[["player_id", "team"]]
+            .dropna()
+            .groupby("player_id")["team"]
+            .agg(lambda x: x.value_counts().index[0])
+            .to_dict()
+        )
 
         # Get unique team abbreviations from both parquets
         game_teams = set(games_df["home_team"].dropna().unique()) | set(
@@ -282,9 +296,9 @@ def seed():
             if row["player_id"] in existing_player_ids:
                 continue
 
-            # Map the team abbreviation to a Team ORM object if possible
-            team_abbr = row.get("team")
-            team_obj = team_map.get(team_abbr) if pd.notna(team_abbr) else None
+            # Map the player to a team via stints data
+            team_abbr = player_team_map.get(row["player_id"])
+            team_obj = team_map.get(team_abbr) if team_abbr else None
             player = Player(
                 team_id=team_obj.id if team_obj else None,
                 playerId=row["player_id"],
@@ -300,7 +314,7 @@ def seed():
                 if pd.notna(row.get("position_group"))
                 else None,
                 handed=row.get("handed") if pd.notna(row.get("handed")) else None,
-                team=team_abbr if pd.notna(team_abbr) else None,
+                team=team_abbr,
             )
             db.session.add(player)
             new_players += 1
@@ -341,6 +355,224 @@ def seed():
         if new_games:
             db.session.flush()
             print(f"Created {new_games} games")
+
+        # --- Stints ---
+        existing_stint_count = Stint.query.count()
+        if existing_stint_count == 0:
+            print("Seeding stints...")
+            stint_records = []
+            for _, row in stints_df.iterrows():
+                stint_records.append(
+                    Stint(
+                        game_id=row["game_id"],
+                        player_id=row["player_id"],
+                        period=int(row["period"])
+                        if pd.notna(row.get("period"))
+                        else None,
+                        period_time_start=str(row["period_time_start"])
+                        if pd.notna(row.get("period_time_start"))
+                        else None,
+                        period_time_end=str(row["period_time_end"])
+                        if pd.notna(row.get("period_time_end"))
+                        else None,
+                        game_stint=int(row["game_stint"])
+                        if pd.notna(row.get("game_stint"))
+                        else None,
+                        n_home_skaters=int(row["n_home_skaters"])
+                        if pd.notna(row.get("n_home_skaters"))
+                        else None,
+                        n_away_skaters=int(row["n_away_skaters"])
+                        if pd.notna(row.get("n_away_skaters"))
+                        else None,
+                        is_home_net_empty=bool(row["is_home_net_empty"])
+                        if pd.notna(row.get("is_home_net_empty"))
+                        else None,
+                        is_away_net_empty=bool(row["is_away_net_empty"])
+                        if pd.notna(row.get("is_away_net_empty"))
+                        else None,
+                        home_score=int(row["home_score"])
+                        if pd.notna(row.get("home_score"))
+                        else None,
+                        away_score=int(row["away_score"])
+                        if pd.notna(row.get("away_score"))
+                        else None,
+                        source_team_id=str(row["team_id"])
+                        if pd.notna(row.get("team_id"))
+                        else None,
+                        team_abbr=row["team"] if pd.notna(row.get("team")) else None,
+                    )
+                )
+                if len(stint_records) >= 5000:
+                    db.session.bulk_save_objects(stint_records)
+                    db.session.flush()
+                    stint_records = []
+            if stint_records:
+                db.session.bulk_save_objects(stint_records)
+                db.session.flush()
+            print(f"Seeded stints")
+        else:
+            print(f"Stints already seeded ({existing_stint_count} rows)")
+
+        # --- Events ---
+        existing_event_count = Event.query.count()
+        if existing_event_count == 0:
+            print("Seeding events...")
+            events_df = pd.read_parquet(os.path.join(DATA_DIR, "events.parquet"))
+            event_records = []
+            for _, row in events_df.iterrows():
+                event_records.append(
+                    Event(
+                        game_id=row["game_id"],
+                        player_id=str(row["player_id"])
+                        if pd.notna(row.get("player_id"))
+                        else None,
+                        period=int(row["period"])
+                        if pd.notna(row.get("period"))
+                        else None,
+                        period_time=str(row["period_time"])
+                        if pd.notna(row.get("period_time"))
+                        else None,
+                        game_stint=int(row["game_stint"])
+                        if pd.notna(row.get("game_stint"))
+                        else None,
+                        sl_event_id=str(row["sl_event_id"])
+                        if pd.notna(row.get("sl_event_id"))
+                        else None,
+                        sequence_id=int(row["sequence_id"])
+                        if pd.notna(row.get("sequence_id"))
+                        else None,
+                        team_abbr=row["team"] if pd.notna(row.get("team")) else None,
+                        source_team_id=str(row["team_id"])
+                        if pd.notna(row.get("team_id"))
+                        else None,
+                        opp_team_abbr=row["opp_team"]
+                        if pd.notna(row.get("opp_team"))
+                        else None,
+                        opp_source_team_id=str(row["opp_team_id"])
+                        if pd.notna(row.get("opp_team_id"))
+                        else None,
+                        event_type=row["event_type"]
+                        if pd.notna(row.get("event_type"))
+                        else None,
+                        outcome=row["outcome"]
+                        if pd.notna(row.get("outcome"))
+                        else None,
+                        flags=str(row["flags"]) if pd.notna(row.get("flags")) else None,
+                        description=str(row["description"])
+                        if pd.notna(row.get("description"))
+                        else None,
+                        detail=str(row["detail"])
+                        if pd.notna(row.get("detail"))
+                        else None,
+                        xg=float(row["sl_xg_all_shots"])
+                        if pd.notna(row.get("sl_xg_all_shots"))
+                        else None,
+                        x=float(row["x"]) if pd.notna(row.get("x")) else None,
+                        y=float(row["y"]) if pd.notna(row.get("y")) else None,
+                        x_adj=float(row["x_adj"])
+                        if pd.notna(row.get("x_adj"))
+                        else None,
+                        y_adj=float(row["y_adj"])
+                        if pd.notna(row.get("y_adj"))
+                        else None,
+                        has_tracking_data=bool(row["has_tracking_data"])
+                        if pd.notna(row.get("has_tracking_data"))
+                        else None,
+                        event_player_tracked=bool(row["event_player_tracked"])
+                        if pd.notna(row.get("event_player_tracked"))
+                        else None,
+                    )
+                )
+                if len(event_records) >= 5000:
+                    db.session.bulk_save_objects(event_records)
+                    db.session.flush()
+                    event_records = []
+            if event_records:
+                db.session.bulk_save_objects(event_records)
+                db.session.flush()
+            print(f"Seeded events")
+        else:
+            print(f"Events already seeded ({existing_event_count} rows)")
+
+        # --- PlayerStats ---
+        print("Computing player stats...")
+        # Get all player_ids that have events
+        player_ids_with_events = (
+            db.session.query(Event.player_id)
+            .filter(Event.player_id.isnot(None))
+            .distinct()
+            .all()
+        )
+        new_player_stats = 0
+        for (pid,) in player_ids_with_events:
+            ps = PlayerStats.query.filter_by(player_id=pid, season_id=season.id).first()
+            if not ps:
+                ps = PlayerStats(player_id=pid, season_id=season.id)
+                db.session.add(ps)
+
+            # Games played: distinct game_ids from stints
+            gp = (
+                db.session.query(Stint.game_id)
+                .filter(Stint.player_id == pid)
+                .distinct()
+                .count()
+            )
+
+            # Event counts
+            goals = Event.query.filter_by(player_id=pid, event_type="goal").count()
+            assists = Event.query.filter_by(player_id=pid, event_type="assist").count()
+            shots = Event.query.filter_by(player_id=pid, event_type="shot").count()
+            faceoffs_won = Event.query.filter(
+                Event.player_id == pid,
+                Event.event_type == "faceoff",
+                Event.outcome == "successful",
+            ).count()
+            faceoffs_lost = Event.query.filter(
+                Event.player_id == pid,
+                Event.event_type == "faceoff",
+                Event.outcome == "failed",
+            ).count()
+            penalties = Event.query.filter_by(
+                player_id=pid, event_type="penalty"
+            ).count()
+            penalties_drawn = Event.query.filter_by(
+                player_id=pid, event_type="penaltydrawn"
+            ).count()
+            blocks = Event.query.filter_by(player_id=pid, event_type="block").count()
+            checks = Event.query.filter_by(player_id=pid, event_type="check").count()
+
+            # xG sum
+            xg_result = (
+                db.session.query(db.func.sum(Event.xg))
+                .filter(Event.player_id == pid, Event.xg.isnot(None))
+                .scalar()
+            )
+            total_xg = round(float(xg_result), 3) if xg_result else 0.0
+
+            total_shots = shots + goals  # goals are also shots on net
+            shooting_pct = round(goals / total_shots, 3) if total_shots > 0 else None
+            total_fo = faceoffs_won + faceoffs_lost
+            faceoff_pct = round(faceoffs_won / total_fo, 3) if total_fo > 0 else None
+
+            ps.games_played = gp
+            ps.goals = goals
+            ps.assists = assists
+            ps.points = goals + assists
+            ps.shots = total_shots
+            ps.shooting_pct = shooting_pct
+            ps.faceoffs_won = faceoffs_won
+            ps.faceoffs_lost = faceoffs_lost
+            ps.faceoff_pct = faceoff_pct
+            ps.penalties = penalties
+            ps.penalties_drawn = penalties_drawn
+            ps.blocks = blocks
+            ps.checks = checks
+            ps.xg = total_xg
+            new_player_stats += 1
+
+        if new_player_stats:
+            db.session.flush()
+            print(f"Upserted {new_player_stats} player stats records")
 
         # --- TeamStats ---
         print("Computing team stats...")

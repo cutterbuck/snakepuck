@@ -22,6 +22,8 @@ class Game(db.Model):
     away_team = db.relationship(
         "Team", foreign_keys=[away_team_id], back_populates="away_games"
     )
+    stints = db.relationship("Stint", back_populates="game", lazy="dynamic")
+    events = db.relationship("Event", back_populates="game", lazy="dynamic")
 
     def __repr__(self):
         return f"<Game {self.game_id} {self.date}>"

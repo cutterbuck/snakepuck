@@ -295,12 +295,19 @@ def register_standings_callbacks(dash_app):
         if sort_dir == "desc":
             order_col = order_col.desc()
 
+        # Tiebreakers when sorting by PTS: RW → ROW → W
+        order_clauses = [order_col]
+        if sort_col == "PTS":
+            order_clauses.append(TeamStats.regulation_wins.desc())
+            order_clauses.append(TeamStats.regulation_or_ot_wins.desc())
+            order_clauses.append(TeamStats.wins.desc())
+
         results = (
             TeamStats.query.join(Team, TeamStats.team_id == Team.id)
             .outerjoin(Division, TeamStats.division_id == Division.id)
             .filter(Team.league_id == league_id, TeamStats.season_id == season_id)
             .add_columns(Team.name, Team.logo, Division.name.label("division_name"))
-            .order_by(order_col)
+            .order_by(*order_clauses)
             .all()
         )
 
