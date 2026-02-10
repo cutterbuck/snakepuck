@@ -285,7 +285,7 @@ def register_standings_callbacks(dash_app):
     )
     def update_standings(league_id, season_id, sort_data, view_mode):
         if not league_id or not season_id:
-            return no_update
+            return html.Div()
 
         sort_col = sort_data.get("column", "PTS") if sort_data else "PTS"
         sort_dir = sort_data.get("direction", "desc") if sort_data else "desc"

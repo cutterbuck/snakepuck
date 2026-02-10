@@ -31,33 +31,34 @@ def create_standings_layout():
                     dbc.Col(
                         [
                             html.Label("View", className="fw-bold mb-1"),
-                            dbc.ButtonGroup(
-                                [
-                                    dbc.Button(
-                                        "League",
-                                        id="standings-view-league",
-                                        color="primary",
-                                        outline=False,
-                                        n_clicks=0,
-                                    ),
-                                    dbc.Button(
-                                        "Division",
-                                        id="standings-view-division",
-                                        color="primary",
-                                        outline=True,
-                                        n_clicks=0,
-                                    ),
-                                ],
-                                size="sm",
+                            html.Div(
+                                dbc.ButtonGroup(
+                                    [
+                                        dbc.Button(
+                                            "Division",
+                                            id="standings-view-division",
+                                            color="primary",
+                                            outline=False,
+                                            n_clicks=0,
+                                        ),
+                                        dbc.Button(
+                                            "League",
+                                            id="standings-view-league",
+                                            color="primary",
+                                            outline=True,
+                                            n_clicks=0,
+                                        ),
+                                    ],
+                                    size="sm",
+                                ),
                             ),
                         ],
                         width="auto",
-                        style={"paddingTop": "8px"},
                     ),
                 ],
                 className="mb-3",
             ),
-            dcc.Store(id="standings-view", data="league"),
+            dcc.Store(id="standings-view", data="division"),
             dcc.Store(id="standings-sort", data={"column": "PTS", "direction": "desc"}),
             html.Div(id="standings-table"),
         ],
