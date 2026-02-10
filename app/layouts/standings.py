@@ -49,7 +49,7 @@ def create_standings_layout():
                                             n_clicks=0,
                                         ),
                                     ],
-                                    size="sm",
+                                    style={"height": "34px"},
                                 ),
                             ),
                         ],
