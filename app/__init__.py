@@ -80,6 +80,7 @@ def create_app():
     from app.layouts.navbar import create_navbar
     from app.layouts.players import create_players_layout
     from app.layouts.standings import create_standings_layout
+    from app.layouts.team_detail import create_team_detail_layout
 
     # App layout
     dash_app.layout = html.Div(
@@ -100,6 +101,8 @@ def create_app():
             return create_games_layout()
         elif pathname == "/players":
             return create_players_layout()
+        elif pathname and pathname.startswith("/team/"):
+            return create_team_detail_layout()
         else:
             return create_standings_layout()
 

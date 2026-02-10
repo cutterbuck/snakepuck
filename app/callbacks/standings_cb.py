@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from dash import Input, Output, State, callback_context, html, no_update
+from dash import Input, Output, State, callback_context, dcc, html, no_update
 
 from app.models import Division, League, Season, Team, TeamStats
 
@@ -102,7 +102,7 @@ DIVISION_TITLE_STYLE = {
 }
 
 
-def _build_team_cell(team_name, team_logo):
+def _build_team_cell(team_name, team_logo, team_id=None):
     team_children = []
     if team_logo:
         team_children.append(
@@ -118,8 +118,18 @@ def _build_team_cell(team_name, team_logo):
     team_children.append(
         html.Div(team_name, style={"display": "inline-block", "paddingLeft": "8px"})
     )
+
+    if team_id:
+        content = dcc.Link(
+            html.Div(children=team_children),
+            href=f"/team/{team_id}",
+            style={"textDecoration": "none", "color": "inherit", "cursor": "pointer"},
+        )
+    else:
+        content = html.Div(children=team_children)
+
     return html.Td(
-        html.Div(children=team_children),
+        content,
         style={
             "paddingTop": "5px",
             "paddingBottom": "5px",
@@ -254,7 +264,8 @@ def register_standings_callbacks(dash_app):
     # Sort state callback
     @dash_app.callback(
         Output("standings-sort", "data"),
-        [Input(f"sort-{h}", "n_clicks") for h in SORTABLE_COLUMNS],
+        [Input(f"sort-{h}", "n_clicks") for h in SORTABLE_COLUMNS]
+        + [Input("standings-league", "value"), Input("standings-season", "value")],
         State("standings-sort", "data"),
     )
     def update_sort(*args):
@@ -263,6 +274,11 @@ def register_standings_callbacks(dash_app):
             return no_update
 
         prop_id = ctx.triggered[0]["prop_id"]
+
+        # Reset to default sort when league or season changes
+        if "standings-league" in prop_id or "standings-season" in prop_id:
+            return {"column": "PTS", "direction": "desc"}
+
         col_name = prop_id.replace("sort-", "").replace(".n_clicks", "")
 
         current = args[-1]
@@ -306,7 +322,12 @@ def register_standings_callbacks(dash_app):
             TeamStats.query.join(Team, TeamStats.team_id == Team.id)
             .outerjoin(Division, TeamStats.division_id == Division.id)
             .filter(Team.league_id == league_id, TeamStats.season_id == season_id)
-            .add_columns(Team.name, Team.logo, Division.name.label("division_name"))
+            .add_columns(
+                Team.id.label("team_id"),
+                Team.name,
+                Team.logo,
+                Division.name.label("division_name"),
+            )
             .order_by(*order_clauses)
             .all()
         )
@@ -321,13 +342,13 @@ def _render_league_view(results, sort_col, sort_dir):
     thead = _build_thead(LEAGUE_HEADERS, sort_col, sort_dir)
 
     rows = []
-    for i, (ts, team_name, team_logo, division_name) in enumerate(results):
+    for i, (ts, team_id, team_name, team_logo, division_name) in enumerate(results):
         row_style = (
             {"backgroundColor": "rgb(245, 245, 245)"}
             if i % 2 == 1
             else {"backgroundColor": "rgb(255, 255, 255)"}
         )
-        team_cell = _build_team_cell(team_name, team_logo)
+        team_cell = _build_team_cell(team_name, team_logo, team_id)
         stat_cells = _build_stat_cells(ts, sort_col)
         rows.append(html.Tr([team_cell] + stat_cells, style=row_style))
 
@@ -343,11 +364,11 @@ DIVISION_ORDER = ["Atlantic", "North", "Central", "Pacific"]
 def _render_division_view(results, sort_col, sort_dir):
     # Group results by division
     divisions = {}
-    for ts, team_name, team_logo, division_name in results:
+    for ts, team_id, team_name, team_logo, division_name in results:
         div_key = division_name or "Other"
         if div_key not in divisions:
             divisions[div_key] = []
-        divisions[div_key].append((ts, team_name, team_logo))
+        divisions[div_key].append((ts, team_id, team_name, team_logo))
 
     # Sort divisions into fixed order
     ordered_keys = [d for d in DIVISION_ORDER if d in divisions]
@@ -369,13 +390,13 @@ def _render_division_view(results, sort_col, sort_dir):
         thead = _build_thead(DIVISION_HEADERS, sort_col, sort_dir)
 
         rows = []
-        for i, (ts, team_name, team_logo) in enumerate(teams):
+        for i, (ts, team_id, team_name, team_logo) in enumerate(teams):
             row_style = (
                 {"backgroundColor": "rgb(245, 245, 245)"}
                 if i % 2 == 1
                 else {"backgroundColor": "rgb(255, 255, 255)"}
             )
-            team_cell = _build_team_cell(team_name, team_logo)
+            team_cell = _build_team_cell(team_name, team_logo, team_id)
             stat_cells = _build_stat_cells(ts, sort_col)
             rows.append(html.Tr([team_cell] + stat_cells, style=row_style))
 
