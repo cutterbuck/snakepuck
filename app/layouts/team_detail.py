@@ -6,11 +6,21 @@ def create_team_detail_layout():
     return dbc.Container(
         [
             dcc.Store(id="team-detail-id"),
-            html.Div(id="team-detail-header", className="mb-3"),
+            dcc.Link(
+                dbc.Button(
+                    "Back to Standings",
+                    color="secondary",
+                    size="sm",
+                ),
+                href="/",
+                style={"textDecoration": "none"},
+            ),
+            html.Div(id="team-detail-header", className="mb-3 mt-3"),
             dash_table.DataTable(
                 id="team-detail-table",
                 columns=[
                     {"name": "Name", "id": "name"},
+                    {"name": "Age", "id": "age"},
                     {"name": "Pos", "id": "position"},
                     {"name": "GP", "id": "gp"},
                     {"name": "G", "id": "goals"},

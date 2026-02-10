@@ -24,6 +24,7 @@ class PlayerStats(db.Model):
     blocks = db.Column(db.Integer, nullable=False, default=0)
     checks = db.Column(db.Integer, nullable=False, default=0)
     xg = db.Column(db.Float, nullable=False, default=0.0)
+    age = db.Column(db.Integer, nullable=True)
 
     __table_args__ = (
         db.UniqueConstraint("player_id", "season_id", name="uq_player_season_stats"),

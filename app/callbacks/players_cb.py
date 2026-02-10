@@ -46,6 +46,7 @@ def register_players_callbacks(dash_app):
                 {
                     "name": f"{first_name} {last_name}",
                     "team": team_name,
+                    "age": ps.age,
                     "position": pos,
                     "gp": ps.games_played,
                     "goals": ps.goals,

@@ -496,6 +496,9 @@ def seed():
 
         # --- PlayerStats ---
         print("Computing player stats...")
+        # Get the most recent game date for age calculation
+        most_recent_game_date = db.session.query(db.func.max(Game.date)).scalar()
+
         # Get all player_ids that have events
         player_ids_with_events = (
             db.session.query(Event.player_id)
@@ -568,6 +571,21 @@ def seed():
             ps.blocks = blocks
             ps.checks = checks
             ps.xg = total_xg
+
+            # Compute age from most recent game date - birthDate
+            if most_recent_game_date:
+                player_obj = Player.query.filter_by(playerId=pid).first()
+                if player_obj and player_obj.birthDate:
+                    bd = player_obj.birthDate
+                    ps.age = (
+                        most_recent_game_date.year
+                        - bd.year
+                        - (
+                            (most_recent_game_date.month, most_recent_game_date.day)
+                            < (bd.month, bd.day)
+                        )
+                    )
+
             new_player_stats += 1
 
         if new_player_stats:

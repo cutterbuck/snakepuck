@@ -39,6 +39,7 @@ def create_players_layout():
                 columns=[
                     {"name": "Name", "id": "name"},
                     {"name": "Team", "id": "team"},
+                    {"name": "Age", "id": "age"},
                     {"name": "Pos", "id": "position"},
                     {"name": "GP", "id": "gp"},
                     {"name": "G", "id": "goals"},

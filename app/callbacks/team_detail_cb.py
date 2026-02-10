@@ -72,6 +72,7 @@ def register_team_detail_callbacks(dash_app):
             rows.append(
                 {
                     "name": f"{first_name} {last_name}",
+                    "age": ps.age,
                     "position": pos,
                     "gp": ps.games_played,
                     "goals": ps.goals,
