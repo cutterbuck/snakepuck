@@ -3,6 +3,12 @@ from dash import Input, Output
 from app.models import Player, PlayerStats, Team
 
 
+def _fmt_pct(val):
+    if val is None:
+        return ""
+    return f"{val:.3f}"
+
+
 def register_players_callbacks(dash_app):
     @dash_app.callback(
         Output("players-team-filter", "options"),
@@ -53,10 +59,10 @@ def register_players_callbacks(dash_app):
                     "assists": ps.assists,
                     "points": ps.points,
                     "shots": ps.shots,
-                    "shooting_pct": ps.shooting_pct,
+                    "shooting_pct": _fmt_pct(ps.shooting_pct),
                     "fow": ps.faceoffs_won,
                     "fol": ps.faceoffs_lost,
-                    "fo_pct": ps.faceoff_pct,
+                    "fo_pct": _fmt_pct(ps.faceoff_pct),
                     "penalties": ps.penalties,
                     "penalties_drawn": ps.penalties_drawn,
                     "blocks": ps.blocks,

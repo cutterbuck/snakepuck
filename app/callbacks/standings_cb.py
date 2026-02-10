@@ -9,7 +9,7 @@ HEADER_STYLE = {
     "color": "white",
     "fontWeight": "bold",
     "textAlign": "center",
-    "padding": "8px",
+    "padding": "4px 8px",
     "cursor": "pointer",
     "userSelect": "none",
     "whiteSpace": "nowrap",
@@ -20,12 +20,12 @@ HEADER_STYLE_NO_SORT = {
     "color": "white",
     "fontWeight": "bold",
     "textAlign": "center",
-    "padding": "8px",
+    "padding": "4px 8px",
 }
 
 CELL_STYLE = {
     "textAlign": "center",
-    "padding": "8px",
+    "padding": "4px 8px",
 }
 
 ACTIVE_HEADER_STYLE = {
@@ -33,7 +33,7 @@ ACTIVE_HEADER_STYLE = {
     "color": "white",
     "fontWeight": "bold",
     "textAlign": "center",
-    "padding": "8px",
+    "padding": "4px 8px",
     "cursor": "pointer",
     "userSelect": "none",
     "whiteSpace": "nowrap",
@@ -41,7 +41,7 @@ ACTIVE_HEADER_STYLE = {
 
 ACTIVE_CELL_STYLE = {
     "textAlign": "center",
-    "padding": "8px",
+    "padding": "4px 8px",
     "backgroundColor": "rgba(74, 111, 165, 0.1)",
 }
 
@@ -131,8 +131,8 @@ def _build_team_cell(team_name, team_logo, team_id=None):
     return html.Td(
         content,
         style={
-            "paddingTop": "5px",
-            "paddingBottom": "5px",
+            "paddingTop": "2px",
+            "paddingBottom": "2px",
             "width": "320px",
             "whiteSpace": "nowrap",
         },
@@ -155,6 +155,12 @@ STAT_COLUMNS = [
 ]
 
 
+def _fmt_pct(val):
+    if val is None:
+        return ""
+    return f"{val:.3f}"
+
+
 def _build_stat_cells(ts, sort_col=None):
     values = [
         ts.games_played,
@@ -162,7 +168,7 @@ def _build_stat_cells(ts, sort_col=None):
         ts.losses,
         ts.ot_losses,
         ts.points,
-        ts.points_percentage,
+        _fmt_pct(ts.points_percentage),
         ts.regulation_wins,
         ts.regulation_or_ot_wins,
         ts.goals_forward,
@@ -280,6 +286,11 @@ def register_standings_callbacks(dash_app):
             return {"column": "PTS", "direction": "desc"}
 
         col_name = prop_id.replace("sort-", "").replace(".n_clicks", "")
+
+        # Ignore triggers from freshly rendered headers (n_clicks=0)
+        triggered_value = ctx.triggered[0]["value"]
+        if triggered_value is None or triggered_value == 0:
+            return no_update
 
         current = args[-1]
         if current["column"] == col_name:
