@@ -12,7 +12,7 @@ class Event(db.Model):
     period = db.Column(db.Integer, nullable=True)
     period_time = db.Column(db.String(20), nullable=True)
     game_stint = db.Column(db.Integer, nullable=True)
-    sl_event_id = db.Column(db.String(36), nullable=True)
+    sl_event_id = db.Column(db.String(36), nullable=True, index=True)
     sequence_id = db.Column(db.Integer, nullable=True)
     team_abbr = db.Column(db.String(10), nullable=True)
     source_team_id = db.Column(db.String(36), nullable=True)

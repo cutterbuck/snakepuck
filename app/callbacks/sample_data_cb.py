@@ -4,9 +4,9 @@ from dash import Input, Output, State, callback_context, dash_table, html, no_up
 from sqlalchemy.sql.expression import func
 
 from app.extensions import db
-from app.models import Event, Game, Player, PlayerStats, Stint, Team
+from app.models import Event, Game, Player, PlayerStats, Stint, Team, Tracking
 
-VIEWS = ["games", "players", "events", "stints"]
+VIEWS = ["games", "players", "events", "stints", "tracking"]
 
 TABLE_STYLE = {"overflowX": "auto"}
 CELL_STYLE = {
@@ -57,11 +57,12 @@ def _build_games_table():
     for g in games:
         rows.append(
             {
-                "date": g.date.strftime("%Y-%m-%d"),
-                "id": g.id,
                 "game_id": g.game_id,
-                "home_team_id": g.home_team.abbrev if g.home_team else g.home_team_id,
-                "away_team_id": g.away_team.abbrev if g.away_team else g.away_team_id,
+                "game_date": g.date.strftime("%Y-%m-%d"),
+                "league": g.league.abbrev if g.league else None,
+                "season": "2023-24",
+                "home_team": g.home_team.abbrev if g.home_team else g.home_team_id,
+                "away_team": g.away_team.abbrev if g.away_team else g.away_team_id,
                 "home_score": g.home_score,
                 "away_score": g.away_score,
                 "game_outcome": g.game_outcome,
@@ -71,14 +72,15 @@ def _build_games_table():
     return dash_table.DataTable(
         id="sample-games-table",
         columns=[
-            {"name": "Date", "id": "date"},
-            {"name": "ID", "id": "id"},
             {"name": "Game ID", "id": "game_id"},
-            {"name": "Home Team", "id": "home_team_id"},
-            {"name": "Away Team", "id": "away_team_id"},
+            {"name": "Game Date", "id": "game_date"},
+            {"name": "League", "id": "league"},
+            {"name": "Season", "id": "season"},
+            {"name": "Home Team", "id": "home_team"},
+            {"name": "Away Team", "id": "away_team"},
             {"name": "Home Score", "id": "home_score"},
             {"name": "Away Score", "id": "away_score"},
-            {"name": "Outcome", "id": "game_outcome"},
+            {"name": "Game Outcome", "id": "game_outcome"},
             {"name": "Home Start Net", "id": "home_start_net"},
         ],
         data=rows,
@@ -92,72 +94,43 @@ def _build_games_table():
 
 
 def _build_players_table():
-    ids = _random_ids(PlayerStats)
+    ids = _random_ids(Player)
     if not ids:
         return html.Div()
-    results = (
-        PlayerStats.query.filter(PlayerStats.id.in_(ids))
-        .join(Player, PlayerStats.player_id == Player.playerId)
-        .outerjoin(Team, Player.team_id == Team.id)
-        .add_columns(
-            Player.firstName,
-            Player.lastName,
-            Player.position,
-            Team.name.label("team_name"),
-        )
-        .order_by(PlayerStats.points.desc(), PlayerStats.goals.desc())
-        .all()
-    )
+    players = Player.query.filter(Player.id.in_(ids)).all()
     rows = []
-    for ps, first_name, last_name, pos, team_name in results:
+    for p in players:
         rows.append(
             {
-                "name": f"{first_name} {last_name}",
-                "team": team_name,
-                "age": ps.age,
-                "position": pos,
-                "gp": ps.games_played,
-                "goals": ps.goals,
-                "assists": ps.assists,
-                "points": ps.points,
-                "shots": ps.shots,
-                "shooting_pct": _fmt_pct(ps.shooting_pct),
-                "fow": ps.faceoffs_won,
-                "fol": ps.faceoffs_lost,
-                "fo_pct": _fmt_pct(ps.faceoff_pct),
-                "penalties": ps.penalties,
-                "penalties_drawn": ps.penalties_drawn,
-                "blocks": ps.blocks,
-                "checks": ps.checks,
-                "xg": ps.xg,
+                "player_id": p.playerId,
+                "player_name": f"{p.firstName} {p.lastName}",
+                "last_name": p.lastName,
+                "first_name": p.firstName,
+                "handed": p.handed,
+                "birth_date": str(p.birthDate) if p.birthDate else None,
+                "position_group": p.position_group,
+                "primary_position": p.position,
             }
         )
     return dash_table.DataTable(
         id="sample-players-table",
         columns=[
-            {"name": "Name", "id": "name"},
-            {"name": "Team", "id": "team"},
-            {"name": "Age", "id": "age"},
-            {"name": "Pos", "id": "position"},
-            {"name": "GP", "id": "gp"},
-            {"name": "G", "id": "goals"},
-            {"name": "A", "id": "assists"},
-            {"name": "PTS", "id": "points"},
-            {"name": "S", "id": "shots"},
-            {"name": "S%", "id": "shooting_pct"},
-            {"name": "FOW", "id": "fow"},
-            {"name": "FOL", "id": "fol"},
-            {"name": "FO%", "id": "fo_pct"},
-            {"name": "PIM", "id": "penalties"},
-            {"name": "PD", "id": "penalties_drawn"},
-            {"name": "BLK", "id": "blocks"},
-            {"name": "HIT", "id": "checks"},
-            {"name": "xG", "id": "xg"},
+            {"name": "Player ID", "id": "player_id"},
+            {"name": "Player Name", "id": "player_name"},
+            {"name": "Last Name", "id": "last_name"},
+            {"name": "First Name", "id": "first_name"},
+            {"name": "Handed", "id": "handed"},
+            {"name": "Birth Date", "id": "birth_date"},
+            {"name": "Position Group", "id": "position_group"},
+            {"name": "Primary Position", "id": "primary_position"},
         ],
         data=rows,
         page_size=20,
         style_table=TABLE_STYLE,
         style_cell=CELL_STYLE,
+        style_cell_conditional=[
+            {"if": {"column_id": "player_id"}, "maxWidth": "80px"},
+        ],
         style_header=HEADER_STYLE,
         style_data_conditional=ROW_STRIPE,
     )
@@ -276,6 +249,64 @@ def _build_stints_table():
     )
 
 
+def _build_tracking_table():
+    ids = _random_ids(Tracking)
+    if not ids:
+        return html.Div()
+    rows_data = Tracking.query.filter(Tracking.id.in_(ids)).all()
+    rows = []
+    for t in rows_data:
+        rows.append(
+            {
+                "game_id": t.game_id,
+                "sl_event_id": t.sl_event_id,
+                "team_id": t.team_id,
+                "team_name": t.team_name,
+                "player_id": t.player_id,
+                "player_name": t.player_name,
+                "tracking_x": round(t.tracking_x, 2)
+                if t.tracking_x is not None
+                else None,
+                "tracking_y": round(t.tracking_y, 2)
+                if t.tracking_y is not None
+                else None,
+                "tracking_vel_x": round(t.tracking_vel_x, 2)
+                if t.tracking_vel_x is not None
+                else None,
+                "tracking_vel_y": round(t.tracking_vel_y, 2)
+                if t.tracking_vel_y is not None
+                else None,
+            }
+        )
+    return dash_table.DataTable(
+        id="sample-tracking-table",
+        columns=[
+            {"name": "Game ID", "id": "game_id"},
+            {"name": "SL Event ID", "id": "sl_event_id"},
+            {"name": "Team ID", "id": "team_id"},
+            {"name": "Team Name", "id": "team_name"},
+            {"name": "Player ID", "id": "player_id"},
+            {"name": "Player Name", "id": "player_name"},
+            {"name": "Tracking X", "id": "tracking_x"},
+            {"name": "Tracking Y", "id": "tracking_y"},
+            {"name": "Vel X", "id": "tracking_vel_x"},
+            {"name": "Vel Y", "id": "tracking_vel_y"},
+        ],
+        data=rows,
+        page_size=20,
+        style_table=TABLE_STYLE,
+        style_cell=CELL_STYLE,
+        style_cell_conditional=[
+            {"if": {"column_id": "game_id"}, "maxWidth": "80px"},
+            {"if": {"column_id": "sl_event_id"}, "maxWidth": "80px"},
+            {"if": {"column_id": "team_id"}, "maxWidth": "80px"},
+            {"if": {"column_id": "player_id"}, "maxWidth": "80px"},
+        ],
+        style_header=HEADER_STYLE,
+        style_data_conditional=ROW_STRIPE,
+    )
+
+
 def register_sample_data_callbacks(dash_app):
     # Toggle view and button styles
     @dash_app.callback(
@@ -284,14 +315,21 @@ def register_sample_data_callbacks(dash_app):
         Output("sample-view-players", "outline"),
         Output("sample-view-events", "outline"),
         Output("sample-view-stints", "outline"),
+        Output("sample-view-tracking", "outline"),
         Input("sample-view-games", "n_clicks"),
         Input("sample-view-players", "n_clicks"),
         Input("sample-view-events", "n_clicks"),
         Input("sample-view-stints", "n_clicks"),
+        Input("sample-view-tracking", "n_clicks"),
         State("sample-data-view", "data"),
     )
     def toggle_view(
-        games_clicks, players_clicks, events_clicks, stints_clicks, current_view
+        games_clicks,
+        players_clicks,
+        events_clicks,
+        stints_clicks,
+        tracking_clicks,
+        current_view,
     ):
         ctx = callback_context
         if not ctx.triggered or ctx.triggered[0]["prop_id"] == ".":
@@ -301,6 +339,7 @@ def register_sample_data_callbacks(dash_app):
                 current_view != "players",
                 current_view != "events",
                 current_view != "stints",
+                current_view != "tracking",
             )
         triggered = ctx.triggered[0]["prop_id"]
         if "games" in triggered:
@@ -309,14 +348,17 @@ def register_sample_data_callbacks(dash_app):
             view = "players"
         elif "events" in triggered:
             view = "events"
-        else:
+        elif "stints" in triggered:
             view = "stints"
+        else:
+            view = "tracking"
         return (
             view,
             view != "games",
             view != "players",
             view != "events",
             view != "stints",
+            view != "tracking",
         )
 
     # Render content based on active view
@@ -333,4 +375,6 @@ def register_sample_data_callbacks(dash_app):
             return _build_events_table()
         elif view == "stints":
             return _build_stints_table()
+        elif view == "tracking":
+            return _build_tracking_table()
         return html.Div()

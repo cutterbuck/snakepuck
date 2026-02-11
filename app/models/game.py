@@ -24,6 +24,7 @@ class Game(db.Model):
     )
     stints = db.relationship("Stint", back_populates="game", lazy="dynamic")
     events = db.relationship("Event", back_populates="game", lazy="dynamic")
+    tracking_data = db.relationship("Tracking", back_populates="game", lazy="dynamic")
 
     def __repr__(self):
         return f"<Game {self.game_id} {self.date}>"

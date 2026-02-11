@@ -22,6 +22,7 @@ from app.models import (
     Stint,
     Team,
     TeamStats,
+    Tracking,
     User,
 )
 
@@ -493,6 +494,56 @@ def seed():
             print(f"Seeded events")
         else:
             print(f"Events already seeded ({existing_event_count} rows)")
+
+        # --- Tracking ---
+        existing_tracking_count = Tracking.query.count()
+        if existing_tracking_count == 0:
+            print("Seeding tracking...")
+            tracking_df = pd.read_parquet(os.path.join(DATA_DIR, "tracking.parquet"))
+            tracking_records = []
+            for _, row in tracking_df.iterrows():
+                tracking_records.append(
+                    Tracking(
+                        game_id=row["game_id"],
+                        sl_event_id=str(row["sl_event_id"])
+                        if pd.notna(row.get("sl_event_id"))
+                        else None,
+                        team_id=str(row["team_id"])
+                        if pd.notna(row.get("team_id"))
+                        else None,
+                        team_name=row["team_name"]
+                        if pd.notna(row.get("team_name"))
+                        else None,
+                        player_id=str(row["player_id"])
+                        if pd.notna(row.get("player_id"))
+                        else None,
+                        player_name=row["player_name"]
+                        if pd.notna(row.get("player_name"))
+                        else None,
+                        tracking_x=float(row["tracking_x"])
+                        if pd.notna(row.get("tracking_x"))
+                        else None,
+                        tracking_y=float(row["tracking_y"])
+                        if pd.notna(row.get("tracking_y"))
+                        else None,
+                        tracking_vel_x=float(row["tracking_vel_x"])
+                        if pd.notna(row.get("tracking_vel_x"))
+                        else None,
+                        tracking_vel_y=float(row["tracking_vel_y"])
+                        if pd.notna(row.get("tracking_vel_y"))
+                        else None,
+                    )
+                )
+                if len(tracking_records) >= 5000:
+                    db.session.bulk_save_objects(tracking_records)
+                    db.session.flush()
+                    tracking_records = []
+            if tracking_records:
+                db.session.bulk_save_objects(tracking_records)
+                db.session.flush()
+            print("Seeded tracking")
+        else:
+            print(f"Tracking already seeded ({existing_tracking_count} rows)")
 
         # --- PlayerStats ---
         print("Computing player stats...")

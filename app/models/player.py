@@ -23,6 +23,7 @@ class Player(db.Model):
     team_rel = db.relationship("Team", back_populates="players")
     stints = db.relationship("Stint", back_populates="player", lazy="dynamic")
     events = db.relationship("Event", back_populates="player", lazy="dynamic")
+    tracking_data = db.relationship("Tracking", back_populates="player", lazy="dynamic")
     player_stats = db.relationship(
         "PlayerStats", back_populates="player", lazy="dynamic"
     )

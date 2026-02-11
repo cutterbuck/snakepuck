@@ -9,6 +9,7 @@ from app.models.season import Season
 from app.models.stint import Stint
 from app.models.team import Team
 from app.models.team_stats import TeamStats
+from app.models.tracking import Tracking
 from app.models.user import User
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "Game",
     "Stint",
     "Event",
+    "Tracking",
 ]

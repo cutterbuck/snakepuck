@@ -9,15 +9,22 @@ def create_sample_data_layout():
             dbc.ButtonGroup(
                 [
                     dbc.Button(
-                        "Games",
-                        id="sample-view-games",
+                        "Players",
+                        id="sample-view-players",
                         color="primary",
                         outline=False,
                         n_clicks=0,
                     ),
                     dbc.Button(
-                        "Players",
-                        id="sample-view-players",
+                        "Games",
+                        id="sample-view-games",
+                        color="primary",
+                        outline=True,
+                        n_clicks=0,
+                    ),
+                    dbc.Button(
+                        "Stints",
+                        id="sample-view-stints",
                         color="primary",
                         outline=True,
                         n_clicks=0,
@@ -30,8 +37,8 @@ def create_sample_data_layout():
                         n_clicks=0,
                     ),
                     dbc.Button(
-                        "Stints",
-                        id="sample-view-stints",
+                        "Tracking",
+                        id="sample-view-tracking",
                         color="primary",
                         outline=True,
                         n_clicks=0,
@@ -40,7 +47,7 @@ def create_sample_data_layout():
                 className="mb-3",
                 style={"height": "34px"},
             ),
-            dcc.Store(id="sample-data-view", data="games"),
+            dcc.Store(id="sample-data-view", data="players"),
             html.Div(id="sample-data-content"),
         ],
         fluid=True,
