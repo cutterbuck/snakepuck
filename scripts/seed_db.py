@@ -110,16 +110,6 @@ def seed():
         games_df = pd.read_parquet(os.path.join(DATA_DIR, "games.parquet"))
         stints_df = pd.read_parquet(os.path.join(DATA_DIR, "stints.parquet"))
 
-        # Build player_id -> team abbreviation mapping from stints
-        # Use the most frequent team per player
-        player_team_map = (
-            stints_df[["player_id", "team"]]
-            .dropna()
-            .groupby("player_id")["team"]
-            .agg(lambda x: x.value_counts().index[0])
-            .to_dict()
-        )
-
         # Get unique team abbreviations from both parquets
         game_teams = set(games_df["home_team"].dropna().unique()) | set(
             games_df["away_team"].dropna().unique()
@@ -297,11 +287,7 @@ def seed():
             if row["player_id"] in existing_player_ids:
                 continue
 
-            # Map the player to a team via stints data
-            team_abbr = player_team_map.get(row["player_id"])
-            team_obj = team_map.get(team_abbr) if team_abbr else None
             player = Player(
-                team_id=team_obj.id if team_obj else None,
                 playerId=row["player_id"],
                 firstName=row["first_name"],
                 lastName=row["last_name"],
@@ -315,7 +301,6 @@ def seed():
                 if pd.notna(row.get("position_group"))
                 else None,
                 handed=row.get("handed") if pd.notna(row.get("handed")) else None,
-                team=team_abbr,
             )
             db.session.add(player)
             new_players += 1
@@ -545,10 +530,13 @@ def seed():
         else:
             print(f"Tracking already seeded ({existing_tracking_count} rows)")
 
-        # --- PlayerStats ---
-        print("Computing player stats...")
+        # --- PlayerStats (per team) ---
+        print("Computing player stats (per team)...")
         # Get the most recent game date for age calculation
         most_recent_game_date = db.session.query(db.func.max(Game.date)).scalar()
+
+        # Build abbreviation -> team_id mapping
+        abbr_to_team_id = {abbr: t.id for abbr, t in team_map.items()}
 
         # Get all player_ids that have events
         player_ids_with_events = (
@@ -559,76 +547,21 @@ def seed():
         )
         new_player_stats = 0
         for (pid,) in player_ids_with_events:
-            ps = PlayerStats.query.filter_by(player_id=pid, season_id=season.id).first()
-            if not ps:
-                ps = PlayerStats(player_id=pid, season_id=season.id)
-                db.session.add(ps)
-
-            # Games played: distinct game_ids from stints
-            gp = (
-                db.session.query(Stint.game_id)
-                .filter(Stint.player_id == pid)
+            # Find all teams this player played for (from stints)
+            player_teams = (
+                db.session.query(Stint.team_abbr)
+                .filter(Stint.player_id == pid, Stint.team_abbr.isnot(None))
                 .distinct()
-                .count()
+                .all()
             )
 
-            # Event counts
-            goals = Event.query.filter_by(player_id=pid, event_type="goal").count()
-            assists = Event.query.filter_by(player_id=pid, event_type="assist").count()
-            shots = Event.query.filter_by(player_id=pid, event_type="shot").count()
-            faceoffs_won = Event.query.filter(
-                Event.player_id == pid,
-                Event.event_type == "faceoff",
-                Event.outcome == "successful",
-            ).count()
-            faceoffs_lost = Event.query.filter(
-                Event.player_id == pid,
-                Event.event_type == "faceoff",
-                Event.outcome == "failed",
-            ).count()
-            penalties = Event.query.filter_by(
-                player_id=pid, event_type="penalty"
-            ).count()
-            penalties_drawn = Event.query.filter_by(
-                player_id=pid, event_type="penaltydrawn"
-            ).count()
-            blocks = Event.query.filter_by(player_id=pid, event_type="block").count()
-            checks = Event.query.filter_by(player_id=pid, event_type="check").count()
-
-            # xG sum
-            xg_result = (
-                db.session.query(db.func.sum(Event.xg))
-                .filter(Event.player_id == pid, Event.xg.isnot(None))
-                .scalar()
-            )
-            total_xg = round(float(xg_result), 3) if xg_result else 0.0
-
-            total_shots = shots + goals  # goals are also shots on net
-            shooting_pct = round(goals / total_shots, 3) if total_shots > 0 else None
-            total_fo = faceoffs_won + faceoffs_lost
-            faceoff_pct = round(faceoffs_won / total_fo, 3) if total_fo > 0 else None
-
-            ps.games_played = gp
-            ps.goals = goals
-            ps.assists = assists
-            ps.points = goals + assists
-            ps.shots = total_shots
-            ps.shooting_pct = shooting_pct
-            ps.faceoffs_won = faceoffs_won
-            ps.faceoffs_lost = faceoffs_lost
-            ps.faceoff_pct = faceoff_pct
-            ps.penalties = penalties
-            ps.penalties_drawn = penalties_drawn
-            ps.blocks = blocks
-            ps.checks = checks
-            ps.xg = total_xg
-
-            # Compute age from most recent game date - birthDate
+            # Compute age once per player
+            player_age = None
             if most_recent_game_date:
                 player_obj = Player.query.filter_by(playerId=pid).first()
                 if player_obj and player_obj.birthDate:
                     bd = player_obj.birthDate
-                    ps.age = (
+                    player_age = (
                         most_recent_game_date.year
                         - bd.year
                         - (
@@ -637,7 +570,99 @@ def seed():
                         )
                     )
 
-            new_player_stats += 1
+            for (team_abbr,) in player_teams:
+                tid = abbr_to_team_id.get(team_abbr)
+                if not tid:
+                    continue
+
+                ps = PlayerStats.query.filter_by(
+                    player_id=pid, season_id=season.id, team_id=tid
+                ).first()
+                if not ps:
+                    ps = PlayerStats(player_id=pid, season_id=season.id, team_id=tid)
+                    db.session.add(ps)
+
+                # Games played: distinct game_ids from stints for this team
+                gp = (
+                    db.session.query(Stint.game_id)
+                    .filter(Stint.player_id == pid, Stint.team_abbr == team_abbr)
+                    .distinct()
+                    .count()
+                )
+
+                # Event counts filtered by team
+                goals = Event.query.filter_by(
+                    player_id=pid, event_type="goal", team_abbr=team_abbr
+                ).count()
+                assists = Event.query.filter_by(
+                    player_id=pid, event_type="assist", team_abbr=team_abbr
+                ).count()
+                shots = Event.query.filter_by(
+                    player_id=pid, event_type="shot", team_abbr=team_abbr
+                ).count()
+                faceoffs_won = Event.query.filter(
+                    Event.player_id == pid,
+                    Event.event_type == "faceoff",
+                    Event.outcome == "successful",
+                    Event.team_abbr == team_abbr,
+                ).count()
+                faceoffs_lost = Event.query.filter(
+                    Event.player_id == pid,
+                    Event.event_type == "faceoff",
+                    Event.outcome == "failed",
+                    Event.team_abbr == team_abbr,
+                ).count()
+                penalties = Event.query.filter_by(
+                    player_id=pid, event_type="penalty", team_abbr=team_abbr
+                ).count()
+                penalties_drawn = Event.query.filter_by(
+                    player_id=pid, event_type="penaltydrawn", team_abbr=team_abbr
+                ).count()
+                blocks = Event.query.filter_by(
+                    player_id=pid, event_type="block", team_abbr=team_abbr
+                ).count()
+                checks = Event.query.filter_by(
+                    player_id=pid, event_type="check", team_abbr=team_abbr
+                ).count()
+
+                # xG sum filtered by team
+                xg_result = (
+                    db.session.query(db.func.sum(Event.xg))
+                    .filter(
+                        Event.player_id == pid,
+                        Event.xg.isnot(None),
+                        Event.team_abbr == team_abbr,
+                    )
+                    .scalar()
+                )
+                total_xg = round(float(xg_result), 3) if xg_result else 0.0
+
+                total_shots = shots + goals  # goals are also shots on net
+                shooting_pct = (
+                    round(goals / total_shots, 3) if total_shots > 0 else None
+                )
+                total_fo = faceoffs_won + faceoffs_lost
+                faceoff_pct = (
+                    round(faceoffs_won / total_fo, 3) if total_fo > 0 else None
+                )
+
+                ps.games_played = gp
+                ps.goals = goals
+                ps.assists = assists
+                ps.points = goals + assists
+                ps.shots = total_shots
+                ps.shooting_pct = shooting_pct
+                ps.faceoffs_won = faceoffs_won
+                ps.faceoffs_lost = faceoffs_lost
+                ps.faceoff_pct = faceoff_pct
+                ps.penalties = penalties
+                ps.penalties_drawn = penalties_drawn
+                ps.blocks = blocks
+                ps.checks = checks
+                ps.xg = total_xg
+                ps.age = player_age
+
+                new_player_stats += 1
 
         if new_player_stats:
             db.session.flush()

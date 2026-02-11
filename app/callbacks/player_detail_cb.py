@@ -17,6 +17,7 @@ CELL_STYLE = {
 }
 
 STAT_HEADERS = [
+    "Team",
     "GP",
     "G",
     "A",
@@ -65,15 +66,27 @@ def register_player_detail_callbacks(dash_app):
                 className="btn btn-secondary btn-sm",
             )
         player = Player.query.get(player_id)
-        if not player or not player.team_rel:
+        if not player:
+            return dcc.Link(
+                "Back to Standings",
+                href="/",
+                className="btn btn-secondary btn-sm",
+            )
+        # Find the player's primary team (most games played) via PlayerStats
+        ps = (
+            PlayerStats.query.filter_by(player_id=player.playerId)
+            .order_by(PlayerStats.games_played.desc())
+            .first()
+        )
+        if not ps or not ps.team:
             return dcc.Link(
                 "Back to Standings",
                 href="/",
                 className="btn btn-secondary btn-sm",
             )
         return dcc.Link(
-            f"Back to {player.team_rel.name}",
-            href=f"/team/{player.team_id}",
+            f"Back to {ps.team.name}",
+            href=f"/team/{ps.team_id}",
             className="btn btn-secondary btn-sm",
         )
 
@@ -88,11 +101,19 @@ def register_player_detail_callbacks(dash_app):
         if not player:
             return html.H2("Player not found")
 
+        # Get primary team (most games played) via PlayerStats
+        ps = (
+            PlayerStats.query.filter_by(player_id=player.playerId)
+            .order_by(PlayerStats.games_played.desc())
+            .first()
+        )
+        team = ps.team if ps else None
+
         children = []
-        if player.team_rel and player.team_rel.logo:
+        if team and team.logo:
             children.append(
                 html.Img(
-                    src=player.team_rel.logo,
+                    src=team.logo,
                     style={
                         "width": "48px",
                         "height": "48px",
@@ -114,8 +135,8 @@ def register_player_detail_callbacks(dash_app):
         info_parts = []
         if player.position:
             info_parts.append(player.position)
-        if player.team_rel:
-            info_parts.append(player.team_rel.name)
+        if team:
+            info_parts.append(team.name)
         if info_parts:
             children.append(
                 html.Span(
@@ -142,31 +163,47 @@ def register_player_detail_callbacks(dash_app):
         player = Player.query.get(player_id)
         if not player:
             return html.Div("No stats available.", style={"color": "#666"})
-        ps = PlayerStats.query.filter_by(player_id=player.playerId).first()
-        if not ps:
+
+        stats_list = (
+            PlayerStats.query.filter_by(player_id=player.playerId)
+            .join(Team, PlayerStats.team_id == Team.id)
+            .add_columns(Team.name.label("team_name"))
+            .order_by(PlayerStats.games_played.desc())
+            .all()
+        )
+        if not stats_list:
             return html.Div("No stats available.", style={"color": "#666"})
 
         header_cells = [html.Th(h, style=HEADER_STYLE) for h in STAT_HEADERS]
         thead = html.Thead(html.Tr(header_cells))
 
-        values = [
-            ps.games_played,
-            ps.goals,
-            ps.assists,
-            ps.points,
-            ps.shots,
-            _fmt_pct(ps.shooting_pct),
-            ps.faceoffs_won,
-            ps.faceoffs_lost,
-            _fmt_pct(ps.faceoff_pct),
-            ps.penalties,
-            ps.penalties_drawn,
-            ps.blocks,
-            ps.checks,
-            ps.xg,
-        ]
-        cells = [html.Td(v, style=CELL_STYLE) for v in values]
-        tbody = html.Tbody([html.Tr(cells)])
+        rows = []
+        for i, (ps, team_name) in enumerate(stats_list):
+            row_style = (
+                {"backgroundColor": "rgb(245, 245, 245)"}
+                if i % 2 == 1
+                else {"backgroundColor": "rgb(255, 255, 255)"}
+            )
+            values = [
+                team_name,
+                ps.games_played,
+                ps.goals,
+                ps.assists,
+                ps.points,
+                ps.shots,
+                _fmt_pct(ps.shooting_pct),
+                ps.faceoffs_won,
+                ps.faceoffs_lost,
+                _fmt_pct(ps.faceoff_pct),
+                ps.penalties,
+                ps.penalties_drawn,
+                ps.blocks,
+                ps.checks,
+                ps.xg,
+            ]
+            cells = [html.Td(v, style=CELL_STYLE) for v in values]
+            rows.append(html.Tr(cells, style=row_style))
+        tbody = html.Tbody(rows)
 
         return html.Table(
             [thead, tbody],

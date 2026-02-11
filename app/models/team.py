@@ -22,7 +22,7 @@ class Team(db.Model):
     organization = db.relationship("Organization", back_populates="teams")
     season = db.relationship("Season", back_populates="teams")
     league = db.relationship("League", back_populates="teams")
-    players = db.relationship("Player", back_populates="team_rel", lazy="dynamic")
+    player_stats = db.relationship("PlayerStats", back_populates="team", lazy="dynamic")
     home_games = db.relationship(
         "Game",
         foreign_keys="Game.home_team_id",

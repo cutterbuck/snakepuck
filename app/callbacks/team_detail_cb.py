@@ -218,7 +218,7 @@ def register_team_detail_callbacks(dash_app):
 
         query = (
             PlayerStats.query.join(Player, PlayerStats.player_id == Player.playerId)
-            .filter(Player.team_id == team_id)
+            .filter(PlayerStats.team_id == team_id)
             .add_columns(Player.id, Player.firstName, Player.lastName, Player.position)
         )
 

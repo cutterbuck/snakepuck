@@ -5,7 +5,6 @@ class Player(db.Model):
     __tablename__ = "players"
 
     id = db.Column(db.Integer, primary_key=True)
-    team_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=True)
     playerId = db.Column(db.String(36), unique=True, nullable=True)
     firstName = db.Column(db.String(80), nullable=False)
     lastName = db.Column(db.String(80), nullable=False)
@@ -18,9 +17,7 @@ class Player(db.Model):
     position_group = db.Column(db.String(5), nullable=True)
     handed = db.Column(db.String(5), nullable=True)
     shootsCatches = db.Column(db.String(5), nullable=True)
-    team = db.Column(db.String(10), nullable=True)
 
-    team_rel = db.relationship("Team", back_populates="players")
     stints = db.relationship("Stint", back_populates="player", lazy="dynamic")
     events = db.relationship("Event", back_populates="player", lazy="dynamic")
     tracking_data = db.relationship("Tracking", back_populates="player", lazy="dynamic")
