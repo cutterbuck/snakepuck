@@ -123,7 +123,7 @@ def _build_team_cell(team_name, team_logo, team_id=None):
         content = dcc.Link(
             html.Div(children=team_children),
             href=f"/team/{team_id}",
-            style={"textDecoration": "none", "color": "inherit", "cursor": "pointer"},
+            className="team-link",
         )
     else:
         content = html.Div(children=team_children)

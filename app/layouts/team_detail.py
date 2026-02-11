@@ -7,13 +7,9 @@ def create_team_detail_layout():
         [
             dcc.Store(id="team-detail-id"),
             dcc.Link(
-                dbc.Button(
-                    "Back to Standings",
-                    color="secondary",
-                    size="sm",
-                ),
+                "Back to Standings",
                 href="/",
-                style={"textDecoration": "none"},
+                className="btn btn-secondary btn-sm",
             ),
             html.Div(id="team-detail-header", className="mb-3 mt-3"),
             dcc.Store(

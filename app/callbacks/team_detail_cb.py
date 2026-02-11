@@ -1,4 +1,4 @@
-from dash import Input, Output, State, callback_context, html, no_update
+from dash import Input, Output, State, callback_context, dcc, html, no_update
 
 from app.models import Player, PlayerStats, Team
 
@@ -219,7 +219,7 @@ def register_team_detail_callbacks(dash_app):
         query = (
             PlayerStats.query.join(Player, PlayerStats.player_id == Player.playerId)
             .filter(Player.team_id == team_id)
-            .add_columns(Player.firstName, Player.lastName, Player.position)
+            .add_columns(Player.id, Player.firstName, Player.lastName, Player.position)
         )
 
         # Apply sort — push NULL to the bottom
@@ -238,7 +238,7 @@ def register_team_detail_callbacks(dash_app):
         thead = _build_thead(sort_col, sort_dir)
 
         rows = []
-        for i, (ps, first_name, last_name, pos) in enumerate(results):
+        for i, (ps, pid, first_name, last_name, pos) in enumerate(results):
             row_style = (
                 {"backgroundColor": "rgb(245, 245, 245)"}
                 if i % 2 == 1
@@ -265,8 +265,13 @@ def register_team_detail_callbacks(dash_app):
             stat_cols = HEADERS[1:]  # all columns except Name
             cells = [
                 html.Td(
-                    f"{first_name} {last_name}",
-                    style={**CELL_STYLE, "textAlign": "left"},
+                    dcc.Link(
+                        f"{first_name} {last_name}",
+                        href=f"/player/{pid}",
+                        className="team-link",
+                        style={"display": "block", "padding": "4px 8px"},
+                    ),
+                    style={**CELL_STYLE, "textAlign": "left", "padding": "0"},
                 )
             ]
             for col, v in zip(stat_cols, values):

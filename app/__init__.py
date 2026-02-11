@@ -77,6 +77,7 @@ def create_app():
 
     # Import layouts
     from app.layouts.navbar import create_navbar
+    from app.layouts.player_detail import create_player_detail_layout
     from app.layouts.sample_data import create_sample_data_layout
     from app.layouts.standings import create_standings_layout
     from app.layouts.team_detail import create_team_detail_layout
@@ -100,6 +101,8 @@ def create_app():
             return create_sample_data_layout()
         elif pathname and pathname.startswith("/team/"):
             return create_team_detail_layout()
+        elif pathname and pathname.startswith("/player/"):
+            return create_player_detail_layout()
         else:
             return create_standings_layout()
 
