@@ -1,5 +1,9 @@
-from dash import Input, Output
+import random
 
+from dash import Input, Output
+from sqlalchemy.sql.expression import func
+
+from app.extensions import db
 from app.models import Game
 
 
@@ -9,7 +13,14 @@ def register_games_callbacks(dash_app):
         Input("url", "pathname"),
     )
     def update_games(pathname):
-        games = Game.query.order_by(Game.date.desc()).all()
+        id_range = db.session.query(func.min(Game.id), func.max(Game.id)).one()
+        min_id, max_id = id_range
+        if min_id is None or max_id is None:
+            return []
+        random_ids = random.sample(
+            range(min_id, max_id + 1), min(100, max_id - min_id + 1)
+        )
+        games = Game.query.filter(Game.id.in_(random_ids)).all()
         rows = []
         for g in games:
             rows.append(

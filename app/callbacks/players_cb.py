@@ -1,5 +1,9 @@
-from dash import Input, Output
+import random
 
+from dash import Input, Output
+from sqlalchemy.sql.expression import func
+
+from app.extensions import db
 from app.models import Player, PlayerStats, Team
 
 
@@ -11,24 +15,24 @@ def _fmt_pct(val):
 
 def register_players_callbacks(dash_app):
     @dash_app.callback(
-        Output("players-team-filter", "options"),
+        Output("players-table", "data"),
         Input("url", "pathname"),
     )
-    def populate_team_filter(pathname):
-        teams = Team.query.order_by(Team.abbrev).all()
-        return [{"label": t.name or t.abbrev, "value": t.id} for t in teams]
+    def update_players(pathname):
+        # Fast random sampling via random ID selection
+        id_range = db.session.query(
+            func.min(PlayerStats.id), func.max(PlayerStats.id)
+        ).one()
+        min_id, max_id = id_range
+        if min_id is None or max_id is None:
+            return []
+        random_ids = random.sample(
+            range(min_id, max_id + 1), min(100, max_id - min_id + 1)
+        )
 
-    @dash_app.callback(
-        Output("players-table", "data"),
-        [
-            Input("url", "pathname"),
-            Input("players-team-filter", "value"),
-            Input("players-position-filter", "value"),
-        ],
-    )
-    def update_players(pathname, team_id, position):
         query = (
-            PlayerStats.query.join(Player, PlayerStats.player_id == Player.playerId)
+            PlayerStats.query.filter(PlayerStats.id.in_(random_ids))
+            .join(Player, PlayerStats.player_id == Player.playerId)
             .outerjoin(Team, Player.team_id == Team.id)
             .add_columns(
                 Player.firstName,
@@ -36,14 +40,9 @@ def register_players_callbacks(dash_app):
                 Player.position,
                 Team.name.label("team_name"),
             )
+            .order_by(PlayerStats.points.desc(), PlayerStats.goals.desc())
         )
 
-        if team_id:
-            query = query.filter(Player.team_id == team_id)
-        if position:
-            query = query.filter(Player.position == position)
-
-        query = query.order_by(PlayerStats.points.desc(), PlayerStats.goals.desc())
         results = query.all()
 
         rows = []

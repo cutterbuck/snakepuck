@@ -1,39 +1,11 @@
 import dash_bootstrap_components as dbc
-from dash import dash_table, dcc, html
+from dash import dash_table, html
 
 
 def create_players_layout():
     return dbc.Container(
         [
-            html.H2("Player Statistics", className="mb-3"),
-            dbc.Row(
-                [
-                    dbc.Col(
-                        dcc.Dropdown(
-                            id="players-team-filter",
-                            placeholder="Filter by team...",
-                            clearable=True,
-                        ),
-                        width=4,
-                    ),
-                    dbc.Col(
-                        dcc.Dropdown(
-                            id="players-position-filter",
-                            placeholder="Filter by position...",
-                            options=[
-                                {"label": "Center", "value": "C"},
-                                {"label": "Defense", "value": "D"},
-                                {"label": "Left Wing", "value": "L"},
-                                {"label": "Right Wing", "value": "R"},
-                                {"label": "Goalie", "value": "G"},
-                            ],
-                            clearable=True,
-                        ),
-                        width=4,
-                    ),
-                ],
-                className="mb-3",
-            ),
+            html.H2("Player Statistics (Random Sample of 100)", className="mb-3"),
             dash_table.DataTable(
                 id="players-table",
                 columns=[
@@ -56,14 +28,18 @@ def create_players_layout():
                     {"name": "HIT", "id": "checks"},
                     {"name": "xG", "id": "xg"},
                 ],
-                sort_action="native",
-                page_size=25,
+                page_size=20,
                 style_table={"overflowX": "auto"},
-                style_cell={"textAlign": "center", "padding": "8px"},
+                style_cell={
+                    "textAlign": "center",
+                    "padding": "2px 6px",
+                    "fontSize": "12px",
+                },
                 style_header={
                     "backgroundColor": "#343a40",
                     "color": "white",
                     "fontWeight": "bold",
+                    "fontSize": "12px",
                 },
                 style_data_conditional=[
                     {

@@ -10,8 +10,7 @@ def create_navbar():
                 dbc.Nav(
                     [
                         dbc.NavItem(dbc.NavLink("Standings", href="/")),
-                        dbc.NavItem(dbc.NavLink("Games", href="/games")),
-                        dbc.NavItem(dbc.NavLink("Players", href="/players")),
+                        dbc.NavItem(dbc.NavLink("Sample Data", href="/sample-data")),
                         dbc.NavItem(
                             dbc.NavLink(
                                 "Logout", href="/auth/logout", external_link=True
