@@ -12,6 +12,22 @@ def create_team_detail_layout():
                 className="btn btn-secondary btn-sm",
             ),
             html.Div(id="team-detail-header", className="mb-3 mt-3"),
+            html.Div(
+                [
+                    html.Label(
+                        "Season",
+                        style={"fontWeight": "bold", "marginRight": "8px"},
+                    ),
+                    dcc.Dropdown(
+                        id="season-selector",
+                        clearable=False,
+                        style={"width": "200px"},
+                    ),
+                ],
+                id="team-detail-season-dropdown",
+                className="mb-3",
+                style={"display": "flex", "alignItems": "center"},
+            ),
             dcc.Store(
                 id="team-detail-sort", data={"column": "PTS", "direction": "desc"}
             ),

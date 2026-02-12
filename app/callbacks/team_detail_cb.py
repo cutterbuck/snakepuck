@@ -1,6 +1,6 @@
 from dash import Input, Output, State, callback_context, dcc, html, no_update
 
-from app.models import Player, PlayerStats, Team
+from app.models import Player, PlayerStats, Season, Team
 
 HEADER_STYLE = {
     "backgroundColor": "#343a40",
@@ -136,8 +136,11 @@ def register_team_detail_callbacks(dash_app):
     )
     def store_team_id(pathname):
         if pathname and pathname.startswith("/team/"):
+            parts = pathname.strip("/").split(
+                "/"
+            )  # ["team", id] or ["team", id, season]
             try:
-                return int(pathname.split("/team/")[1])
+                return int(parts[1])
             except (ValueError, IndexError):
                 return None
         return None
@@ -177,6 +180,30 @@ def register_team_detail_callbacks(dash_app):
         )
         return html.Div(children, style={"display": "flex", "alignItems": "center"})
 
+    @dash_app.callback(
+        Output("season-selector", "options"),
+        Output("season-selector", "value"),
+        Input("team-detail-id", "data"),
+    )
+    def update_season_dropdown(team_id):
+        if not team_id:
+            return [], None
+        team = Team.query.get(team_id)
+        if not team:
+            return [], None
+        # Find all teams for the same organization (one per season)
+        org_teams = (
+            Team.query.filter_by(organization_id=team.organization_id)
+            .join(Season, Team.season_id == Season.id)
+            .add_columns(Season.name.label("season_name"))
+            .order_by(Season.name.desc())
+            .all()
+        )
+        options = [
+            {"label": season_name, "value": t.id} for t, season_name in org_teams
+        ]
+        return options, team_id
+
     # Sort state callback
     @dash_app.callback(
         Output("team-detail-sort", "data"),
@@ -207,10 +234,13 @@ def register_team_detail_callbacks(dash_app):
 
     @dash_app.callback(
         Output("team-detail-table", "children"),
-        [Input("team-detail-id", "data"), Input("team-detail-sort", "data")],
+        [
+            Input("team-detail-sort", "data"),
+            Input("season-selector", "value"),
+        ],
     )
-    def update_roster(team_id, sort_data):
-        if not team_id:
+    def update_roster(sort_data, active_team_id):
+        if not active_team_id:
             return html.Div()
 
         sort_col = sort_data.get("column", "PTS") if sort_data else "PTS"
@@ -218,7 +248,7 @@ def register_team_detail_callbacks(dash_app):
 
         query = (
             PlayerStats.query.join(Player, PlayerStats.player_id == Player.playerId)
-            .filter(PlayerStats.team_id == team_id)
+            .filter(PlayerStats.team_id == active_team_id)
             .add_columns(Player.id, Player.firstName, Player.lastName, Player.position)
         )
 
@@ -265,7 +295,7 @@ def register_team_detail_callbacks(dash_app):
             stat_cols = HEADERS[1:]  # all columns except Name
             cells = [
                 html.Td(
-                    dcc.Link(
+                    html.A(
                         f"{first_name} {last_name}",
                         href=f"/player/{pid}",
                         className="team-link",

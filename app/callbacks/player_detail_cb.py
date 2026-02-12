@@ -1,7 +1,7 @@
 import dash_bootstrap_components as dbc
 from dash import Input, Output, dcc, html
 
-from app.models import Player, PlayerStats, Team
+from app.models import Player, PlayerStats, Season, Team
 
 HEADER_STYLE = {
     "backgroundColor": "#343a40",
@@ -17,6 +17,7 @@ CELL_STYLE = {
 }
 
 STAT_HEADERS = [
+    "Season",
     "Team",
     "GP",
     "G",
@@ -53,42 +54,6 @@ def register_player_detail_callbacks(dash_app):
             except (ValueError, IndexError):
                 return None
         return None
-
-    @dash_app.callback(
-        Output("player-detail-back", "children"),
-        Input("player-detail-id", "data"),
-    )
-    def update_back_button(player_id):
-        if not player_id:
-            return dcc.Link(
-                "Back to Standings",
-                href="/",
-                className="btn btn-secondary btn-sm",
-            )
-        player = Player.query.get(player_id)
-        if not player:
-            return dcc.Link(
-                "Back to Standings",
-                href="/",
-                className="btn btn-secondary btn-sm",
-            )
-        # Find the player's primary team (most games played) via PlayerStats
-        ps = (
-            PlayerStats.query.filter_by(player_id=player.playerId)
-            .order_by(PlayerStats.games_played.desc())
-            .first()
-        )
-        if not ps or not ps.team:
-            return dcc.Link(
-                "Back to Standings",
-                href="/",
-                className="btn btn-secondary btn-sm",
-            )
-        return dcc.Link(
-            f"Back to {ps.team.name}",
-            href=f"/team/{ps.team_id}",
-            className="btn btn-secondary btn-sm",
-        )
 
     @dash_app.callback(
         Output("player-detail-header", "children"),
@@ -167,8 +132,14 @@ def register_player_detail_callbacks(dash_app):
         stats_list = (
             PlayerStats.query.filter_by(player_id=player.playerId)
             .join(Team, PlayerStats.team_id == Team.id)
-            .add_columns(Team.name.label("team_name"))
-            .order_by(PlayerStats.games_played.desc())
+            .join(Season, PlayerStats.season_id == Season.id)
+            .add_columns(
+                Team.name.label("team_name"),
+                Team.id.label("tid"),
+                Team.logo.label("team_logo"),
+                Season.name.label("season_name"),
+            )
+            .order_by(Season.name, PlayerStats.games_played.desc())
             .all()
         )
         if not stats_list:
@@ -178,14 +149,51 @@ def register_player_detail_callbacks(dash_app):
         thead = html.Thead(html.Tr(header_cells))
 
         rows = []
-        for i, (ps, team_name) in enumerate(stats_list):
+        seen_seasons = set()
+        for i, (ps, team_name, tid, team_logo, season_name) in enumerate(stats_list):
             row_style = (
                 {"backgroundColor": "rgb(245, 245, 245)"}
                 if i % 2 == 1
                 else {"backgroundColor": "rgb(255, 255, 255)"}
             )
+            team_children = []
+            if team_logo:
+                team_children.append(
+                    html.Img(
+                        src=team_logo,
+                        style={
+                            "width": "24px",
+                            "height": "24px",
+                            "verticalAlign": "middle",
+                        },
+                    )
+                )
+            team_children.append(
+                html.Span(
+                    team_name,
+                    style={"paddingLeft": "8px", "verticalAlign": "middle"},
+                )
+            )
+            team_link = dcc.Link(
+                html.Div(
+                    team_children,
+                    style={"display": "flex", "alignItems": "center"},
+                ),
+                href=f"/team/{tid}/{season_name}",
+                className="team-link",
+                style={
+                    "display": "flex",
+                    "alignItems": "center",
+                    "padding": "4px 8px",
+                    "width": "100%",
+                    "height": "100%",
+                    "boxSizing": "border-box",
+                },
+            )
+            # Only show season name on the first row for that season
+            display_season = season_name if season_name not in seen_seasons else ""
+            seen_seasons.add(season_name)
             values = [
-                team_name,
                 ps.games_played,
                 ps.goals,
                 ps.assists,
@@ -201,7 +209,12 @@ def register_player_detail_callbacks(dash_app):
                 ps.checks,
                 ps.xg,
             ]
-            cells = [html.Td(v, style=CELL_STYLE) for v in values]
+            cells = [
+                html.Td(display_season, style=CELL_STYLE),
+                html.Td(
+                    team_link, style={**CELL_STYLE, "padding": "0", "textAlign": "left"}
+                ),
+            ] + [html.Td(v, style=CELL_STYLE) for v in values]
             rows.append(html.Tr(cells, style=row_style))
         tbody = html.Tbody(rows)
 
