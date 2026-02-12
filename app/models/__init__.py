@@ -4,6 +4,7 @@ from app.models.game import Game
 from app.models.league import League
 from app.models.organization import Organization
 from app.models.player import Player
+from app.models.player_game_stats import PlayerGameStats
 from app.models.player_stats import PlayerStats
 from app.models.season import Season
 from app.models.stint import Stint
@@ -21,6 +22,7 @@ __all__ = [
     "Team",
     "TeamStats",
     "Player",
+    "PlayerGameStats",
     "PlayerStats",
     "Game",
     "Stint",

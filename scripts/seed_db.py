@@ -17,6 +17,7 @@ from app.models import (
     League,
     Organization,
     Player,
+    PlayerGameStats,
     PlayerStats,
     Season,
     Stint,
@@ -667,6 +668,132 @@ def seed():
         if new_player_stats:
             db.session.flush()
             print(f"Upserted {new_player_stats} player stats records")
+
+        # --- PlayerGameStats (per game) ---
+        existing_pgs_count = PlayerGameStats.query.count()
+        if existing_pgs_count == 0:
+            print("Computing player game stats...")
+            pgs_records = []
+            for (pid,) in player_ids_with_events:
+                # Distinct (game_id, team_abbr) pairs from stints
+                game_team_pairs = (
+                    db.session.query(Stint.game_id, Stint.team_abbr)
+                    .filter(Stint.player_id == pid, Stint.team_abbr.isnot(None))
+                    .distinct()
+                    .all()
+                )
+                for gid, team_abbr in game_team_pairs:
+                    tid = abbr_to_team_id.get(team_abbr)
+                    if not tid:
+                        continue
+
+                    goals = Event.query.filter_by(
+                        player_id=pid,
+                        game_id=gid,
+                        event_type="goal",
+                        team_abbr=team_abbr,
+                    ).count()
+                    assists = Event.query.filter_by(
+                        player_id=pid,
+                        game_id=gid,
+                        event_type="assist",
+                        team_abbr=team_abbr,
+                    ).count()
+                    shot_count = Event.query.filter_by(
+                        player_id=pid,
+                        game_id=gid,
+                        event_type="shot",
+                        team_abbr=team_abbr,
+                    ).count()
+                    faceoffs_won = Event.query.filter(
+                        Event.player_id == pid,
+                        Event.game_id == gid,
+                        Event.event_type == "faceoff",
+                        Event.outcome == "successful",
+                        Event.team_abbr == team_abbr,
+                    ).count()
+                    faceoffs_lost = Event.query.filter(
+                        Event.player_id == pid,
+                        Event.game_id == gid,
+                        Event.event_type == "faceoff",
+                        Event.outcome == "failed",
+                        Event.team_abbr == team_abbr,
+                    ).count()
+                    penalties = Event.query.filter_by(
+                        player_id=pid,
+                        game_id=gid,
+                        event_type="penalty",
+                        team_abbr=team_abbr,
+                    ).count()
+                    penalties_drawn = Event.query.filter_by(
+                        player_id=pid,
+                        game_id=gid,
+                        event_type="penaltydrawn",
+                        team_abbr=team_abbr,
+                    ).count()
+                    blocks = Event.query.filter_by(
+                        player_id=pid,
+                        game_id=gid,
+                        event_type="block",
+                        team_abbr=team_abbr,
+                    ).count()
+                    checks = Event.query.filter_by(
+                        player_id=pid,
+                        game_id=gid,
+                        event_type="check",
+                        team_abbr=team_abbr,
+                    ).count()
+                    xg_result = (
+                        db.session.query(db.func.sum(Event.xg))
+                        .filter(
+                            Event.player_id == pid,
+                            Event.game_id == gid,
+                            Event.xg.isnot(None),
+                            Event.team_abbr == team_abbr,
+                        )
+                        .scalar()
+                    )
+                    total_xg = round(float(xg_result), 3) if xg_result else 0.0
+                    total_shots = shot_count + goals
+                    shooting_pct = (
+                        round(goals / total_shots, 3) if total_shots > 0 else None
+                    )
+                    total_fo = faceoffs_won + faceoffs_lost
+                    faceoff_pct = (
+                        round(faceoffs_won / total_fo, 3) if total_fo > 0 else None
+                    )
+
+                    pgs_records.append(
+                        PlayerGameStats(
+                            player_id=pid,
+                            game_id=gid,
+                            team_id=tid,
+                            season_id=season.id,
+                            goals=goals,
+                            assists=assists,
+                            points=goals + assists,
+                            shots=total_shots,
+                            shooting_pct=shooting_pct,
+                            faceoffs_won=faceoffs_won,
+                            faceoffs_lost=faceoffs_lost,
+                            faceoff_pct=faceoff_pct,
+                            penalties=penalties,
+                            penalties_drawn=penalties_drawn,
+                            blocks=blocks,
+                            checks=checks,
+                            xg=total_xg,
+                        )
+                    )
+                    if len(pgs_records) >= 5000:
+                        db.session.bulk_save_objects(pgs_records)
+                        db.session.flush()
+                        pgs_records = []
+            if pgs_records:
+                db.session.bulk_save_objects(pgs_records)
+                db.session.flush()
+            print("Seeded player game stats")
+        else:
+            print(f"Player game stats already seeded ({existing_pgs_count} rows)")
 
         # --- TeamStats ---
         print("Computing team stats...")

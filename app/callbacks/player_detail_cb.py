@@ -1,7 +1,9 @@
 import dash_bootstrap_components as dbc
 from dash import Input, Output, dcc, html
+from sqlalchemy import case
+from sqlalchemy.orm import aliased
 
-from app.models import Player, PlayerStats, Season, Team
+from app.models import Game, Player, PlayerGameStats, PlayerStats, Season, Team
 
 HEADER_STYLE = {
     "backgroundColor": "#343a40",
@@ -20,6 +22,26 @@ STAT_HEADERS = [
     "Season",
     "Team",
     "GP",
+    "G",
+    "A",
+    "PTS",
+    "S",
+    "S%",
+    "FOW",
+    "FOL",
+    "FO%",
+    "PIM",
+    "PD",
+    "BLK",
+    "HIT",
+    "xG",
+]
+
+
+GAME_LOG_HEADERS = [
+    "Date",
+    "Opp",
+    "Result",
     "G",
     "A",
     "PTS",
@@ -222,3 +244,152 @@ def register_player_detail_callbacks(dash_app):
             [thead, tbody],
             style={"overflowX": "auto", "width": "100%", "borderCollapse": "collapse"},
         )
+
+    @dash_app.callback(
+        Output("player-detail-game-log", "children"),
+        Input("player-detail-id", "data"),
+    )
+    def update_game_log(player_id):
+        if not player_id:
+            return html.Div()
+
+        player = Player.query.get(player_id)
+        if not player:
+            return html.Div()
+
+        OppTeam = aliased(Team)
+
+        results = (
+            PlayerGameStats.query.filter_by(player_id=player.playerId)
+            .join(Game, PlayerGameStats.game_id == Game.game_id)
+            .join(Team, PlayerGameStats.team_id == Team.id)
+            .outerjoin(
+                OppTeam,
+                case(
+                    (
+                        PlayerGameStats.team_id == Game.home_team_id,
+                        Game.away_team_id,
+                    ),
+                    else_=Game.home_team_id,
+                )
+                == OppTeam.id,
+            )
+            .add_columns(
+                Game.date,
+                Game.home_score,
+                Game.away_score,
+                Game.game_outcome,
+                Game.home_team_id,
+                OppTeam.name.label("opp_name"),
+                OppTeam.logo.label("opp_logo"),
+                OppTeam.id.label("opp_id"),
+            )
+            .order_by(Game.date.desc())
+            .all()
+        )
+
+        if not results:
+            return html.Div()
+
+        header_cells = [html.Th(h, style=HEADER_STYLE) for h in GAME_LOG_HEADERS]
+        thead = html.Thead(html.Tr(header_cells))
+
+        rows = []
+        for i, (
+            pgs,
+            game_date,
+            home_score,
+            away_score,
+            game_outcome,
+            home_team_id,
+            opp_name,
+            opp_logo,
+            opp_id,
+        ) in enumerate(results):
+            row_style = (
+                {"backgroundColor": "rgb(245, 245, 245)"}
+                if i % 2 == 1
+                else {"backgroundColor": "rgb(255, 255, 255)"}
+            )
+
+            # Determine result
+            is_home = pgs.team_id == home_team_id
+            player_score = home_score if is_home else away_score
+            opp_score = away_score if is_home else home_score
+            outcome_str = (game_outcome or "").lower()
+            if player_score > opp_score:
+                result = f"W {player_score}-{opp_score}"
+            elif "_ot_" in outcome_str:
+                result = f"OTL {opp_score}-{player_score}"
+            elif "_so_" in outcome_str:
+                result = f"SOL {opp_score}-{player_score}"
+            else:
+                result = f"L {opp_score}-{player_score}"
+
+            # Opponent cell with logo + name
+            opp_children = []
+            if opp_logo:
+                opp_children.append(
+                    html.Img(
+                        src=opp_logo,
+                        style={
+                            "width": "24px",
+                            "height": "24px",
+                            "verticalAlign": "middle",
+                        },
+                    )
+                )
+            opp_children.append(
+                html.Span(
+                    opp_name or "",
+                    style={"paddingLeft": "8px", "verticalAlign": "middle"},
+                )
+            )
+            opp_cell = html.A(
+                html.Div(
+                    opp_children,
+                    style={"display": "flex", "alignItems": "center"},
+                ),
+                href=f"/team/{opp_id}",
+                className="team-link",
+                style={
+                    "display": "flex",
+                    "alignItems": "center",
+                    "padding": "4px 8px",
+                },
+            )
+
+            date_str = game_date.strftime("%Y-%m-%d") if game_date else ""
+
+            values = [
+                pgs.goals,
+                pgs.assists,
+                pgs.points,
+                pgs.shots,
+                _fmt_pct(pgs.shooting_pct),
+                pgs.faceoffs_won,
+                pgs.faceoffs_lost,
+                _fmt_pct(pgs.faceoff_pct),
+                pgs.penalties,
+                pgs.penalties_drawn,
+                pgs.blocks,
+                pgs.checks,
+                pgs.xg,
+            ]
+            cells = [
+                html.Td(date_str, style=CELL_STYLE),
+                html.Td(
+                    opp_cell,
+                    style={**CELL_STYLE, "padding": "0", "textAlign": "left"},
+                ),
+                html.Td(result, style=CELL_STYLE),
+            ] + [html.Td(v, style=CELL_STYLE) for v in values]
+            rows.append(html.Tr(cells, style=row_style))
+
+        tbody = html.Tbody(rows)
+        table = html.Table(
+            [thead, tbody],
+            style={"overflowX": "auto", "width": "100%", "borderCollapse": "collapse"},
+        )
+
+        return html.Div([html.H4("Game Log"), table])

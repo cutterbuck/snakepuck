@@ -8,6 +8,7 @@ def create_player_detail_layout():
             dcc.Store(id="player-detail-id"),
             html.Div(id="player-detail-header", className="mb-3 mt-3"),
             html.Div(id="player-detail-stats"),
+            html.Div(id="player-detail-game-log", className="mt-4"),
         ],
         fluid=True,
     )

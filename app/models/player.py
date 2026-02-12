@@ -24,6 +24,9 @@ class Player(db.Model):
     player_stats = db.relationship(
         "PlayerStats", back_populates="player", lazy="dynamic"
     )
+    player_game_stats = db.relationship(
+        "PlayerGameStats", back_populates="player", lazy="dynamic"
+    )
 
     def __repr__(self):
         return f"<Player {self.firstName} {self.lastName}>"
