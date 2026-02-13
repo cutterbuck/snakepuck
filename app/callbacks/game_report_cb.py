@@ -2,7 +2,7 @@ from dash import ALL, Input, Output, State, ctx, dcc, html
 from sqlalchemy import case
 from sqlalchemy.orm import aliased
 
-from app.models import Game, Player, PlayerGameStats, Stint, Team
+from app.models import Event, Game, Player, PlayerGameStats, Stint, Team, Tracking
 from app.utils.rink import create_rink_figure
 
 HEADER_STYLE = {
@@ -340,6 +340,21 @@ def register_game_report_callbacks(dash_app):
         if not stints:
             return html.Div("No stints found.", style={"color": "#666"})
 
+        # Find which game_stints have event data for this player
+        stints_with_events = set(
+            row.game_stint
+            for row in (
+                Event.query.filter_by(
+                    game_id=game_id,
+                    player_id=player.playerId,
+                )
+                .with_entities(Event.game_stint)
+                .distinct()
+                .all()
+            )
+            if row.game_stint is not None
+        )
+
         header_cells = [
             html.Th(
                 h,
@@ -357,11 +372,13 @@ def register_game_report_callbacks(dash_app):
         rows = []
         for i, stint in enumerate(stints):
             is_selected = stint.id == selected_stint
-            row_style = (
+            has_tracking = stint.game_stint in stints_with_events
+            row_bg = (
                 {"backgroundColor": "rgb(245, 245, 245)"}
                 if i % 2 == 1
                 else {"backgroundColor": "rgb(255, 255, 255)"}
             )
+            row_style = {**row_bg, "fontWeight": "bold"} if has_tracking else row_bg
             cls = "stint-row selected" if is_selected else "stint-row"
             cells = [
                 html.Td(stint.period_time_start or "", style=CELL_STYLE),
@@ -409,15 +426,77 @@ def register_game_report_callbacks(dash_app):
         Output("game-report-rink", "children"),
         Input("game-report-player-id", "data"),
         Input("game-report-game-id", "data"),
+        Input("game-report-selected-stint", "data"),
     )
-    def update_game_report_rink(player_id, game_id):
+    def update_game_report_rink(player_id, game_id, selected_stint):
         if not player_id or not game_id:
             return html.Div()
 
         fig = create_rink_figure()
 
+        # If a stint is selected, overlay tracking data
+        if selected_stint:
+            player = Player.query.get(player_id)
+            if player:
+                stint = Stint.query.get(selected_stint)
+                if stint:
+                    # Get sl_event_ids for this stint via Events
+                    event_ids = (
+                        Event.query.filter_by(
+                            game_id=stint.game_id,
+                            player_id=player.playerId,
+                            game_stint=stint.game_stint,
+                        )
+                        .with_entities(Event.sl_event_id)
+                        .all()
+                    )
+                    sl_ids = [e.sl_event_id for e in event_ids if e.sl_event_id]
+
+                    if sl_ids:
+                        # Get tracking positions for these events
+                        tracking_rows = Tracking.query.filter(
+                            Tracking.game_id == stint.game_id,
+                            Tracking.player_id == player.playerId,
+                            Tracking.sl_event_id.in_(sl_ids),
+                        ).all()
+
+                        if tracking_rows:
+                            tx = [
+                                t.tracking_x
+                                for t in tracking_rows
+                                if t.tracking_x is not None
+                            ]
+                            ty = [
+                                t.tracking_y
+                                for t in tracking_rows
+                                if t.tracking_y is not None
+                            ]
+
+                            if tx and ty:
+                                import plotly.graph_objects as go
+
+                                fig.add_trace(
+                                    go.Scatter(
+                                        x=tx,
+                                        y=ty,
+                                        mode="markers",
+                                        marker=dict(
+                                            size=10,
+                                            color="#0d6efd",
+                                            opacity=0.7,
+                                            line=dict(width=1, color="white"),
+                                        ),
+                                        hoverinfo="text",
+                                        text=[
+                                            f"({x:.1f}, {y:.1f})"
+                                            for x, y in zip(tx, ty)
+                                        ],
+                                        showlegend=False,
+                                    )
+                                )
+
         return dcc.Graph(
             figure=fig,
-            config={"staticPlot": True},
+            config={"displayModeBar": False},
             style={"width": "100%"},
         )
