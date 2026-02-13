@@ -7,6 +7,7 @@ Usage:
 import os
 
 import pandas as pd
+from sqlalchemy import case
 
 from app import create_app
 from app.extensions import db
@@ -347,8 +348,9 @@ def seed():
         existing_stint_count = Stint.query.count()
         if existing_stint_count == 0:
             print("Seeding stints...")
+            total_stints = len(stints_df)
             stint_records = []
-            for _, row in stints_df.iterrows():
+            for row_idx, (_, row) in enumerate(stints_df.iterrows(), 1):
                 stint_records.append(
                     Stint(
                         game_id=row["game_id"],
@@ -392,10 +394,12 @@ def seed():
                 if len(stint_records) >= 5000:
                     db.session.bulk_save_objects(stint_records)
                     db.session.flush()
+                    print(f"  Stints: {row_idx}/{total_stints} rows")
                     stint_records = []
             if stint_records:
                 db.session.bulk_save_objects(stint_records)
                 db.session.flush()
+            print(f"  Stints: {total_stints}/{total_stints} rows")
             print(f"Seeded stints")
         else:
             print(f"Stints already seeded ({existing_stint_count} rows)")
@@ -405,8 +409,9 @@ def seed():
         if existing_event_count == 0:
             print("Seeding events...")
             events_df = pd.read_parquet(os.path.join(DATA_DIR, "events.parquet"))
+            total_events = len(events_df)
             event_records = []
-            for _, row in events_df.iterrows():
+            for row_idx, (_, row) in enumerate(events_df.iterrows(), 1):
                 event_records.append(
                     Event(
                         game_id=row["game_id"],
@@ -473,10 +478,12 @@ def seed():
                 if len(event_records) >= 5000:
                     db.session.bulk_save_objects(event_records)
                     db.session.flush()
+                    print(f"  Events: {row_idx}/{total_events} rows")
                     event_records = []
             if event_records:
                 db.session.bulk_save_objects(event_records)
                 db.session.flush()
+            print(f"  Events: {total_events}/{total_events} rows")
             print(f"Seeded events")
         else:
             print(f"Events already seeded ({existing_event_count} rows)")
@@ -486,8 +493,9 @@ def seed():
         if existing_tracking_count == 0:
             print("Seeding tracking...")
             tracking_df = pd.read_parquet(os.path.join(DATA_DIR, "tracking.parquet"))
+            total_tracking = len(tracking_df)
             tracking_records = []
-            for _, row in tracking_df.iterrows():
+            for row_idx, (_, row) in enumerate(tracking_df.iterrows(), 1):
                 tracking_records.append(
                     Tracking(
                         game_id=row["game_id"],
@@ -523,10 +531,12 @@ def seed():
                 if len(tracking_records) >= 5000:
                     db.session.bulk_save_objects(tracking_records)
                     db.session.flush()
+                    print(f"  Tracking: {row_idx}/{total_tracking} rows")
                     tracking_records = []
             if tracking_records:
                 db.session.bulk_save_objects(tracking_records)
                 db.session.flush()
+            print(f"  Tracking: {total_tracking}/{total_tracking} rows")
             print("Seeded tracking")
         else:
             print(f"Tracking already seeded ({existing_tracking_count} rows)")
@@ -674,94 +684,99 @@ def seed():
         if existing_pgs_count == 0:
             print("Computing player game stats...")
             pgs_records = []
-            for (pid,) in player_ids_with_events:
-                # Distinct (game_id, team_abbr) pairs from stints
-                game_team_pairs = (
+            total_players = len(player_ids_with_events)
+            for idx, (pid,) in enumerate(player_ids_with_events, 1):
+                if idx % 50 == 0 or idx == total_players:
+                    print(
+                        f"  Player game stats: {idx}/{total_players} players processed"
+                    )
+
+                # Single aggregation query: all stats for all games in one pass
+                game_stats = (
+                    db.session.query(
+                        Event.game_id,
+                        Event.team_abbr,
+                        db.func.count(case((Event.event_type == "goal", 1))).label(
+                            "goals"
+                        ),
+                        db.func.count(case((Event.event_type == "assist", 1))).label(
+                            "assists"
+                        ),
+                        db.func.count(
+                            case((Event.event_type.in_(["shot", "goal"]), 1))
+                        ).label("shots"),
+                        db.func.count(
+                            case(
+                                (
+                                    db.and_(
+                                        Event.event_type == "faceoff",
+                                        Event.outcome == "successful",
+                                    ),
+                                    1,
+                                )
+                            )
+                        ).label("fow"),
+                        db.func.count(
+                            case(
+                                (
+                                    db.and_(
+                                        Event.event_type == "faceoff",
+                                        Event.outcome == "failed",
+                                    ),
+                                    1,
+                                )
+                            )
+                        ).label("fol"),
+                        db.func.count(case((Event.event_type == "penalty", 1))).label(
+                            "penalties"
+                        ),
+                        db.func.count(
+                            case((Event.event_type == "penaltydrawn", 1))
+                        ).label("penalties_drawn"),
+                        db.func.count(case((Event.event_type == "block", 1))).label(
+                            "blocks"
+                        ),
+                        db.func.count(case((Event.event_type == "check", 1))).label(
+                            "checks"
+                        ),
+                        db.func.coalesce(
+                            db.func.sum(case((Event.xg.isnot(None), Event.xg))),
+                            0.0,
+                        ).label("xg"),
+                    )
+                    .filter(Event.player_id == pid)
+                    .group_by(Event.game_id, Event.team_abbr)
+                    .all()
+                )
+
+                # Filter to only (game, team) pairs where the player had stints
+                player_game_teams = set(
                     db.session.query(Stint.game_id, Stint.team_abbr)
                     .filter(Stint.player_id == pid, Stint.team_abbr.isnot(None))
                     .distinct()
                     .all()
                 )
-                for gid, team_abbr in game_team_pairs:
+
+                for row in game_stats:
+                    gid = row.game_id
+                    team_abbr = row.team_abbr
+                    if (gid, team_abbr) not in player_game_teams:
+                        continue
                     tid = abbr_to_team_id.get(team_abbr)
                     if not tid:
                         continue
 
-                    goals = Event.query.filter_by(
-                        player_id=pid,
-                        game_id=gid,
-                        event_type="goal",
-                        team_abbr=team_abbr,
-                    ).count()
-                    assists = Event.query.filter_by(
-                        player_id=pid,
-                        game_id=gid,
-                        event_type="assist",
-                        team_abbr=team_abbr,
-                    ).count()
-                    shot_count = Event.query.filter_by(
-                        player_id=pid,
-                        game_id=gid,
-                        event_type="shot",
-                        team_abbr=team_abbr,
-                    ).count()
-                    faceoffs_won = Event.query.filter(
-                        Event.player_id == pid,
-                        Event.game_id == gid,
-                        Event.event_type == "faceoff",
-                        Event.outcome == "successful",
-                        Event.team_abbr == team_abbr,
-                    ).count()
-                    faceoffs_lost = Event.query.filter(
-                        Event.player_id == pid,
-                        Event.game_id == gid,
-                        Event.event_type == "faceoff",
-                        Event.outcome == "failed",
-                        Event.team_abbr == team_abbr,
-                    ).count()
-                    penalties = Event.query.filter_by(
-                        player_id=pid,
-                        game_id=gid,
-                        event_type="penalty",
-                        team_abbr=team_abbr,
-                    ).count()
-                    penalties_drawn = Event.query.filter_by(
-                        player_id=pid,
-                        game_id=gid,
-                        event_type="penaltydrawn",
-                        team_abbr=team_abbr,
-                    ).count()
-                    blocks = Event.query.filter_by(
-                        player_id=pid,
-                        game_id=gid,
-                        event_type="block",
-                        team_abbr=team_abbr,
-                    ).count()
-                    checks = Event.query.filter_by(
-                        player_id=pid,
-                        game_id=gid,
-                        event_type="check",
-                        team_abbr=team_abbr,
-                    ).count()
-                    xg_result = (
-                        db.session.query(db.func.sum(Event.xg))
-                        .filter(
-                            Event.player_id == pid,
-                            Event.game_id == gid,
-                            Event.xg.isnot(None),
-                            Event.team_abbr == team_abbr,
-                        )
-                        .scalar()
-                    )
-                    total_xg = round(float(xg_result), 3) if xg_result else 0.0
-                    total_shots = shot_count + goals
+                    goals = row.goals
+                    assists = row.assists
+                    total_shots = row.shots
+                    fow = row.fow
+                    fol = row.fol
+                    total_xg = round(float(row.xg), 3)
                     shooting_pct = (
                         round(goals / total_shots, 3) if total_shots > 0 else None
                     )
-                    total_fo = faceoffs_won + faceoffs_lost
-                    faceoff_pct = (
-                        round(faceoffs_won / total_fo, 3) if total_fo > 0 else None
-                    )
+                    total_fo = fow + fol
+                    faceoff_pct = round(fow / total_fo, 3) if total_fo > 0 else None
 
                     pgs_records.append(
                         PlayerGameStats(
@@ -774,13 +789,13 @@ def seed():
                             points=goals + assists,
                             shots=total_shots,
                             shooting_pct=shooting_pct,
-                            faceoffs_won=faceoffs_won,
-                            faceoffs_lost=faceoffs_lost,
+                            faceoffs_won=fow,
+                            faceoffs_lost=fol,
                             faceoff_pct=faceoff_pct,
-                            penalties=penalties,
-                            penalties_drawn=penalties_drawn,
-                            blocks=blocks,
-                            checks=checks,
+                            penalties=row.penalties,
+                            penalties_drawn=row.penalties_drawn,
+                            blocks=row.blocks,
+                            checks=row.checks,
                             xg=total_xg,
                         )
                     )
