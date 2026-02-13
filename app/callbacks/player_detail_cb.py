@@ -1,5 +1,5 @@
 import dash_bootstrap_components as dbc
-from dash import Input, Output, dcc, html
+from dash import ALL, Input, Output, State, ctx, dcc, html
 from sqlalchemy import case
 from sqlalchemy.orm import aliased
 
@@ -88,13 +88,14 @@ def register_player_detail_callbacks(dash_app):
         if not player:
             return html.H2("Player not found")
 
-        # Get primary team (most games played) via PlayerStats
-        ps = (
-            PlayerStats.query.filter_by(player_id=player.playerId)
-            .order_by(PlayerStats.games_played.desc())
+        # Get most recent team via the player's latest game
+        latest_pgs = (
+            PlayerGameStats.query.filter_by(player_id=player.playerId)
+            .join(Game, PlayerGameStats.game_id == Game.game_id)
+            .order_by(Game.date.desc())
             .first()
         )
-        team = ps.team if ps else None
+        team = latest_pgs.team if latest_pgs else None
 
         children = []
         if team and team.logo:
@@ -280,9 +281,11 @@ def register_player_detail_callbacks(dash_app):
                 Game.away_score,
                 Game.game_outcome,
                 Game.home_team_id,
+                Team.logo.label("team_logo"),
                 OppTeam.name.label("opp_name"),
                 OppTeam.logo.label("opp_logo"),
                 OppTeam.id.label("opp_id"),
+                OppTeam.abbrev.label("opp_abbrev"),
             )
             .order_by(Game.date.desc())
             .all()
@@ -302,9 +305,11 @@ def register_player_detail_callbacks(dash_app):
             away_score,
             game_outcome,
             home_team_id,
+            team_logo,
             opp_name,
             opp_logo,
             opp_id,
+            opp_abbrev,
         ) in enumerate(results):
             row_style = (
                 {"backgroundColor": "rgb(245, 245, 245)"}
@@ -326,8 +331,27 @@ def register_player_detail_callbacks(dash_app):
             else:
                 result = f"L {opp_score}-{player_score}"
 
-            # Opponent cell with logo + name
+            # Opponent cell: player's team logo, vs./@, opp logo + abbreviation
+            prefix = "vs." if is_home else "@"
             opp_children = []
+            if team_logo:
+                opp_children.append(
+                    html.Img(
+                        src=team_logo,
+                        style={
+                            "width": "24px",
+                            "height": "24px",
+                            "verticalAlign": "middle",
+                            "marginRight": "6px",
+                        },
+                    )
+                )
+            opp_children.append(
+                html.Span(
+                    prefix,
+                    style={"marginRight": "6px", "verticalAlign": "middle"},
+                ),
+            )
             if opp_logo:
                 opp_children.append(
                     html.Img(
@@ -341,17 +365,12 @@ def register_player_detail_callbacks(dash_app):
                 )
             opp_children.append(
                 html.Span(
-                    opp_name or "",
-                    style={"paddingLeft": "8px", "verticalAlign": "middle"},
+                    opp_abbrev or "",
+                    style={"paddingLeft": "6px", "verticalAlign": "middle"},
                 )
             )
-            opp_cell = html.A(
-                html.Div(
-                    opp_children,
-                    style={"display": "flex", "alignItems": "center"},
-                ),
-                href=f"/team/{opp_id}",
-                className="team-link",
+            opp_cell = html.Div(
+                opp_children,
                 style={
                     "display": "flex",
                     "alignItems": "center",
@@ -384,7 +403,15 @@ def register_player_detail_callbacks(dash_app):
                 ),
                 html.Td(result, style=CELL_STYLE),
             ] + [html.Td(v, style=CELL_STYLE) for v in values]
-            rows.append(html.Tr(cells, style=row_style))
+            rows.append(
+                html.Tr(
+                    cells,
+                    style=row_style,
+                    className="game-log-row",
+                    id={"type": "game-log-row", "index": f"{player_id}_{pgs.game_id}"},
+                    n_clicks=0,
+                )
+            )
 
         tbody = html.Tbody(rows)
         table = html.Table(
@@ -393,3 +420,17 @@ def register_player_detail_callbacks(dash_app):
         )
 
         return html.Div([html.H4("Game Log"), table])
+
+    @dash_app.callback(
+        Output("url", "pathname", allow_duplicate=True),
+        Input({"type": "game-log-row", "index": ALL}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def navigate_to_game_report(n_clicks):
+        if not ctx.triggered_id or not any(n for n in n_clicks if n):
+            from dash.exceptions import PreventUpdate
+
+            raise PreventUpdate
+        row_id = ctx.triggered_id["index"]
+        player_id, game_id = row_id.split("_", 1)
+        return f"/player/{player_id}/game/{game_id}"

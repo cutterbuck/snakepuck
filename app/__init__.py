@@ -76,6 +76,7 @@ def create_app():
 </html>"""
 
     # Import layouts
+    from app.layouts.game_report import create_game_report_layout
     from app.layouts.navbar import create_navbar
     from app.layouts.player_detail import create_player_detail_layout
     from app.layouts.sample_data import create_sample_data_layout
@@ -101,6 +102,8 @@ def create_app():
             return create_sample_data_layout()
         elif pathname and pathname.startswith("/team/"):
             return create_team_detail_layout()
+        elif pathname and pathname.startswith("/player/") and "/game/" in pathname:
+            return create_game_report_layout()
         elif pathname and pathname.startswith("/player/"):
             return create_player_detail_layout()
         else:

@@ -8,3 +8,48 @@
     text-decoration: underline;
     color: #0d6efd;
 }
+
+.game-log-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.game-log-row:hover {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+}
+
+.stint-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.stint-row:hover {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+}
+
+.stint-row.selected {
+    background-color: rgba(13, 110, 253, 0.2) !important;
+}
+
+.stints-scroll-container {
+    overflow-y: auto;
+}
+
+/* Always show scrollbar */
+.stints-scroll-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.stints-scroll-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.stints-scroll-container::-webkit-scrollbar-thumb {
+    background: #aaa;
+    border-radius: 4px;
+}
+
+.stints-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #888;
+}
