@@ -10,8 +10,8 @@ class Stint(db.Model):
         db.String(36), db.ForeignKey("players.playerId"), nullable=False
     )
     period = db.Column(db.Integer, nullable=True)
-    period_time_start = db.Column(db.String(20), nullable=True)
-    period_time_end = db.Column(db.String(20), nullable=True)
+    period_time_start = db.Column(db.Float, nullable=True)
+    period_time_end = db.Column(db.Float, nullable=True)
     game_stint = db.Column(db.Integer, nullable=True)
     n_home_skaters = db.Column(db.Integer, nullable=True)
     n_away_skaters = db.Column(db.Integer, nullable=True)

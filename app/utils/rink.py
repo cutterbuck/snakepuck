@@ -150,8 +150,14 @@ def _crease_points(cx, side=1):
     return xs, ys
 
 
-def create_rink_figure():
-    """Create a Plotly figure of an NHL hockey rink (bird's-eye view)."""
+def create_rink_figure(center_logo_url=None):
+    """Create a Plotly figure of an NHL hockey rink (bird's-eye view).
+
+    Parameters
+    ----------
+    center_logo_url : str, optional
+        URL for a team logo to display at center ice.
+    """
     fig = go.Figure()
 
     half_w = RINK_WIDTH / 2
@@ -298,6 +304,22 @@ def create_rink_figure():
             line=dict(color=RED_LINE, width=1.5),
         )
 
+    # --- Center-ice logo ---
+    if center_logo_url:
+        fig.add_layout_image(
+            source=center_logo_url,
+            xref="x",
+            yref="y",
+            x=0,
+            y=0,
+            xanchor="center",
+            yanchor="middle",
+            sizex=22,
+            sizey=22,
+            opacity=0.3,
+            layer="above",
+        )
+
     # --- Layout ---
     fig.update_layout(
         xaxis=dict(
@@ -316,8 +338,14 @@ def create_rink_figure():
         ),
         plot_bgcolor="white",
         paper_bgcolor="white",
-        margin=dict(l=10, r=10, t=10, b=10),
+        margin=dict(l=10, r=150, t=10, b=10),
         height=400,
+        legend=dict(
+            x=1.02,
+            y=1,
+            xanchor="left",
+            yanchor="top",
+        ),
     )
 
     return fig

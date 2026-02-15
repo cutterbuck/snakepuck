@@ -10,7 +10,7 @@ class Event(db.Model):
         db.String(36), db.ForeignKey("players.playerId"), nullable=True
     )
     period = db.Column(db.Integer, nullable=True)
-    period_time = db.Column(db.String(20), nullable=True)
+    period_time = db.Column(db.Float, nullable=True)
     game_stint = db.Column(db.Integer, nullable=True)
     sl_event_id = db.Column(db.String(36), nullable=True, index=True)
     sequence_id = db.Column(db.Integer, nullable=True)

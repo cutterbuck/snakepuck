@@ -13,7 +13,7 @@ class Team(db.Model):
     abbrev = db.Column(db.String(10), nullable=False)
     name = db.Column(db.String(120), nullable=True)
     logo = db.Column(db.String(255), nullable=True)
-    source_team_id = db.Column(db.Integer, nullable=True)
+    source_team_id = db.Column(db.String(36), nullable=True)
 
     __table_args__ = (
         db.UniqueConstraint("organization_id", "season_id", name="uq_org_season"),

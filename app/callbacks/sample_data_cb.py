@@ -148,7 +148,7 @@ def _build_events_table():
                 "game_id": e.game_id,
                 "player_id": e.player_id,
                 "period": e.period,
-                "period_time": f"{float(e.period_time):.2f}"
+                "period_time": f"{e.period_time:.2f}"
                 if e.period_time is not None
                 else None,
                 "event_type": e.event_type,

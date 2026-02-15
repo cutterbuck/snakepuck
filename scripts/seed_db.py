@@ -358,10 +358,10 @@ def seed():
                         period=int(row["period"])
                         if pd.notna(row.get("period"))
                         else None,
-                        period_time_start=str(row["period_time_start"])
+                        period_time_start=float(row["period_time_start"])
                         if pd.notna(row.get("period_time_start"))
                         else None,
-                        period_time_end=str(row["period_time_end"])
+                        period_time_end=float(row["period_time_end"])
                         if pd.notna(row.get("period_time_end"))
                         else None,
                         game_stint=int(row["game_stint"])
@@ -421,7 +421,7 @@ def seed():
                         period=int(row["period"])
                         if pd.notna(row.get("period"))
                         else None,
-                        period_time=str(row["period_time"])
+                        period_time=float(row["period_time"])
                         if pd.notna(row.get("period_time"))
                         else None,
                         game_stint=int(row["game_stint"])
