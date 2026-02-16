@@ -21,6 +21,7 @@ class Stint(db.Model):
     away_score = db.Column(db.Integer, nullable=True)
     source_team_id = db.Column(db.String(36), nullable=True)
     team_abbr = db.Column(db.String(10), nullable=True)
+    shift = db.Column(db.Integer, nullable=True)
 
     game = db.relationship("Game", back_populates="stints")
     player = db.relationship("Player", back_populates="stints")

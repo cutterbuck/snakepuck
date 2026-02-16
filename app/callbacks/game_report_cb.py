@@ -5,6 +5,14 @@ from sqlalchemy.orm import aliased
 from app.models import Event, Game, Player, PlayerGameStats, Stint, Team, Tracking
 from app.utils.rink import create_rink_figure
 
+
+def _seconds_to_mmss(seconds):
+    """Convert seconds (float) to M:SS format."""
+    total = int(seconds)
+    m, s = divmod(total, 60)
+    return f"{m}:{s:02d}"
+
+
 HEADER_STYLE = {
     "backgroundColor": "#343a40",
     "color": "white",
@@ -226,6 +234,7 @@ def register_game_report_callbacks(dash_app):
         return html.Div([table], className="mt-3")
 
     STINT_HEADERS = [
+        "Shift",
         "Start",
         "End",
         "Home Skaters",
@@ -319,6 +328,7 @@ def register_game_report_callbacks(dash_app):
 
     @dash_app.callback(
         Output("game-report-stints", "children"),
+        Output("game-report-merged-stints", "data"),
         Input("game-report-player-id", "data"),
         Input("game-report-game-id", "data"),
         Input("game-report-stint-period", "data"),
@@ -326,34 +336,49 @@ def register_game_report_callbacks(dash_app):
     )
     def update_game_report_stints(player_id, game_id, selected_period, selected_stint):
         if not player_id or not game_id:
-            return html.Div()
+            return html.Div(), {}
 
         player = Player.query.get(player_id)
         if not player:
-            return html.Div()
+            return html.Div(), {}
 
-        query = Stint.query.filter_by(player_id=player.playerId, game_id=game_id)
-        if selected_period is not None:
-            query = query.filter_by(period=selected_period)
-        stints = query.order_by(Stint.game_stint).all()
-
-        if not stints:
-            return html.Div("No stints found.", style={"color": "#666"})
-
-        # Find which game_stints have event data for this player
-        stints_with_events = set(
-            row.game_stint
-            for row in (
-                Event.query.filter_by(
-                    game_id=game_id,
-                    player_id=player.playerId,
-                )
-                .with_entities(Event.game_stint)
-                .distinct()
-                .all()
-            )
-            if row.game_stint is not None
+        # Get ALL stints for this player/game
+        all_stints = (
+            Stint.query.filter_by(player_id=player.playerId, game_id=game_id)
+            .order_by(Stint.game_stint)
+            .all()
         )
+
+        if not all_stints:
+            return html.Div("No stints found.", style={"color": "#666"}), {}
+
+        # Group stints by shift number (from database)
+        from collections import OrderedDict
+
+        shift_groups = OrderedDict()
+        for s in all_stints:
+            shift_groups.setdefault(s.shift, []).append(s)
+        all_groups = list(shift_groups.values())
+
+        # Build merged stint mapping
+        merged_map = {}
+        for group in all_groups:
+            first = group[0]
+            last = group[-1]
+            merged_map[str(first.id)] = {
+                "period": first.period,
+                "period_time_start": first.period_time_start,
+                "period_time_end": last.period_time_end,
+            }
+
+        # Filter groups by selected period
+        if selected_period is not None:
+            groups = [g for g in all_groups if g[0].period == selected_period]
+        else:
+            groups = all_groups
+
+        if not groups:
+            return html.Div("No stints found.", style={"color": "#666"}), merged_map
 
         header_cells = [
             html.Th(
@@ -370,36 +395,38 @@ def register_game_report_callbacks(dash_app):
         thead = html.Thead(html.Tr(header_cells))
 
         rows = []
-        for i, stint in enumerate(stints):
-            is_selected = stint.id == selected_stint
-            has_tracking = stint.game_stint in stints_with_events
+        for i, group in enumerate(groups):
+            first = group[0]
+            last = group[-1]
+            is_selected = first.id == selected_stint
             row_bg = (
                 {"backgroundColor": "rgb(245, 245, 245)"}
                 if i % 2 == 1
                 else {"backgroundColor": "rgb(255, 255, 255)"}
             )
-            row_style = {**row_bg, "fontWeight": "bold"} if has_tracking else row_bg
+            row_style = row_bg
             cls = "stint-row selected" if is_selected else "stint-row"
             cells = [
+                html.Td(first.shift, style=CELL_STYLE),
                 html.Td(
-                    f"{stint.period_time_start:.2f}"
-                    if stint.period_time_start is not None
+                    _seconds_to_mmss(first.period_time_start)
+                    if first.period_time_start is not None
                     else "",
                     style=CELL_STYLE,
                 ),
                 html.Td(
-                    f"{stint.period_time_end:.2f}"
-                    if stint.period_time_end is not None
+                    _seconds_to_mmss(last.period_time_end)
+                    if last.period_time_end is not None
                     else "",
                     style=CELL_STYLE,
                 ),
-                html.Td(stint.n_home_skaters, style=CELL_STYLE),
-                html.Td(stint.n_away_skaters, style=CELL_STYLE),
-                html.Td("Yes" if stint.is_home_net_empty else "No", style=CELL_STYLE),
-                html.Td("Yes" if stint.is_away_net_empty else "No", style=CELL_STYLE),
+                html.Td(first.n_home_skaters, style=CELL_STYLE),
+                html.Td(first.n_away_skaters, style=CELL_STYLE),
+                html.Td("Yes" if first.is_home_net_empty else "No", style=CELL_STYLE),
+                html.Td("Yes" if first.is_away_net_empty else "No", style=CELL_STYLE),
                 html.Td(
-                    f"{stint.home_score}-{stint.away_score}"
-                    if stint.home_score is not None
+                    f"{first.home_score}-{first.away_score}"
+                    if first.home_score is not None
                     else "",
                     style=CELL_STYLE,
                 ),
@@ -409,7 +436,7 @@ def register_game_report_callbacks(dash_app):
                     cells,
                     style=row_style,
                     className=cls,
-                    id={"type": "stint-row", "index": stint.id},
+                    id={"type": "stint-row", "index": first.id},
                     n_clicks=0,
                 )
             )
@@ -423,13 +450,16 @@ def register_game_report_callbacks(dash_app):
             },
         )
 
-        return html.Div(
-            table,
-            className="stints-scroll-container",
-            style={
-                "maxHeight": "335px",
-                "overflowX": "auto",
-            },
+        return (
+            html.Div(
+                table,
+                className="stints-scroll-container",
+                style={
+                    "maxHeight": "335px",
+                    "overflowX": "auto",
+                },
+            ),
+            merged_map,
         )
 
     EVENT_COLORS = {
@@ -448,6 +478,7 @@ def register_game_report_callbacks(dash_app):
         Output("game-report-stint-events", "data"),
         Output("game-report-frame-slider", "max"),
         Output("game-report-frame-slider", "value"),
+        Output("game-report-frame-slider", "marks"),
         Output("game-report-frame-index", "data", allow_duplicate=True),
         Output("game-report-playback-controls", "style"),
         Output("game-report-interval", "disabled", allow_duplicate=True),
@@ -455,22 +486,35 @@ def register_game_report_callbacks(dash_app):
         Input("game-report-selected-stint", "data"),
         State("game-report-player-id", "data"),
         State("game-report-game-id", "data"),
+        State("game-report-merged-stints", "data"),
         prevent_initial_call=True,
     )
-    def prepare_stint_frames(selected_stint, player_id, game_id):
+    def prepare_stint_frames(selected_stint, player_id, game_id, merged_map):
         hidden = {"display": "none", "alignItems": "center", "marginTop": "8px"}
         visible = {"display": "flex", "alignItems": "center", "marginTop": "8px"}
 
         if not selected_stint or not player_id or not game_id:
-            return None, 0, 0, 0, hidden, True, "Play"
+            return None, 0, 0, None, 0, hidden, True, "Play"
 
         game = Game.query.filter_by(game_id=game_id).first()
         if not game:
-            return None, 0, 0, 0, hidden, True, "Play"
+            return None, 0, 0, None, 0, hidden, True, "Play"
 
-        stint = Stint.query.get(selected_stint)
-        if not stint:
-            return None, 0, 0, 0, hidden, True, "Play"
+        # Use merged time range if available, otherwise fall back to single stint
+        merged = (merged_map or {}).get(str(selected_stint))
+        if merged:
+            period = merged["period"]
+            time_start = merged["period_time_start"]
+            time_end = merged["period_time_end"]
+            stint_game_id = game_id
+        else:
+            stint = Stint.query.get(selected_stint)
+            if not stint:
+                return None, 0, 0, None, 0, hidden, True, "Play"
+            period = stint.period
+            time_start = stint.period_time_start
+            time_end = stint.period_time_end
+            stint_game_id = stint.game_id
 
         # Build logo map
         logo_map = {}
@@ -481,32 +525,34 @@ def register_game_report_callbacks(dash_app):
         if game.away_team and game.away_team.logo:
             logo_map[game.away_team.source_team_id] = game.away_team.logo
 
-        # Get all events during stint time window
+        # Get all events during merged stint time window
         all_events = (
             Event.query.filter(
-                Event.game_id == stint.game_id,
-                Event.period == stint.period,
-                Event.period_time >= stint.period_time_start,
-                Event.period_time <= stint.period_time_end,
+                Event.game_id == stint_game_id,
+                Event.period == period,
+                Event.period_time >= time_start,
+                Event.period_time <= time_end,
             )
             .order_by(Event.period_time)
             .all()
         )
 
-        # Get unique sl_event_ids preserving order
+        # Get unique sl_event_ids preserving order, with period_time
         seen = set()
         ordered_sl_ids = []
+        period_time_by_sl_id = {}
         for e in all_events:
             if e.sl_event_id and e.sl_event_id not in seen:
                 seen.add(e.sl_event_id)
                 ordered_sl_ids.append(e.sl_event_id)
+                period_time_by_sl_id[e.sl_event_id] = e.period_time
 
         if not ordered_sl_ids:
-            return None, 0, 0, 0, hidden, True, "Play"
+            return None, 0, 0, None, 0, hidden, True, "Play"
 
         # Get all tracking data for these events
         tracking_rows = Tracking.query.filter(
-            Tracking.game_id == stint.game_id,
+            Tracking.game_id == stint_game_id,
             Tracking.sl_event_id.in_(ordered_sl_ids),
             Tracking.player_id.isnot(None),
         ).all()
@@ -540,18 +586,25 @@ def register_game_report_callbacks(dash_app):
             frame_tracking = []
             for t in tracking_by_event.get(sl_id, []):
                 if t.tracking_x is not None and t.tracking_y is not None:
+                    last_name = ""
+                    full_name = t.player_name or ""
+                    if t.player and t.player.lastName:
+                        last_name = t.player.lastName
+                        full_name = f"{t.player.firstName} {t.player.lastName}"
                     frame_tracking.append(
                         {
                             "tracking_x": t.tracking_x,
                             "tracking_y": t.tracking_y,
                             "team_id": t.team_id,
-                            "player_name": t.player_name or "",
+                            "player_name": full_name,
+                            "last_name": last_name,
                         }
                     )
 
             frames.append(
                 {
                     "sl_event_id": sl_id,
+                    "period_time": period_time_by_sl_id.get(sl_id),
                     "events": frame_events,
                     "tracking": frame_tracking,
                 }
@@ -564,7 +617,26 @@ def register_game_report_callbacks(dash_app):
         }
 
         max_frame = len(frames) - 1
-        return stint_data, max_frame, 0, 0, visible, True, "Play"
+
+        # Build slider marks: show period time in minutes
+        # Only show a subset of marks to avoid clutter
+        total = len(frames)
+        if total <= 10:
+            mark_indices = range(total)
+        else:
+            step = max(1, total // 8)
+            mark_indices = list(range(0, total, step))
+            if total - 1 not in mark_indices:
+                mark_indices.append(total - 1)
+        marks = {}
+        for i in mark_indices:
+            pt = frames[i].get("period_time")
+            if pt is not None:
+                marks[i] = _seconds_to_mmss(pt)
+            else:
+                marks[i] = str(i)
+
+        return stint_data, max_frame, 0, marks, 0, visible, True, "Play"
 
     @dash_app.callback(
         Output("game-report-interval", "disabled"),
@@ -671,7 +743,7 @@ def register_game_report_callbacks(dash_app):
                         )
                     )
 
-            # Render tracking logos for this frame
+            # Render tracking logos and player names for this frame
             if frame.get("tracking"):
                 for t in frame["tracking"]:
                     logo = logo_map.get(t["team_id"])
@@ -687,6 +759,28 @@ def register_game_report_callbacks(dash_app):
                             sizex=5,
                             sizey=5,
                             layer="above",
+                        )
+
+                # Alternate label placement: cycle through below, above,
+                # right, left to spread labels out
+                placements = [
+                    {"xanchor": "center", "yanchor": "top", "dx": 0, "dy": -3.5},
+                    {"xanchor": "center", "yanchor": "bottom", "dx": 0, "dy": 3.5},
+                    {"xanchor": "left", "yanchor": "middle", "dx": 3.5, "dy": 0},
+                    {"xanchor": "right", "yanchor": "middle", "dx": -3.5, "dy": 0},
+                ]
+                for idx_t, t in enumerate(frame["tracking"]):
+                    last_name = t.get("last_name", "")
+                    if last_name:
+                        p = placements[idx_t % len(placements)]
+                        fig.add_annotation(
+                            x=t["tracking_x"] + p["dx"],
+                            y=t["tracking_y"] + p["dy"],
+                            text=last_name,
+                            showarrow=False,
+                            font=dict(size=8, color="#333"),
+                            xanchor=p["xanchor"],
+                            yanchor=p["yanchor"],
                         )
 
                 # Invisible scatter for hover

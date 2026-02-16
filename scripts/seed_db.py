@@ -401,6 +401,40 @@ def seed():
                 db.session.flush()
             print(f"  Stints: {total_stints}/{total_stints} rows")
             print(f"Seeded stints")
+
+            # Compute shift numbers for each player/game (skip goalies)
+            print("Computing shift numbers...")
+            pairs = (
+                db.session.query(Stint.player_id, Stint.game_id)
+                .join(Player, Player.playerId == Stint.player_id)
+                .filter(Player.position != "G")
+                .distinct()
+                .all()
+            )
+            for player_id, game_id in pairs:
+                stints = (
+                    Stint.query.filter_by(player_id=player_id, game_id=game_id)
+                    .order_by(Stint.game_stint)
+                    .all()
+                )
+                if not stints:
+                    continue
+                shift_num = 1
+                stints[0].shift = shift_num
+                for i in range(1, len(stints)):
+                    prev = stints[i - 1]
+                    curr = stints[i]
+                    if (
+                        prev.period_time_end is not None
+                        and curr.period_time_start is not None
+                        and prev.period_time_end == curr.period_time_start
+                    ):
+                        curr.shift = shift_num
+                    else:
+                        shift_num += 1
+                        curr.shift = shift_num
+            db.session.commit()
+            print("Computed shift numbers")
         else:
             print(f"Stints already seeded ({existing_stint_count} rows)")
 
