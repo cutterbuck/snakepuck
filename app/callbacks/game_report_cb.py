@@ -39,9 +39,15 @@ STAT_HEADERS = [
     "PD",
     "BLK",
     "HIT",
-    "ixG",
-    "oixGF",
-    "oixGA",
+    "Tot ixG",
+    "Tot oixGF",
+    "Tot oixGA",
+    "ES ixG",
+    "ES oixGF",
+    "ES oixGA",
+    "5v5 ixG",
+    "5v5 oixGF",
+    "5v5 oixGA",
 ]
 
 
@@ -211,9 +217,9 @@ def register_game_report_callbacks(dash_app):
         thead = html.Thead(html.Tr(header_cells))
 
         values = [
-            pgs.goals,
-            pgs.assists,
-            pgs.points,
+            pgs.tot_goals,
+            pgs.tot_assists,
+            pgs.tot_points,
             pgs.shots,
             _fmt_pct(pgs.shooting_pct),
             pgs.faceoffs_won,
@@ -223,9 +229,15 @@ def register_game_report_callbacks(dash_app):
             pgs.penalties_drawn,
             pgs.blocks,
             pgs.checks,
-            pgs.i_xg,
-            pgs.oi_xgf,
-            pgs.oi_xga,
+            pgs.tot_i_xg,
+            pgs.tot_oi_xgf,
+            pgs.tot_oi_xga,
+            pgs.es_i_xg,
+            pgs.es_oi_xgf,
+            pgs.es_oi_xga,
+            pgs.ev5_i_xg,
+            pgs.ev5_oi_xgf,
+            pgs.ev5_oi_xga,
         ]
         cells = [html.Td(v, style=CELL_STYLE) for v in values]
         row = html.Tr(cells, style={"backgroundColor": "rgb(255, 255, 255)"})
@@ -251,9 +263,15 @@ def register_game_report_callbacks(dash_app):
         "Home Net Empty",
         "Away Net Empty",
         "Score",
-        "ixG",
-        "oixGF",
-        "oixGA",
+        "Tot ixG",
+        "Tot oixGF",
+        "Tot oixGA",
+        "ES ixG",
+        "ES oixGF",
+        "ES oixGA",
+        "5v5 ixG",
+        "5v5 oixGF",
+        "5v5 oixGA",
     ]
 
     PERIOD_BTN_BASE = {
@@ -440,10 +458,10 @@ def register_game_report_callbacks(dash_app):
             )
             row_style = row_bg
             cls = "stint-row selected" if is_selected else "stint-row"
+
             # Aggregate xG across all stints in this shift
-            shift_ixg = sum(s.i_xg or 0 for s in group)
-            shift_oixgf = sum(s.oi_xgf or 0 for s in group)
-            shift_oixga = sum(s.oi_xga or 0 for s in group)
+            def _sum_field(field):
+                return round(sum(getattr(s, field) or 0 for s in group), 3)
 
             cells = [
                 html.Td(first.shift, style=CELL_STYLE),
@@ -469,9 +487,15 @@ def register_game_report_callbacks(dash_app):
                     else "",
                     style=CELL_STYLE,
                 ),
-                html.Td(round(shift_ixg, 3), style=CELL_STYLE),
-                html.Td(round(shift_oixgf, 3), style=CELL_STYLE),
-                html.Td(round(shift_oixga, 3), style=CELL_STYLE),
+                html.Td(_sum_field("tot_i_xg"), style=CELL_STYLE),
+                html.Td(_sum_field("tot_oi_xgf"), style=CELL_STYLE),
+                html.Td(_sum_field("tot_oi_xga"), style=CELL_STYLE),
+                html.Td(_sum_field("es_i_xg"), style=CELL_STYLE),
+                html.Td(_sum_field("es_oi_xgf"), style=CELL_STYLE),
+                html.Td(_sum_field("es_oi_xga"), style=CELL_STYLE),
+                html.Td(_sum_field("ev5_i_xg"), style=CELL_STYLE),
+                html.Td(_sum_field("ev5_oi_xgf"), style=CELL_STYLE),
+                html.Td(_sum_field("ev5_oi_xga"), style=CELL_STYLE),
             ]
             rows.append(
                 html.Tr(
@@ -525,9 +549,15 @@ def register_game_report_callbacks(dash_app):
                             else "",
                             style=sub_cell_style,
                         ),
-                        html.Td(stint.i_xg or 0, style=sub_cell_style),
-                        html.Td(stint.oi_xgf or 0, style=sub_cell_style),
-                        html.Td(stint.oi_xga or 0, style=sub_cell_style),
+                        html.Td(stint.tot_i_xg or 0, style=sub_cell_style),
+                        html.Td(stint.tot_oi_xgf or 0, style=sub_cell_style),
+                        html.Td(stint.tot_oi_xga or 0, style=sub_cell_style),
+                        html.Td(stint.es_i_xg or 0, style=sub_cell_style),
+                        html.Td(stint.es_oi_xgf or 0, style=sub_cell_style),
+                        html.Td(stint.es_oi_xga or 0, style=sub_cell_style),
+                        html.Td(stint.ev5_i_xg or 0, style=sub_cell_style),
+                        html.Td(stint.ev5_oi_xgf or 0, style=sub_cell_style),
+                        html.Td(stint.ev5_oi_xga or 0, style=sub_cell_style),
                     ]
                     rows.append(
                         html.Tr(

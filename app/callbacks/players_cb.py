@@ -40,7 +40,7 @@ def register_players_callbacks(dash_app):
                 Player.position,
                 Team.name.label("team_name"),
             )
-            .order_by(PlayerStats.points.desc(), PlayerStats.goals.desc())
+            .order_by(PlayerStats.tot_points.desc(), PlayerStats.tot_goals.desc())
         )
 
         results = query.all()
@@ -54,9 +54,9 @@ def register_players_callbacks(dash_app):
                     "age": ps.age,
                     "position": pos,
                     "gp": ps.games_played,
-                    "goals": ps.goals,
-                    "assists": ps.assists,
-                    "points": ps.points,
+                    "goals": ps.tot_goals,
+                    "assists": ps.tot_assists,
+                    "points": ps.tot_points,
                     "shots": ps.shots,
                     "shooting_pct": _fmt_pct(ps.shooting_pct),
                     "fow": ps.faceoffs_won,
@@ -66,10 +66,18 @@ def register_players_callbacks(dash_app):
                     "penalties_drawn": ps.penalties_drawn,
                     "blocks": ps.blocks,
                     "checks": ps.checks,
-                    "i_xg": ps.i_xg,
-                    "oi_xgf": ps.oi_xgf,
-                    "oi_xga": ps.oi_xga,
-                    "xg_percentage": _fmt_pct(ps.xg_percentage),
+                    "tot_i_xg": ps.tot_i_xg,
+                    "tot_oi_xgf": ps.tot_oi_xgf,
+                    "tot_oi_xga": ps.tot_oi_xga,
+                    "tot_xg_pct": _fmt_pct(ps.tot_xg_pct),
+                    "es_i_xg": ps.es_i_xg,
+                    "es_oi_xgf": ps.es_oi_xgf,
+                    "es_oi_xga": ps.es_oi_xga,
+                    "es_xg_pct": _fmt_pct(ps.es_xg_pct),
+                    "ev5_i_xg": ps.ev5_i_xg,
+                    "ev5_oi_xgf": ps.ev5_oi_xgf,
+                    "ev5_oi_xga": ps.ev5_oi_xga,
+                    "ev5_xg_pct": _fmt_pct(ps.ev5_xg_pct),
                 }
             )
         return rows

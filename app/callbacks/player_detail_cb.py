@@ -62,6 +62,22 @@ GAME_LOG_HEADERS = [
     "oixGA",
 ]
 
+SITUATIONS = [
+    ("tot", "All"),
+    ("es", "Even Strength"),
+    ("ev5", "5-on-5"),
+    ("pp", "Power Play"),
+    ("pk", "Short-Handed"),
+]
+
+SITUATION_BTN_BASE = {
+    "padding": "4px 12px",
+    "border": "1px solid #ccc",
+    "cursor": "pointer",
+    "fontSize": "14px",
+    "fontWeight": "bold",
+}
+
 
 def _fmt_pct(val):
     if val is None:
@@ -146,12 +162,77 @@ def register_player_detail_callbacks(dash_app):
         return html.Div(children, style={"display": "flex", "alignItems": "center"})
 
     @dash_app.callback(
-        Output("player-detail-stats", "children"),
+        Output("player-detail-situation-toggle", "children"),
         Input("player-detail-id", "data"),
+        Input("player-detail-situation", "data"),
     )
-    def update_stats(player_id):
+    def update_situation_toggle(player_id, selected_situation):
         if not player_id:
             return html.Div()
+
+        selected = selected_situation or "tot"
+        buttons = []
+        for idx, (value, label) in enumerate(SITUATIONS):
+            active = selected == value
+            if idx == 0:
+                radius = "4px 0 0 4px"
+            elif idx == len(SITUATIONS) - 1:
+                radius = "0 4px 4px 0"
+            else:
+                radius = "0"
+            style = {
+                **SITUATION_BTN_BASE,
+                "backgroundColor": "#0d6efd" if active else "#fff",
+                "color": "#fff" if active else "#333",
+                "borderRadius": radius,
+            }
+            buttons.append(
+                html.Button(
+                    label,
+                    id={"type": "situation-btn", "index": value},
+                    n_clicks=0,
+                    style=style,
+                )
+            )
+
+        return html.Div(
+            [
+                html.Span(
+                    "Situation:",
+                    style={
+                        "fontWeight": "bold",
+                        "marginRight": "8px",
+                        "fontSize": "14px",
+                    },
+                ),
+                html.Div(buttons, style={"display": "flex"}),
+            ],
+            style={"display": "flex", "alignItems": "center"},
+        )
+
+    @dash_app.callback(
+        Output("player-detail-situation", "data"),
+        Input({"type": "situation-btn", "index": ALL}, "n_clicks"),
+        State("player-detail-situation", "data"),
+        prevent_initial_call=True,
+    )
+    def toggle_situation(n_clicks, current_situation):
+        if not ctx.triggered_id or not any(n for n in n_clicks if n):
+            from dash.exceptions import PreventUpdate
+
+            raise PreventUpdate
+        return ctx.triggered_id["index"]
+
+    @dash_app.callback(
+        Output("player-detail-stats", "children"),
+        Input("player-detail-id", "data"),
+        Input("player-detail-situation", "data"),
+    )
+    def update_stats(player_id, situation=None):
+        if not player_id:
+            return html.Div()
+
+        prefix = situation or "tot"
 
         player = Player.query.get(player_id)
         if not player:
@@ -223,9 +304,9 @@ def register_player_detail_callbacks(dash_app):
             seen_seasons.add(season_name)
             values = [
                 ps.games_played,
-                ps.goals,
-                ps.assists,
-                ps.points,
+                getattr(ps, f"{prefix}_goals"),
+                getattr(ps, f"{prefix}_assists"),
+                getattr(ps, f"{prefix}_points"),
                 ps.shots,
                 _fmt_pct(ps.shooting_pct),
                 ps.faceoffs_won,
@@ -235,10 +316,10 @@ def register_player_detail_callbacks(dash_app):
                 ps.penalties_drawn,
                 ps.blocks,
                 ps.checks,
-                ps.i_xg,
-                ps.oi_xgf,
-                ps.oi_xga,
-                _fmt_pct(ps.xg_percentage),
+                getattr(ps, f"{prefix}_i_xg"),
+                getattr(ps, f"{prefix}_oi_xgf"),
+                getattr(ps, f"{prefix}_oi_xga"),
+                _fmt_pct(getattr(ps, f"{prefix}_xg_pct")),
             ]
             cells = [
                 html.Td(display_season, style=CELL_STYLE),
@@ -257,10 +338,13 @@ def register_player_detail_callbacks(dash_app):
     @dash_app.callback(
         Output("player-detail-game-log", "children"),
         Input("player-detail-id", "data"),
+        Input("player-detail-situation", "data"),
     )
-    def update_game_log(player_id):
+    def update_game_log(player_id, situation=None):
         if not player_id:
             return html.Div()
+
+        prefix = situation or "tot"
 
         player = Player.query.get(player_id)
         if not player:
@@ -345,7 +429,7 @@ def register_player_detail_callbacks(dash_app):
                 result = f"L {opp_score}-{player_score}"
 
             # Opponent cell: player's team logo, vs./@, opp logo + abbreviation
-            prefix = "vs." if is_home else "@"
+            opp_prefix = "vs." if is_home else "@"
             opp_children = []
             if team_logo:
                 opp_children.append(
@@ -361,7 +445,7 @@ def register_player_detail_callbacks(dash_app):
                 )
             opp_children.append(
                 html.Span(
-                    prefix,
+                    opp_prefix,
                     style={"marginRight": "6px", "verticalAlign": "middle"},
                 ),
             )
@@ -394,9 +478,9 @@ def register_player_detail_callbacks(dash_app):
             date_str = game_date.strftime("%Y-%m-%d") if game_date else ""
 
             values = [
-                pgs.goals,
-                pgs.assists,
-                pgs.points,
+                getattr(pgs, f"{prefix}_goals"),
+                getattr(pgs, f"{prefix}_assists"),
+                getattr(pgs, f"{prefix}_points"),
                 pgs.shots,
                 _fmt_pct(pgs.shooting_pct),
                 pgs.faceoffs_won,
@@ -406,9 +490,9 @@ def register_player_detail_callbacks(dash_app):
                 pgs.penalties_drawn,
                 pgs.blocks,
                 pgs.checks,
-                pgs.i_xg,
-                pgs.oi_xgf,
-                pgs.oi_xga,
+                getattr(pgs, f"{prefix}_i_xg"),
+                getattr(pgs, f"{prefix}_oi_xgf"),
+                getattr(pgs, f"{prefix}_oi_xga"),
             ]
             cells = [
                 html.Td(date_str, style=CELL_STYLE),

@@ -575,10 +575,31 @@ def seed():
         else:
             print(f"Tracking already seeded ({existing_tracking_count} rows)")
 
-        # --- Stint xG (i_xg, oi_xgf, oi_xga per stint) ---
-        print("Computing stint xG values...")
+        # --- Stint xG + GAP (per stint) ---
+        print("Computing stint xG and GAP values...")
         from collections import defaultdict
 
+        # Build game_id -> (home_abbr, away_abbr) mapping
+        from sqlalchemy.orm import aliased as sa_aliased
+
+        HomeTeam = sa_aliased(Team)
+        AwayTeam = sa_aliased(Team)
+        game_rows = (
+            db.session.query(
+                Game.game_id,
+                HomeTeam.abbrev,
+                AwayTeam.abbrev,
+            )
+            .join(HomeTeam, Game.home_team_id == HomeTeam.id)
+            .join(AwayTeam, Game.away_team_id == AwayTeam.id)
+            .all()
+        )
+        game_home_away = {}
+        for gid, home_abbr, away_abbr in game_rows:
+            game_home_away[gid] = (home_abbr, away_abbr)
+        del game_rows
+
+        # Load xG events
         xg_events = (
             db.session.query(
                 Event.game_id,
@@ -596,16 +617,35 @@ def seed():
             xg_by_game_period[(gid, period)].append((pt, team_abbr, xg, pid))
         del xg_events
 
+        # Load goal/assist events
+        gap_events = (
+            db.session.query(
+                Event.game_id,
+                Event.period,
+                Event.period_time,
+                Event.player_id,
+                Event.event_type,
+            )
+            .filter(Event.event_type.in_(["goal", "assist"]))
+            .all()
+        )
+        gap_by_game_period = defaultdict(list)
+        for gid, period, pt, pid, etype in gap_events:
+            gap_by_game_period[(gid, period)].append((pt, pid, etype))
+        del gap_events
+
         all_stints_for_xg = Stint.query.all()
         total_stints_xg = len(all_stints_for_xg)
         for idx, stint in enumerate(all_stints_for_xg, 1):
             if idx % 500 == 0 or idx == total_stints_xg:
                 print(
-                    f"  Stint xG: {idx}/{total_stints_xg} ({idx * 100 // total_stints_xg}%)"
+                    f"  Stint xG/GAP: {idx}/{total_stints_xg} ({idx * 100 // total_stints_xg}%)"
                 )
-            i_xg = 0.0
-            oi_xgf = 0.0
-            oi_xga = 0.0
+
+            # --- xG ---
+            tot_i_xg = 0.0
+            tot_oi_xgf = 0.0
+            tot_oi_xga = 0.0
             if (
                 stint.period_time_start is not None
                 and stint.period_time_end is not None
@@ -618,17 +658,88 @@ def seed():
                         and stint.period_time_start <= evt_time < stint.period_time_end
                     ):
                         if evt_team == stint.team_abbr:
-                            oi_xgf += evt_xg
+                            tot_oi_xgf += evt_xg
                             if evt_pid == stint.player_id:
-                                i_xg += evt_xg
+                                tot_i_xg += evt_xg
                         else:
-                            oi_xga += evt_xg
-            stint.i_xg = round(i_xg, 3)
-            stint.oi_xgf = round(oi_xgf, 3)
-            stint.oi_xga = round(oi_xga, 3)
+                            tot_oi_xga += evt_xg
+            stint.tot_i_xg = round(tot_i_xg, 3)
+            stint.tot_oi_xgf = round(tot_oi_xgf, 3)
+            stint.tot_oi_xga = round(tot_oi_xga, 3)
+
+            # --- GAP ---
+            tot_goals = 0
+            tot_assists = 0
+            if (
+                stint.period_time_start is not None
+                and stint.period_time_end is not None
+            ):
+                for evt_time, evt_pid, evt_type in gap_by_game_period.get(
+                    (stint.game_id, stint.period), []
+                ):
+                    if (
+                        evt_time is not None
+                        and evt_pid == stint.player_id
+                        and stint.period_time_start <= evt_time < stint.period_time_end
+                    ):
+                        if evt_type == "goal":
+                            tot_goals += 1
+                        elif evt_type == "assist":
+                            tot_assists += 1
+            tot_points = tot_goals + tot_assists
+            stint.tot_goals = tot_goals
+            stint.tot_assists = tot_assists
+            stint.tot_points = tot_points
+
+            # --- Situation flags ---
+            n_home = stint.n_home_skaters
+            n_away = stint.n_away_skaters
+            has_skaters = n_home is not None and n_away is not None
+
+            is_even = has_skaters and n_home == n_away
+            is_5v5 = is_even and n_home == 5
+
+            home_away = game_home_away.get(stint.game_id)
+            is_pp = False
+            is_pk = False
+            if has_skaters and home_away and stint.team_abbr:
+                is_home = stint.team_abbr == home_away[0]
+                player_sk = n_home if is_home else n_away
+                opp_sk = n_away if is_home else n_home
+                is_pp = player_sk > opp_sk
+                is_pk = player_sk < opp_sk
+
+            # xG situations
+            stint.es_i_xg = stint.tot_i_xg if is_even else 0.0
+            stint.es_oi_xgf = stint.tot_oi_xgf if is_even else 0.0
+            stint.es_oi_xga = stint.tot_oi_xga if is_even else 0.0
+            stint.ev5_i_xg = stint.tot_i_xg if is_5v5 else 0.0
+            stint.ev5_oi_xgf = stint.tot_oi_xgf if is_5v5 else 0.0
+            stint.ev5_oi_xga = stint.tot_oi_xga if is_5v5 else 0.0
+            stint.pp_i_xg = stint.tot_i_xg if is_pp else 0.0
+            stint.pp_oi_xgf = stint.tot_oi_xgf if is_pp else 0.0
+            stint.pp_oi_xga = stint.tot_oi_xga if is_pp else 0.0
+            stint.pk_i_xg = stint.tot_i_xg if is_pk else 0.0
+            stint.pk_oi_xgf = stint.tot_oi_xgf if is_pk else 0.0
+            stint.pk_oi_xga = stint.tot_oi_xga if is_pk else 0.0
+
+            # GAP situations
+            stint.es_goals = tot_goals if is_even else 0
+            stint.es_assists = tot_assists if is_even else 0
+            stint.es_points = tot_points if is_even else 0
+            stint.ev5_goals = tot_goals if is_5v5 else 0
+            stint.ev5_assists = tot_assists if is_5v5 else 0
+            stint.ev5_points = tot_points if is_5v5 else 0
+            stint.pp_goals = tot_goals if is_pp else 0
+            stint.pp_assists = tot_assists if is_pp else 0
+            stint.pp_points = tot_points if is_pp else 0
+            stint.pk_goals = tot_goals if is_pk else 0
+            stint.pk_assists = tot_assists if is_pk else 0
+            stint.pk_points = tot_points if is_pk else 0
+
         db.session.flush()
-        del xg_by_game_period, all_stints_for_xg
-        print("Computed stint xG values")
+        del xg_by_game_period, gap_by_game_period, all_stints_for_xg
+        print("Computed stint xG and GAP values")
 
         # --- PlayerStats (per team) ---
         print("Computing player stats (per team)...")
@@ -747,9 +858,9 @@ def seed():
                 )
 
                 ps.games_played = gp
-                ps.goals = goals
-                ps.assists = assists
-                ps.points = goals + assists
+                ps.tot_goals = goals
+                ps.tot_assists = assists
+                ps.tot_points = goals + assists
                 ps.shots = total_shots
                 ps.shooting_pct = shooting_pct
                 ps.faceoffs_won = faceoffs_won
@@ -759,49 +870,60 @@ def seed():
                 ps.penalties_drawn = penalties_drawn
                 ps.blocks = blocks
                 ps.checks = checks
-                ps.i_xg = total_xg
+                ps.tot_i_xg = total_xg
 
-                # Compute on-ice xGF and xGA from stints
+                # Aggregate situation columns from pre-computed stint columns
                 player_stints = Stint.query.filter_by(
                     player_id=pid, team_abbr=team_abbr
                 ).all()
-                oi_xgf = 0.0
-                oi_xga = 0.0
-                for stint in player_stints:
-                    xgf = (
-                        db.session.query(db.func.sum(Event.xg))
-                        .filter(
-                            Event.game_id == stint.game_id,
-                            Event.period == stint.period,
-                            Event.period_time >= stint.period_time_start,
-                            Event.period_time < stint.period_time_end,
-                            Event.xg.isnot(None),
-                            Event.team_abbr == team_abbr,
-                        )
-                        .scalar()
+                xg_fields = [
+                    "tot_oi_xgf",
+                    "tot_oi_xga",
+                    "es_i_xg",
+                    "es_oi_xgf",
+                    "es_oi_xga",
+                    "ev5_i_xg",
+                    "ev5_oi_xgf",
+                    "ev5_oi_xga",
+                    "pp_i_xg",
+                    "pp_oi_xgf",
+                    "pp_oi_xga",
+                    "pk_i_xg",
+                    "pk_oi_xgf",
+                    "pk_oi_xga",
+                ]
+                for f in xg_fields:
+                    setattr(
+                        ps, f, round(sum(getattr(s, f) or 0 for s in player_stints), 3)
                     )
-                    if xgf:
-                        oi_xgf += xgf
-                    xga = (
-                        db.session.query(db.func.sum(Event.xg))
-                        .filter(
-                            Event.game_id == stint.game_id,
-                            Event.period == stint.period,
-                            Event.period_time >= stint.period_time_start,
-                            Event.period_time < stint.period_time_end,
-                            Event.xg.isnot(None),
-                            Event.team_abbr != team_abbr,
-                        )
-                        .scalar()
+
+                for prefix in ["tot", "es", "ev5", "pp", "pk"]:
+                    xgf = getattr(ps, f"{prefix}_oi_xgf")
+                    xga = getattr(ps, f"{prefix}_oi_xga")
+                    total_xg_sit = xgf + xga
+                    setattr(
+                        ps,
+                        f"{prefix}_xg_pct",
+                        round(xgf / total_xg_sit, 3) if total_xg_sit > 0 else None,
                     )
-                    if xga:
-                        oi_xga += xga
-                ps.oi_xgf = round(oi_xgf, 3)
-                ps.oi_xga = round(oi_xga, 3)
-                total_oi_xg = ps.oi_xgf + ps.oi_xga
-                ps.xg_percentage = (
-                    round(ps.oi_xgf / total_oi_xg, 3) if total_oi_xg > 0 else None
-                )
+
+                # Aggregate situation GAP from pre-computed stint columns
+                gap_fields = [
+                    "es_goals",
+                    "es_assists",
+                    "es_points",
+                    "ev5_goals",
+                    "ev5_assists",
+                    "ev5_points",
+                    "pp_goals",
+                    "pp_assists",
+                    "pp_points",
+                    "pk_goals",
+                    "pk_assists",
+                    "pk_points",
+                ]
+                for f in gap_fields:
+                    setattr(ps, f, sum(getattr(s, f) or 0 for s in player_stints))
                 ps.age = player_age
 
                 new_player_stats += 1
@@ -909,41 +1031,45 @@ def seed():
                     total_fo = fow + fol
                     faceoff_pct = round(fow / total_fo, 3) if total_fo > 0 else None
 
-                    # Compute on-ice xGF and xGA for this game
+                    # Aggregate situation columns from pre-computed stint columns
                     game_stints = Stint.query.filter_by(
                         player_id=pid, game_id=gid, team_abbr=team_abbr
                     ).all()
-                    oi_xgf = 0.0
-                    oi_xga = 0.0
-                    for stint in game_stints:
-                        xgf = (
-                            db.session.query(db.func.sum(Event.xg))
-                            .filter(
-                                Event.game_id == gid,
-                                Event.period == stint.period,
-                                Event.period_time >= stint.period_time_start,
-                                Event.period_time < stint.period_time_end,
-                                Event.xg.isnot(None),
-                                Event.team_abbr == team_abbr,
-                            )
-                            .scalar()
+                    stint_agg = {}
+                    for f in [
+                        "tot_oi_xgf",
+                        "tot_oi_xga",
+                        "es_i_xg",
+                        "es_oi_xgf",
+                        "es_oi_xga",
+                        "ev5_i_xg",
+                        "ev5_oi_xgf",
+                        "ev5_oi_xga",
+                        "pp_i_xg",
+                        "pp_oi_xgf",
+                        "pp_oi_xga",
+                        "pk_i_xg",
+                        "pk_oi_xgf",
+                        "pk_oi_xga",
+                    ]:
+                        stint_agg[f] = round(
+                            sum(getattr(s, f) or 0 for s in game_stints), 3
                         )
-                        if xgf:
-                            oi_xgf += xgf
-                        xga = (
-                            db.session.query(db.func.sum(Event.xg))
-                            .filter(
-                                Event.game_id == gid,
-                                Event.period == stint.period,
-                                Event.period_time >= stint.period_time_start,
-                                Event.period_time < stint.period_time_end,
-                                Event.xg.isnot(None),
-                                Event.team_abbr != team_abbr,
-                            )
-                            .scalar()
-                        )
-                        if xga:
-                            oi_xga += xga
+                    for f in [
+                        "es_goals",
+                        "es_assists",
+                        "es_points",
+                        "ev5_goals",
+                        "ev5_assists",
+                        "ev5_points",
+                        "pp_goals",
+                        "pp_assists",
+                        "pp_points",
+                        "pk_goals",
+                        "pk_assists",
+                        "pk_points",
+                    ]:
+                        stint_agg[f] = sum(getattr(s, f) or 0 for s in game_stints)
 
                     pgs_records.append(
                         PlayerGameStats(
@@ -951,9 +1077,9 @@ def seed():
                             game_id=gid,
                             team_id=tid,
                             season_id=season.id,
-                            goals=goals,
-                            assists=assists,
-                            points=goals + assists,
+                            tot_goals=goals,
+                            tot_assists=assists,
+                            tot_points=goals + assists,
                             shots=total_shots,
                             shooting_pct=shooting_pct,
                             faceoffs_won=fow,
@@ -963,9 +1089,8 @@ def seed():
                             penalties_drawn=row.penalties_drawn,
                             blocks=row.blocks,
                             checks=row.checks,
-                            i_xg=total_xg,
-                            oi_xgf=round(oi_xgf, 3),
-                            oi_xga=round(oi_xga, 3),
+                            tot_i_xg=total_xg,
+                            **stint_agg,
                         )
                     )
                     if len(pgs_records) >= 5000:

@@ -60,10 +60,18 @@ HEADERS = [
     "PD",
     "BLK",
     "HIT",
-    "ixG",
-    "oixGF",
-    "oixGA",
-    "xG%",
+    "Tot ixG",
+    "Tot oixGF",
+    "Tot oixGA",
+    "Tot xG%",
+    "ES ixG",
+    "ES oixGF",
+    "ES oixGA",
+    "ES xG%",
+    "5v5 ixG",
+    "5v5 oixGF",
+    "5v5 oixGA",
+    "5v5 xG%",
 ]
 
 SORTABLE_COLUMNS = [
@@ -82,19 +90,27 @@ SORTABLE_COLUMNS = [
     "PD",
     "BLK",
     "HIT",
-    "ixG",
-    "oixGF",
-    "oixGA",
-    "xG%",
+    "Tot ixG",
+    "Tot oixGF",
+    "Tot oixGA",
+    "Tot xG%",
+    "ES ixG",
+    "ES oixGF",
+    "ES oixGA",
+    "ES xG%",
+    "5v5 ixG",
+    "5v5 oixGF",
+    "5v5 oixGA",
+    "5v5 xG%",
 ]
 
 COLUMN_TO_FIELD = {
     "Age": "age",
     "Pos": "position",
     "GP": "games_played",
-    "G": "goals",
-    "A": "assists",
-    "PTS": "points",
+    "G": "tot_goals",
+    "A": "tot_assists",
+    "PTS": "tot_points",
     "S": "shots",
     "S%": "shooting_pct",
     "FOW": "faceoffs_won",
@@ -104,10 +120,18 @@ COLUMN_TO_FIELD = {
     "PD": "penalties_drawn",
     "BLK": "blocks",
     "HIT": "checks",
-    "ixG": "i_xg",
-    "oixGF": "oi_xgf",
-    "oixGA": "oi_xga",
-    "xG%": "xg_percentage",
+    "Tot ixG": "tot_i_xg",
+    "Tot oixGF": "tot_oi_xgf",
+    "Tot oixGA": "tot_oi_xga",
+    "Tot xG%": "tot_xg_pct",
+    "ES ixG": "es_i_xg",
+    "ES oixGF": "es_oi_xgf",
+    "ES oixGA": "es_oi_xga",
+    "ES xG%": "es_xg_pct",
+    "5v5 ixG": "ev5_i_xg",
+    "5v5 oixGF": "ev5_oi_xgf",
+    "5v5 oixGA": "ev5_oi_xga",
+    "5v5 xG%": "ev5_xg_pct",
 }
 
 
@@ -262,7 +286,7 @@ def register_team_detail_callbacks(dash_app):
         )
 
         # Apply sort — push NULL to the bottom
-        field = COLUMN_TO_FIELD.get(sort_col, "points")
+        field = COLUMN_TO_FIELD.get(sort_col, "tot_points")
         if field == "position":
             order_col = getattr(Player, field)
         else:
@@ -287,9 +311,9 @@ def register_team_detail_callbacks(dash_app):
                 ps.age,
                 pos,
                 ps.games_played,
-                ps.goals,
-                ps.assists,
-                ps.points,
+                ps.tot_goals,
+                ps.tot_assists,
+                ps.tot_points,
                 ps.shots,
                 _fmt_pct(ps.shooting_pct),
                 ps.faceoffs_won,
@@ -299,10 +323,18 @@ def register_team_detail_callbacks(dash_app):
                 ps.penalties_drawn,
                 ps.blocks,
                 ps.checks,
-                ps.i_xg,
-                ps.oi_xgf,
-                ps.oi_xga,
-                _fmt_pct(ps.xg_percentage),
+                ps.tot_i_xg,
+                ps.tot_oi_xgf,
+                ps.tot_oi_xga,
+                _fmt_pct(ps.tot_xg_pct),
+                ps.es_i_xg,
+                ps.es_oi_xgf,
+                ps.es_oi_xga,
+                _fmt_pct(ps.es_xg_pct),
+                ps.ev5_i_xg,
+                ps.ev5_oi_xgf,
+                ps.ev5_oi_xga,
+                _fmt_pct(ps.ev5_xg_pct),
             ]
             stat_cols = HEADERS[1:]  # all columns except Name
             cells = [

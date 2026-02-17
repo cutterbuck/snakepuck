@@ -1,6 +1,6 @@
-"""Backfill oi_xgf and oi_xga for existing PlayerGameStats and PlayerStats.
+"""Backfill tot_/es_/ev5_/pp_/pk_ xG columns for PlayerGameStats and PlayerStats.
 
-Loads all events and stints into memory to avoid per-stint SQL queries.
+Loads all stints into memory for fast aggregation.
 
 Usage:
     python -m scripts.backfill_oi_xg
@@ -11,7 +11,7 @@ from collections import defaultdict
 
 from app import create_app
 from app.extensions import db
-from app.models import Event, PlayerGameStats, PlayerStats, Stint
+from app.models import PlayerGameStats, PlayerStats, Stint
 
 
 def _progress(msg):
@@ -19,100 +19,77 @@ def _progress(msg):
     sys.stdout.flush()
 
 
+XG_FIELDS = [
+    "tot_i_xg",
+    "tot_oi_xgf",
+    "tot_oi_xga",
+    "es_i_xg",
+    "es_oi_xgf",
+    "es_oi_xga",
+    "ev5_i_xg",
+    "ev5_oi_xgf",
+    "ev5_oi_xga",
+    "pp_i_xg",
+    "pp_oi_xgf",
+    "pp_oi_xga",
+    "pk_i_xg",
+    "pk_oi_xgf",
+    "pk_oi_xga",
+]
+
+
 def backfill():
     app = create_app()
     with app.app_context():
-        # --- Pre-load all events with xG into memory ---
-        _progress("Loading events with xG into memory...")
-        xg_events = (
-            db.session.query(
-                Event.game_id,
-                Event.period,
-                Event.period_time,
-                Event.team_abbr,
-                Event.xg,
-            )
-            .filter(Event.xg.isnot(None))
-            .all()
-        )
-        # Index by (game_id, period) for fast lookup
-        events_by_game_period = defaultdict(list)
-        for game_id, period, period_time, team_abbr, xg in xg_events:
-            events_by_game_period[(game_id, period)].append(
-                (period_time, team_abbr, xg)
-            )
-        _progress(f"  Loaded {len(xg_events)} events with xG values.")
-        del xg_events  # free memory
-
-        # --- Pre-load all stints into memory ---
-        _progress("Loading stints into memory...")
+        # Pre-load all stint xG values into memory
+        _progress("Loading stint xG data into memory...")
         all_stints = db.session.query(
             Stint.player_id,
             Stint.game_id,
-            Stint.period,
-            Stint.period_time_start,
-            Stint.period_time_end,
-            Stint.team_abbr,
+            *[getattr(Stint, f) for f in XG_FIELDS],
         ).all()
-        # Index by (player_id, game_id)
-        stints_by_player_game = defaultdict(list)
-        for pid, gid, period, pt_start, pt_end, team_abbr in all_stints:
-            stints_by_player_game[(pid, gid)].append(
-                (period, pt_start, pt_end, team_abbr)
-            )
-        _progress(f"  Loaded {len(all_stints)} stints.")
+        # Aggregate by (player_id, game_id)
+        stint_agg = defaultdict(lambda: {f: 0.0 for f in XG_FIELDS})
+        for row in all_stints:
+            key = (row.player_id, row.game_id)
+            for f in XG_FIELDS:
+                stint_agg[key][f] += getattr(row, f) or 0.0
+        _progress(
+            f"  Loaded {len(all_stints)} stints, {len(stint_agg)} player-game pairs."
+        )
         del all_stints
 
         # --- PlayerGameStats ---
         all_pgs = PlayerGameStats.query.all()
         total = len(all_pgs)
-        _progress(
-            f"Backfilling oi_xgf and oi_xga for {total} PlayerGameStats records..."
-        )
+        _progress(f"Backfilling xG columns for {total} PlayerGameStats records...")
         for idx, pgs in enumerate(all_pgs, 1):
             if idx % 100 == 0 or idx == total:
                 _progress(f"  PlayerGameStats: {idx}/{total} ({idx * 100 // total}%)")
 
-            stints = stints_by_player_game.get((pgs.player_id, pgs.game_id), [])
-            if not stints:
-                pgs.oi_xgf = 0.0
-                pgs.oi_xga = 0.0
-                continue
-
-            player_team = stints[0][3]  # team_abbr from first stint
-            oi_xgf = 0.0
-            oi_xga = 0.0
-            for period, pt_start, pt_end, _ in stints:
-                for evt_time, evt_team, evt_xg in events_by_game_period.get(
-                    (pgs.game_id, period), []
-                ):
-                    if (
-                        evt_time is not None
-                        and pt_start is not None
-                        and pt_end is not None
-                    ):
-                        if pt_start <= evt_time < pt_end:
-                            if evt_team == player_team:
-                                oi_xgf += evt_xg
-                            else:
-                                oi_xga += evt_xg
-
-            pgs.oi_xgf = round(oi_xgf, 3)
-            pgs.oi_xga = round(oi_xga, 3)
+            agg = stint_agg.get((pgs.player_id, pgs.game_id))
+            if agg:
+                for f in XG_FIELDS:
+                    setattr(pgs, f, round(agg[f], 3))
+            else:
+                for f in XG_FIELDS:
+                    setattr(pgs, f, 0.0)
 
         db.session.commit()
         _progress("Backfilled PlayerGameStats.")
 
         # --- PlayerStats (aggregate from PlayerGameStats) ---
-        # Single query to sum oi_xgf/oi_xga grouped by player+team+season
-        _progress("Backfilling oi_xgf, oi_xga, and xg_percentage for PlayerStats...")
+        _progress("Aggregating xG columns for PlayerStats...")
+        # Single query to sum all xG fields grouped by player+team+season
         agg_results = (
             db.session.query(
                 PlayerGameStats.player_id,
                 PlayerGameStats.team_id,
                 PlayerGameStats.season_id,
-                db.func.coalesce(db.func.sum(PlayerGameStats.oi_xgf), 0.0),
-                db.func.coalesce(db.func.sum(PlayerGameStats.oi_xga), 0.0),
+                *[
+                    db.func.coalesce(db.func.sum(getattr(PlayerGameStats, f)), 0.0)
+                    for f in XG_FIELDS
+                ],
             )
             .group_by(
                 PlayerGameStats.player_id,
@@ -122,8 +99,9 @@ def backfill():
             .all()
         )
         agg_map = {}
-        for pid, tid, sid, xgf, xga in agg_results:
-            agg_map[(pid, tid, sid)] = (float(xgf), float(xga))
+        for row in agg_results:
+            key = (row[0], row[1], row[2])
+            agg_map[key] = {f: float(row[3 + i]) for i, f in enumerate(XG_FIELDS)}
 
         all_ps = PlayerStats.query.all()
         total = len(all_ps)
@@ -131,13 +109,20 @@ def backfill():
             if idx % 100 == 0 or idx == total:
                 _progress(f"  PlayerStats: {idx}/{total} ({idx * 100 // total}%)")
 
-            xgf, xga = agg_map.get((ps.player_id, ps.team_id, ps.season_id), (0.0, 0.0))
-            ps.oi_xgf = round(xgf, 3)
-            ps.oi_xga = round(xga, 3)
-            total_oi_xg = ps.oi_xgf + ps.oi_xga
-            ps.xg_percentage = (
-                round(ps.oi_xgf / total_oi_xg, 3) if total_oi_xg > 0 else None
-            )
+            agg = agg_map.get((ps.player_id, ps.team_id, ps.season_id), {})
+            for f in XG_FIELDS:
+                setattr(ps, f, round(agg.get(f, 0.0), 3))
+
+            # Compute xg_pct for each situation
+            for prefix in ["tot", "es", "ev5", "pp", "pk"]:
+                xgf = getattr(ps, f"{prefix}_oi_xgf")
+                xga = getattr(ps, f"{prefix}_oi_xga")
+                total_xg = xgf + xga
+                setattr(
+                    ps,
+                    f"{prefix}_xg_pct",
+                    round(xgf / total_xg, 3) if total_xg > 0 else None,
+                )
 
         db.session.commit()
         _progress("Backfilled PlayerStats.")
