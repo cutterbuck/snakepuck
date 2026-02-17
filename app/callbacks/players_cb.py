@@ -66,7 +66,10 @@ def register_players_callbacks(dash_app):
                     "penalties_drawn": ps.penalties_drawn,
                     "blocks": ps.blocks,
                     "checks": ps.checks,
-                    "xg": ps.xg,
+                    "i_xg": ps.i_xg,
+                    "oi_xgf": ps.oi_xgf,
+                    "oi_xga": ps.oi_xga,
+                    "xg_percentage": _fmt_pct(ps.xg_percentage),
                 }
             )
         return rows

@@ -575,6 +575,61 @@ def seed():
         else:
             print(f"Tracking already seeded ({existing_tracking_count} rows)")
 
+        # --- Stint xG (i_xg, oi_xgf, oi_xga per stint) ---
+        print("Computing stint xG values...")
+        from collections import defaultdict
+
+        xg_events = (
+            db.session.query(
+                Event.game_id,
+                Event.period,
+                Event.period_time,
+                Event.team_abbr,
+                Event.xg,
+                Event.player_id,
+            )
+            .filter(Event.xg.isnot(None))
+            .all()
+        )
+        xg_by_game_period = defaultdict(list)
+        for gid, period, pt, team_abbr, xg, pid in xg_events:
+            xg_by_game_period[(gid, period)].append((pt, team_abbr, xg, pid))
+        del xg_events
+
+        all_stints_for_xg = Stint.query.all()
+        total_stints_xg = len(all_stints_for_xg)
+        for idx, stint in enumerate(all_stints_for_xg, 1):
+            if idx % 500 == 0 or idx == total_stints_xg:
+                print(
+                    f"  Stint xG: {idx}/{total_stints_xg} ({idx * 100 // total_stints_xg}%)"
+                )
+            i_xg = 0.0
+            oi_xgf = 0.0
+            oi_xga = 0.0
+            if (
+                stint.period_time_start is not None
+                and stint.period_time_end is not None
+            ):
+                for evt_time, evt_team, evt_xg, evt_pid in xg_by_game_period.get(
+                    (stint.game_id, stint.period), []
+                ):
+                    if (
+                        evt_time is not None
+                        and stint.period_time_start <= evt_time < stint.period_time_end
+                    ):
+                        if evt_team == stint.team_abbr:
+                            oi_xgf += evt_xg
+                            if evt_pid == stint.player_id:
+                                i_xg += evt_xg
+                        else:
+                            oi_xga += evt_xg
+            stint.i_xg = round(i_xg, 3)
+            stint.oi_xgf = round(oi_xgf, 3)
+            stint.oi_xga = round(oi_xga, 3)
+        db.session.flush()
+        del xg_by_game_period, all_stints_for_xg
+        print("Computed stint xG values")
+
         # --- PlayerStats (per team) ---
         print("Computing player stats (per team)...")
         # Get the most recent game date for age calculation
@@ -704,7 +759,49 @@ def seed():
                 ps.penalties_drawn = penalties_drawn
                 ps.blocks = blocks
                 ps.checks = checks
-                ps.xg = total_xg
+                ps.i_xg = total_xg
+
+                # Compute on-ice xGF and xGA from stints
+                player_stints = Stint.query.filter_by(
+                    player_id=pid, team_abbr=team_abbr
+                ).all()
+                oi_xgf = 0.0
+                oi_xga = 0.0
+                for stint in player_stints:
+                    xgf = (
+                        db.session.query(db.func.sum(Event.xg))
+                        .filter(
+                            Event.game_id == stint.game_id,
+                            Event.period == stint.period,
+                            Event.period_time >= stint.period_time_start,
+                            Event.period_time < stint.period_time_end,
+                            Event.xg.isnot(None),
+                            Event.team_abbr == team_abbr,
+                        )
+                        .scalar()
+                    )
+                    if xgf:
+                        oi_xgf += xgf
+                    xga = (
+                        db.session.query(db.func.sum(Event.xg))
+                        .filter(
+                            Event.game_id == stint.game_id,
+                            Event.period == stint.period,
+                            Event.period_time >= stint.period_time_start,
+                            Event.period_time < stint.period_time_end,
+                            Event.xg.isnot(None),
+                            Event.team_abbr != team_abbr,
+                        )
+                        .scalar()
+                    )
+                    if xga:
+                        oi_xga += xga
+                ps.oi_xgf = round(oi_xgf, 3)
+                ps.oi_xga = round(oi_xga, 3)
+                total_oi_xg = ps.oi_xgf + ps.oi_xga
+                ps.xg_percentage = (
+                    round(ps.oi_xgf / total_oi_xg, 3) if total_oi_xg > 0 else None
+                )
                 ps.age = player_age
 
                 new_player_stats += 1
@@ -812,6 +909,42 @@ def seed():
                     total_fo = fow + fol
                     faceoff_pct = round(fow / total_fo, 3) if total_fo > 0 else None
 
+                    # Compute on-ice xGF and xGA for this game
+                    game_stints = Stint.query.filter_by(
+                        player_id=pid, game_id=gid, team_abbr=team_abbr
+                    ).all()
+                    oi_xgf = 0.0
+                    oi_xga = 0.0
+                    for stint in game_stints:
+                        xgf = (
+                            db.session.query(db.func.sum(Event.xg))
+                            .filter(
+                                Event.game_id == gid,
+                                Event.period == stint.period,
+                                Event.period_time >= stint.period_time_start,
+                                Event.period_time < stint.period_time_end,
+                                Event.xg.isnot(None),
+                                Event.team_abbr == team_abbr,
+                            )
+                            .scalar()
+                        )
+                        if xgf:
+                            oi_xgf += xgf
+                        xga = (
+                            db.session.query(db.func.sum(Event.xg))
+                            .filter(
+                                Event.game_id == gid,
+                                Event.period == stint.period,
+                                Event.period_time >= stint.period_time_start,
+                                Event.period_time < stint.period_time_end,
+                                Event.xg.isnot(None),
+                                Event.team_abbr != team_abbr,
+                            )
+                            .scalar()
+                        )
+                        if xga:
+                            oi_xga += xga
+
                     pgs_records.append(
                         PlayerGameStats(
                             player_id=pid,
@@ -830,7 +963,9 @@ def seed():
                             penalties_drawn=row.penalties_drawn,
                             blocks=row.blocks,
                             checks=row.checks,
-                            xg=total_xg,
+                            i_xg=total_xg,
+                            oi_xgf=round(oi_xgf, 3),
+                            oi_xga=round(oi_xga, 3),
                         )
                     )
                     if len(pgs_records) >= 5000:

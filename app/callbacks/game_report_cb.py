@@ -39,7 +39,9 @@ STAT_HEADERS = [
     "PD",
     "BLK",
     "HIT",
-    "xG",
+    "ixG",
+    "oixGF",
+    "oixGA",
 ]
 
 
@@ -107,7 +109,12 @@ def register_game_report_callbacks(dash_app):
 
         outcome_str = (game.game_outcome or "").lower()
         if player_score > opp_score:
-            result = f"W {player_score}-{opp_score}"
+            if "_so_" in outcome_str:
+                result = f"SOW {player_score}-{opp_score}"
+            elif "_ot_" in outcome_str:
+                result = f"OTW {player_score}-{opp_score}"
+            else:
+                result = f"W {player_score}-{opp_score}"
         elif "_ot_" in outcome_str:
             result = f"OTL {opp_score}-{player_score}"
         elif "_so_" in outcome_str:
@@ -216,7 +223,9 @@ def register_game_report_callbacks(dash_app):
             pgs.penalties_drawn,
             pgs.blocks,
             pgs.checks,
-            pgs.xg,
+            pgs.i_xg,
+            pgs.oi_xgf,
+            pgs.oi_xga,
         ]
         cells = [html.Td(v, style=CELL_STYLE) for v in values]
         row = html.Tr(cells, style={"backgroundColor": "rgb(255, 255, 255)"})
@@ -242,6 +251,9 @@ def register_game_report_callbacks(dash_app):
         "Home Net Empty",
         "Away Net Empty",
         "Score",
+        "ixG",
+        "oixGF",
+        "oixGA",
     ]
 
     PERIOD_BTN_BASE = {
@@ -255,22 +267,44 @@ def register_game_report_callbacks(dash_app):
     @dash_app.callback(
         Output("game-report-stints-header", "children"),
         Input("game-report-stint-period", "data"),
+        Input("game-report-player-id", "data"),
+        Input("game-report-game-id", "data"),
     )
-    def update_stints_header(selected_period):
+    def update_stints_header(selected_period, player_id, game_id):
+        # Determine which periods exist for this player/game
+        periods = [1, 2, 3]
+        if player_id and game_id:
+            player = Player.query.get(player_id)
+            if player:
+                distinct_periods = (
+                    Stint.query.with_entities(Stint.period)
+                    .filter_by(player_id=player.playerId, game_id=game_id)
+                    .distinct()
+                    .all()
+                )
+                existing = sorted(p[0] for p in distinct_periods if p[0] is not None)
+                if existing:
+                    periods = existing
+
         buttons = []
-        for p in [1, 2, 3]:
+        for idx, p in enumerate(periods):
             active = selected_period == p
+            label = "OT" if p >= 4 else str(p)
+            if idx == 0:
+                radius = "4px 0 0 4px"
+            elif idx == len(periods) - 1:
+                radius = "0 4px 4px 0"
+            else:
+                radius = "0"
             style = {
                 **PERIOD_BTN_BASE,
                 "backgroundColor": "#0d6efd" if active else "#fff",
                 "color": "#fff" if active else "#333",
-                "borderRadius": "4px 0 0 4px"
-                if p == 1
-                else ("0 4px 4px 0" if p == 3 else "0"),
+                "borderRadius": radius,
             }
             buttons.append(
                 html.Button(
-                    str(p),
+                    label,
                     id={"type": "stint-period-btn", "index": p},
                     n_clicks=0,
                     style=style,
@@ -290,7 +324,7 @@ def register_game_report_callbacks(dash_app):
                 ),
                 html.Div(buttons, style={"display": "flex"}),
             ],
-            style={"display": "flex", "alignItems": "baseline"},
+            style={"display": "flex", "alignItems": "center"},
         )
 
     @dash_app.callback(
@@ -406,6 +440,11 @@ def register_game_report_callbacks(dash_app):
             )
             row_style = row_bg
             cls = "stint-row selected" if is_selected else "stint-row"
+            # Aggregate xG across all stints in this shift
+            shift_ixg = sum(s.i_xg or 0 for s in group)
+            shift_oixgf = sum(s.oi_xgf or 0 for s in group)
+            shift_oixga = sum(s.oi_xga or 0 for s in group)
+
             cells = [
                 html.Td(first.shift, style=CELL_STYLE),
                 html.Td(
@@ -430,6 +469,9 @@ def register_game_report_callbacks(dash_app):
                     else "",
                     style=CELL_STYLE,
                 ),
+                html.Td(round(shift_ixg, 3), style=CELL_STYLE),
+                html.Td(round(shift_oixgf, 3), style=CELL_STYLE),
+                html.Td(round(shift_oixga, 3), style=CELL_STYLE),
             ]
             rows.append(
                 html.Tr(
@@ -483,6 +525,9 @@ def register_game_report_callbacks(dash_app):
                             else "",
                             style=sub_cell_style,
                         ),
+                        html.Td(stint.i_xg or 0, style=sub_cell_style),
+                        html.Td(stint.oi_xgf or 0, style=sub_cell_style),
+                        html.Td(stint.oi_xga or 0, style=sub_cell_style),
                     ]
                     rows.append(
                         html.Tr(

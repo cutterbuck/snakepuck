@@ -26,7 +26,9 @@ class PlayerGameStats(db.Model):
     penalties_drawn = db.Column(db.Integer, nullable=False, default=0)
     blocks = db.Column(db.Integer, nullable=False, default=0)
     checks = db.Column(db.Integer, nullable=False, default=0)
-    xg = db.Column(db.Float, nullable=False, default=0.0)
+    i_xg = db.Column(db.Float, nullable=False, default=0.0)
+    oi_xgf = db.Column(db.Float, nullable=False, default=0.0)
+    oi_xga = db.Column(db.Float, nullable=False, default=0.0)
 
     __table_args__ = (
         db.UniqueConstraint(

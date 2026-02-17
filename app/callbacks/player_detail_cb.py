@@ -34,7 +34,10 @@ STAT_HEADERS = [
     "PD",
     "BLK",
     "HIT",
-    "xG",
+    "ixG",
+    "oixGF",
+    "oixGA",
+    "xG%",
 ]
 
 
@@ -54,7 +57,9 @@ GAME_LOG_HEADERS = [
     "PD",
     "BLK",
     "HIT",
-    "xG",
+    "ixG",
+    "oixGF",
+    "oixGA",
 ]
 
 
@@ -230,7 +235,10 @@ def register_player_detail_callbacks(dash_app):
                 ps.penalties_drawn,
                 ps.blocks,
                 ps.checks,
-                ps.xg,
+                ps.i_xg,
+                ps.oi_xgf,
+                ps.oi_xga,
+                _fmt_pct(ps.xg_percentage),
             ]
             cells = [
                 html.Td(display_season, style=CELL_STYLE),
@@ -323,7 +331,12 @@ def register_player_detail_callbacks(dash_app):
             opp_score = away_score if is_home else home_score
             outcome_str = (game_outcome or "").lower()
             if player_score > opp_score:
-                result = f"W {player_score}-{opp_score}"
+                if "_so_" in outcome_str:
+                    result = f"SOW {player_score}-{opp_score}"
+                elif "_ot_" in outcome_str:
+                    result = f"OTW {player_score}-{opp_score}"
+                else:
+                    result = f"W {player_score}-{opp_score}"
             elif "_ot_" in outcome_str:
                 result = f"OTL {opp_score}-{player_score}"
             elif "_so_" in outcome_str:
@@ -393,7 +406,9 @@ def register_player_detail_callbacks(dash_app):
                 pgs.penalties_drawn,
                 pgs.blocks,
                 pgs.checks,
-                pgs.xg,
+                pgs.i_xg,
+                pgs.oi_xgf,
+                pgs.oi_xga,
             ]
             cells = [
                 html.Td(date_str, style=CELL_STYLE),

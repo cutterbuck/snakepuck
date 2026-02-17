@@ -60,7 +60,10 @@ HEADERS = [
     "PD",
     "BLK",
     "HIT",
-    "xG",
+    "ixG",
+    "oixGF",
+    "oixGA",
+    "xG%",
 ]
 
 SORTABLE_COLUMNS = [
@@ -79,7 +82,10 @@ SORTABLE_COLUMNS = [
     "PD",
     "BLK",
     "HIT",
-    "xG",
+    "ixG",
+    "oixGF",
+    "oixGA",
+    "xG%",
 ]
 
 COLUMN_TO_FIELD = {
@@ -98,7 +104,10 @@ COLUMN_TO_FIELD = {
     "PD": "penalties_drawn",
     "BLK": "blocks",
     "HIT": "checks",
-    "xG": "xg",
+    "ixG": "i_xg",
+    "oixGF": "oi_xgf",
+    "oixGA": "oi_xga",
+    "xG%": "xg_percentage",
 }
 
 
@@ -290,7 +299,10 @@ def register_team_detail_callbacks(dash_app):
                 ps.penalties_drawn,
                 ps.blocks,
                 ps.checks,
-                ps.xg,
+                ps.i_xg,
+                ps.oi_xgf,
+                ps.oi_xga,
+                _fmt_pct(ps.xg_percentage),
             ]
             stat_cols = HEADERS[1:]  # all columns except Name
             cells = [

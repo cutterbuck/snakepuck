@@ -22,6 +22,9 @@ class Stint(db.Model):
     source_team_id = db.Column(db.String(36), nullable=True)
     team_abbr = db.Column(db.String(10), nullable=True)
     shift = db.Column(db.Integer, nullable=True)
+    i_xg = db.Column(db.Float, nullable=True)
+    oi_xgf = db.Column(db.Float, nullable=True)
+    oi_xga = db.Column(db.Float, nullable=True)
 
     game = db.relationship("Game", back_populates="stints")
     player = db.relationship("Player", back_populates="stints")
