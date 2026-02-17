@@ -6,7 +6,7 @@ def create_navbar():
     return dbc.Navbar(
         dbc.Container(
             [
-                dbc.NavbarBrand("SnakePuck Analytics", href="/"),
+                dbc.NavbarBrand("MacNaughton HALO Project", href="/"),
                 dbc.Nav(
                     [
                         dbc.NavItem(dbc.NavLink("Standings", href="/")),

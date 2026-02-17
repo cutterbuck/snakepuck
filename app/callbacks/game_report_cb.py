@@ -279,7 +279,7 @@ def register_game_report_callbacks(dash_app):
 
         return html.Div(
             [
-                html.H4("Stints", style={"marginRight": "32px", "marginBottom": "0"}),
+                html.H4("Shifts", style={"marginRight": "32px", "marginBottom": "0"}),
                 html.Span(
                     "Period:",
                     style={
@@ -440,6 +440,60 @@ def register_game_report_callbacks(dash_app):
                     n_clicks=0,
                 )
             )
+
+            # Expand sub-rows for each stint when this shift is selected
+            if is_selected and len(group) > 1:
+                sub_cell_style = {**CELL_STYLE, "fontSize": "13px"}
+                for stint in group:
+                    sub_cells = [
+                        html.Td(
+                            "",
+                            style={
+                                **sub_cell_style,
+                                "borderLeft": "3px solid #0d6efd",
+                            },
+                        ),
+                        html.Td(
+                            _seconds_to_mmss(stint.period_time_start)
+                            if stint.period_time_start is not None
+                            else "",
+                            style=sub_cell_style,
+                        ),
+                        html.Td(
+                            _seconds_to_mmss(stint.period_time_end)
+                            if stint.period_time_end is not None
+                            else "",
+                            style=sub_cell_style,
+                        ),
+                        html.Td(stint.n_home_skaters, style=sub_cell_style),
+                        html.Td(stint.n_away_skaters, style=sub_cell_style),
+                        html.Td(
+                            "Yes" if stint.is_home_net_empty else "No",
+                            style=sub_cell_style,
+                        ),
+                        html.Td(
+                            "Yes" if stint.is_away_net_empty else "No",
+                            style=sub_cell_style,
+                        ),
+                        html.Td(
+                            f"{stint.home_score}-{stint.away_score}"
+                            if stint.home_score is not None
+                            else "",
+                            style=sub_cell_style,
+                        ),
+                    ]
+                    rows.append(
+                        html.Tr(
+                            sub_cells,
+                            style={"backgroundColor": "rgba(13, 110, 253, 0.05)"},
+                            className="stint-row",
+                            id={
+                                "type": "stint-sub-row",
+                                "index": stint.period_time_start or 0,
+                            },
+                            n_clicks=0,
+                        )
+                    )
 
         tbody = html.Tbody(rows)
         table = html.Table(
@@ -618,23 +672,60 @@ def register_game_report_callbacks(dash_app):
 
         max_frame = len(frames) - 1
 
-        # Build slider marks: show period time in minutes
-        # Only show a subset of marks to avoid clutter
-        total = len(frames)
-        if total <= 10:
-            mark_indices = range(total)
-        else:
-            step = max(1, total // 8)
-            mark_indices = list(range(0, total, step))
-            if total - 1 not in mark_indices:
-                mark_indices.append(total - 1)
+        # Find stint boundaries within this shift
+        shift_stints = []
+        selected = Stint.query.get(selected_stint)
+        if selected and selected.shift is not None:
+            shift_stints = (
+                Stint.query.filter_by(
+                    player_id=selected.player_id,
+                    game_id=selected.game_id,
+                    shift=selected.shift,
+                )
+                .order_by(Stint.game_stint)
+                .all()
+            )
+
+        def _closest_frame(target_time):
+            closest_idx = None
+            closest_dist = float("inf")
+            for i, f in enumerate(frames):
+                pt = f.get("period_time")
+                if pt is not None:
+                    dist = abs(pt - target_time)
+                    if dist < closest_dist:
+                        closest_dist = dist
+                        closest_idx = i
+            return closest_idx
+
         marks = {}
-        for i in mark_indices:
-            pt = frames[i].get("period_time")
-            if pt is not None:
-                marks[i] = _seconds_to_mmss(pt)
-            else:
-                marks[i] = str(i)
+        boundary_style = {"color": "#dc3545", "fontWeight": "bold"}
+
+        # Pin shift start and end to slider extremes
+        first_start = shift_stints[0].period_time_start if shift_stints else None
+        last_end = shift_stints[-1].period_time_end if shift_stints else None
+        if first_start is not None:
+            marks[0] = {
+                "label": _seconds_to_mmss(first_start),
+                "style": boundary_style,
+            }
+        if last_end is not None:
+            marks[max_frame] = {
+                "label": _seconds_to_mmss(last_end),
+                "style": boundary_style,
+            }
+
+        # Add interior stint boundaries (skip first start and last end)
+        pinned_times = {first_start, last_end}
+        for s in shift_stints:
+            for pt in [s.period_time_start, s.period_time_end]:
+                if pt is not None and pt not in pinned_times:
+                    idx = _closest_frame(pt)
+                    if idx is not None and idx not in marks:
+                        marks[idx] = {
+                            "label": _seconds_to_mmss(pt),
+                            "style": boundary_style,
+                        }
 
         return stint_data, max_frame, 0, marks, 0, visible, True, "Play"
 
@@ -685,6 +776,39 @@ def register_game_report_callbacks(dash_app):
         return value or 0
 
     @dash_app.callback(
+        Output("game-report-frame-index", "data", allow_duplicate=True),
+        Output("game-report-frame-slider", "value", allow_duplicate=True),
+        Input({"type": "stint-sub-row", "index": ALL}, "n_clicks"),
+        State("game-report-stint-events", "data"),
+        prevent_initial_call=True,
+    )
+    def sub_row_to_frame(n_clicks, stint_data):
+        if not ctx.triggered_id or not any(n for n in n_clicks if n):
+            from dash.exceptions import PreventUpdate
+
+            raise PreventUpdate
+
+        target_time = ctx.triggered_id["index"]
+        if not stint_data or not stint_data.get("frames"):
+            from dash.exceptions import PreventUpdate
+
+            raise PreventUpdate
+
+        # Find the frame closest to this stint's start time
+        frames = stint_data["frames"]
+        closest_idx = 0
+        closest_dist = float("inf")
+        for i, f in enumerate(frames):
+            pt = f.get("period_time")
+            if pt is not None:
+                dist = abs(pt - target_time)
+                if dist < closest_dist:
+                    closest_dist = dist
+                    closest_idx = i
+
+        return closest_idx, closest_idx
+
+    @dash_app.callback(
         Output("game-report-rink", "children"),
         Input("game-report-player-id", "data"),
         Input("game-report-game-id", "data"),
@@ -706,7 +830,7 @@ def register_game_report_callbacks(dash_app):
             if game and game.home_team and game.home_team.logo:
                 center_logo = game.home_team.logo
 
-        fig = create_rink_figure(center_logo_url=center_logo)
+        fig = create_rink_figure(center_logo_url=center_logo, rink_opacity=0.35)
 
         # If stint data exists, render the current frame
         if stint_data and stint_data.get("frames"):
@@ -725,16 +849,33 @@ def register_game_report_callbacks(dash_app):
                     events_by_type.setdefault(et, []).append(ev)
 
                 for et, evs in events_by_type.items():
+                    color = EVENT_COLORS.get(et, DEFAULT_EVENT_COLOR)
+                    # Glow layer: larger, transparent marker behind
                     fig.add_trace(
                         go.Scatter(
                             x=[e["x_adj"] for e in evs],
                             y=[e["y_adj"] for e in evs],
                             mode="markers",
                             marker=dict(
-                                size=8,
-                                color=EVENT_COLORS.get(et, DEFAULT_EVENT_COLOR),
-                                opacity=0.8,
-                                line=dict(width=1, color="white"),
+                                size=24,
+                                color=color,
+                                opacity=0.25,
+                            ),
+                            hoverinfo="skip",
+                            showlegend=False,
+                        )
+                    )
+                    # Main event marker
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[e["x_adj"] for e in evs],
+                            y=[e["y_adj"] for e in evs],
+                            mode="markers",
+                            marker=dict(
+                                size=12,
+                                color=color,
+                                opacity=1.0,
+                                line=dict(width=2, color="white"),
                             ),
                             hoverinfo="text",
                             text=[f"{et}: {e['description']}" for e in evs],
@@ -758,6 +899,7 @@ def register_game_report_callbacks(dash_app):
                             yanchor="middle",
                             sizex=5,
                             sizey=5,
+                            opacity=0.75,
                             layer="above",
                         )
 

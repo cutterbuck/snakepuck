@@ -53,3 +53,16 @@
 .stints-scroll-container::-webkit-scrollbar-thumb:hover {
     background: #888;
 }
+
+/* Play slider: show mark labels below the track without clipping */
+#game-report-frame-slider .rc-slider {
+    margin-bottom: 50px;
+}
+
+#game-report-frame-slider .rc-slider-mark-text {
+    overflow: visible !important;
+    white-space: nowrap !important;
+    text-overflow: clip !important;
+    max-width: none !important;
+    width: auto !important;
+}

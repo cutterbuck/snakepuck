@@ -150,17 +150,28 @@ def _crease_points(cx, side=1):
     return xs, ys
 
 
-def create_rink_figure(center_logo_url=None):
+def _rgba(hex_color, opacity):
+    """Convert a hex color to rgba string with given opacity."""
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{opacity})"
+
+
+def create_rink_figure(center_logo_url=None, rink_opacity=1.0):
     """Create a Plotly figure of an NHL hockey rink (bird's-eye view).
 
     Parameters
     ----------
     center_logo_url : str, optional
         URL for a team logo to display at center ice.
+    rink_opacity : float, optional
+        Opacity for rink markings (lines, circles, dots, creases, trapezoids).
+        Defaults to 1.0.
     """
     fig = go.Figure()
 
     half_w = RINK_WIDTH / 2
+    op = rink_opacity
 
     # --- Ice surface (filled rink outline) ---
     ox, oy = _rink_outline()
@@ -170,7 +181,7 @@ def create_rink_figure(center_logo_url=None):
             y=oy,
             fill="toself",
             fillcolor=ICE_COLOR,
-            line=dict(color=BOARD_COLOR, width=3),
+            line=dict(color=_rgba(BOARD_COLOR, op), width=3),
             hoverinfo="skip",
             showlegend=False,
         )
@@ -183,7 +194,7 @@ def create_rink_figure(center_logo_url=None):
         y0=-half_w,
         x1=CENTER_LINE_X,
         y1=half_w,
-        line=dict(color=RED_LINE, width=3),
+        line=dict(color=_rgba(RED_LINE, op), width=3),
     )
 
     # --- Blue lines ---
@@ -194,7 +205,7 @@ def create_rink_figure(center_logo_url=None):
             y0=-half_w,
             x1=x,
             y1=half_w,
-            line=dict(color=BLUE_LINE, width=3),
+            line=dict(color=_rgba(BLUE_LINE, op), width=3),
         )
 
     # --- Goal lines (red, clipped to boards) ---
@@ -206,7 +217,7 @@ def create_rink_figure(center_logo_url=None):
             y0=-board_y,
             x1=x,
             y1=board_y,
-            line=dict(color=RED_LINE, width=2),
+            line=dict(color=_rgba(RED_LINE, op), width=2),
         )
 
     # --- Center ice circle ---
@@ -216,7 +227,7 @@ def create_rink_figure(center_logo_url=None):
             x=cx_pts,
             y=cy_pts,
             mode="lines",
-            line=dict(color=BLUE_LINE, width=2),
+            line=dict(color=_rgba(BLUE_LINE, op), width=2),
             hoverinfo="skip",
             showlegend=False,
         )
@@ -228,7 +239,7 @@ def create_rink_figure(center_logo_url=None):
             x=[0],
             y=[0],
             mode="markers",
-            marker=dict(size=8, color=BLUE_LINE),
+            marker=dict(size=8, color=_rgba(BLUE_LINE, op)),
             hoverinfo="skip",
             showlegend=False,
         )
@@ -243,7 +254,7 @@ def create_rink_figure(center_logo_url=None):
                     x=fc_x,
                     y=fc_y,
                     mode="lines",
-                    line=dict(color=RED_LINE, width=1.5),
+                    line=dict(color=_rgba(RED_LINE, op), width=1.5),
                     hoverinfo="skip",
                     showlegend=False,
                 )
@@ -267,7 +278,7 @@ def create_rink_figure(center_logo_url=None):
             x=dot_xs,
             y=dot_ys,
             mode="markers",
-            marker=dict(size=6, color=RED_LINE),
+            marker=dict(size=6, color=_rgba(RED_LINE, op)),
             hoverinfo="skip",
             showlegend=False,
         )
@@ -281,28 +292,33 @@ def create_rink_figure(center_logo_url=None):
                 x=crx,
                 y=cry,
                 fill="toself",
-                fillcolor=CREASE_COLOR,
-                line=dict(color=RED_LINE, width=1.5),
+                fillcolor=_rgba(CREASE_COLOR, op),
+                line=dict(color=_rgba(RED_LINE, op), width=1.5),
                 hoverinfo="skip",
                 showlegend=False,
             )
         )
 
-    # --- Trapezoids behind nets ---
+    # --- Trapezoids behind nets (3 red sides, board side hidden) ---
     for side in [1, -1]:
         gx = GOAL_LINE_X * side
         bx = 100 * side
-        # Trapezoid: wider at boards, narrower at goal line
         trap_narrow = 11  # half-width at goal line
         trap_wide = 14  # half-width at boards (approximate)
-        trap_x = [gx, bx, bx, gx, gx]
-        trap_y = [trap_narrow, trap_wide, -trap_wide, -trap_narrow, trap_narrow]
-        fig.add_shape(
-            type="path",
-            path=f"M {trap_x[0]},{trap_y[0]} L {trap_x[1]},{trap_y[1]} "
-            f"L {trap_x[2]},{trap_y[2]} L {trap_x[3]},{trap_y[3]} Z",
-            line=dict(color=RED_LINE, width=1.5),
-        )
+        # Draw only the 3 non-board sides as individual lines
+        for x0, y0, x1, y1 in [
+            (gx, trap_narrow, bx, trap_wide),  # top side
+            (gx, -trap_narrow, bx, -trap_wide),  # bottom side
+            (gx, -trap_narrow, gx, trap_narrow),  # goal-line side
+        ]:
+            fig.add_shape(
+                type="line",
+                x0=x0,
+                y0=y0,
+                x1=x1,
+                y1=y1,
+                line=dict(color=_rgba(RED_LINE, op), width=1.5),
+            )
 
     # --- Center-ice logo ---
     if center_logo_url:

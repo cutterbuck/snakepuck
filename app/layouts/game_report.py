@@ -20,7 +20,6 @@ def create_game_report_layout():
             dcc.Store(id="game-report-merged-stints", data={}),
             html.Div(id="game-report-stints-header", style={"marginTop": "3px"}),
             html.Div(id="game-report-stints"),
-            html.Div(id="game-report-rink", className="mt-3"),
             dcc.Store(id="game-report-stint-events", data=None),
             dcc.Store(id="game-report-frame-index", data=0),
             html.Div(
@@ -52,6 +51,7 @@ def create_game_report_layout():
                     "marginTop": "8px",
                 },
             ),
+            html.Div(id="game-report-rink", className="mt-3"),
             dcc.Interval(
                 id="game-report-interval",
                 interval=1500,
