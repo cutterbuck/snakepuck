@@ -444,13 +444,15 @@ def register_game_report_callbacks(dash_app):
             # Expand sub-rows for each stint when this shift is selected
             if is_selected and len(group) > 1:
                 sub_cell_style = {**CELL_STYLE, "fontSize": "13px"}
-                for stint in group:
+                for si, stint in enumerate(group, 1):
                     sub_cells = [
                         html.Td(
-                            "",
+                            f"Stint {si}",
                             style={
                                 **sub_cell_style,
                                 "borderLeft": "3px solid #0d6efd",
+                                "fontStyle": "italic",
+                                "color": "#666",
                             },
                         ),
                         html.Td(
@@ -634,6 +636,7 @@ def register_game_report_callbacks(dash_app):
                             "y_adj": e.y_adj,
                             "event_type": (e.event_type or "unknown").lower(),
                             "description": e.description or "",
+                            "player_id": e.player_id,
                         }
                     )
 
@@ -650,6 +653,7 @@ def register_game_report_callbacks(dash_app):
                             "tracking_x": t.tracking_x,
                             "tracking_y": t.tracking_y,
                             "team_id": t.team_id,
+                            "player_id": t.player_id,
                             "player_name": full_name,
                             "last_name": last_name,
                         }
@@ -886,9 +890,17 @@ def register_game_report_callbacks(dash_app):
 
             # Render tracking logos and player names for this frame
             if frame.get("tracking"):
+                # Collect player_ids involved in current events
+                event_player_ids = set()
+                for ev in frame.get("events", []):
+                    if ev.get("player_id"):
+                        event_player_ids.add(ev["player_id"])
+
                 for t in frame["tracking"]:
                     logo = logo_map.get(t["team_id"])
                     if logo:
+                        involved = t.get("player_id") in event_player_ids
+                        logo_size = 7 if involved else 5
                         fig.add_layout_image(
                             source=logo,
                             xref="x",
@@ -897,9 +909,9 @@ def register_game_report_callbacks(dash_app):
                             y=t["tracking_y"],
                             xanchor="center",
                             yanchor="middle",
-                            sizex=5,
-                            sizey=5,
-                            opacity=0.75,
+                            sizex=logo_size,
+                            sizey=logo_size,
+                            opacity=1.0 if involved else 0.5,
                             layer="above",
                         )
 
@@ -914,11 +926,12 @@ def register_game_report_callbacks(dash_app):
                 for idx_t, t in enumerate(frame["tracking"]):
                     last_name = t.get("last_name", "")
                     if last_name:
+                        involved = t.get("player_id") in event_player_ids
                         p = placements[idx_t % len(placements)]
                         fig.add_annotation(
                             x=t["tracking_x"] + p["dx"],
                             y=t["tracking_y"] + p["dy"],
-                            text=last_name,
+                            text=f"<b>{last_name}</b>" if involved else last_name,
                             showarrow=False,
                             font=dict(size=8, color="#333"),
                             xanchor=p["xanchor"],
