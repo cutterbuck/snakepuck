@@ -629,11 +629,11 @@ def register_game_report_callbacks(dash_app):
         for sl_id in ordered_sl_ids:
             frame_events = []
             for e in events_by_sl_id.get(sl_id, []):
-                if e.x_adj is not None:
+                if e.x is not None:
                     frame_events.append(
                         {
-                            "x_adj": e.x_adj,
-                            "y_adj": e.y_adj,
+                            "x": e.x,
+                            "y": e.y,
                             "event_type": (e.event_type or "unknown").lower(),
                             "description": e.description or "",
                             "player_id": e.player_id,
@@ -857,8 +857,8 @@ def register_game_report_callbacks(dash_app):
                     # Glow layer: larger, transparent marker behind
                     fig.add_trace(
                         go.Scatter(
-                            x=[e["x_adj"] for e in evs],
-                            y=[e["y_adj"] for e in evs],
+                            x=[e["x"] for e in evs],
+                            y=[e["y"] for e in evs],
                             mode="markers",
                             marker=dict(
                                 size=24,
@@ -872,8 +872,8 @@ def register_game_report_callbacks(dash_app):
                     # Main event marker
                     fig.add_trace(
                         go.Scatter(
-                            x=[e["x_adj"] for e in evs],
-                            y=[e["y_adj"] for e in evs],
+                            x=[e["x"] for e in evs],
+                            y=[e["y"] for e in evs],
                             mode="markers",
                             marker=dict(
                                 size=12,
