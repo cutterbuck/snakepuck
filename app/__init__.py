@@ -76,8 +76,11 @@ def create_app():
 </html>"""
 
     # Import layouts
+    from app.layouts.blog_post_detail import create_blog_post_detail_layout
+    from app.layouts.blog_posts import create_blog_posts_layout
     from app.layouts.game_report import create_game_report_layout
     from app.layouts.navbar import create_navbar
+    from app.layouts.player_analysis import create_player_analysis_layout
     from app.layouts.player_detail import create_player_detail_layout
     from app.layouts.sample_data import create_sample_data_layout
     from app.layouts.standings import create_standings_layout
@@ -98,8 +101,14 @@ def create_app():
         dash.Input("url", "pathname"),
     )
     def display_page(pathname):
-        if pathname == "/sample-data":
+        if pathname == "/player-analysis":
+            return create_player_analysis_layout()
+        elif pathname == "/sample-data":
             return create_sample_data_layout()
+        elif pathname and pathname.startswith("/blog/"):
+            return create_blog_post_detail_layout()
+        elif pathname == "/blog-posts":
+            return create_blog_posts_layout()
         elif pathname and pathname.startswith("/team/"):
             return create_team_detail_layout()
         elif pathname and pathname.startswith("/player/") and "/game/" in pathname:

@@ -1,3 +1,4 @@
+from app.models.blog_post import BlogPost
 from app.models.division import Division
 from app.models.event import Event
 from app.models.game import Game
@@ -14,6 +15,7 @@ from app.models.tracking import Tracking
 from app.models.user import User
 
 __all__ = [
+    "BlogPost",
     "User",
     "League",
     "Division",
