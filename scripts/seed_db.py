@@ -634,6 +634,71 @@ def seed():
             gap_by_game_period[(gid, period)].append((pt, pid, etype))
         del gap_events
 
+        # Load shot/goal events for shots counting
+        shot_events = (
+            db.session.query(
+                Event.game_id,
+                Event.period,
+                Event.period_time,
+                Event.player_id,
+            )
+            .filter(Event.event_type.in_(["shot", "goal"]))
+            .all()
+        )
+        shots_by_game_period = defaultdict(list)
+        for gid, period, pt, pid in shot_events:
+            shots_by_game_period[(gid, period)].append((pt, pid))
+        del shot_events
+
+        # Load faceoff events
+        faceoff_events = (
+            db.session.query(
+                Event.game_id,
+                Event.period,
+                Event.period_time,
+                Event.player_id,
+                Event.outcome,
+            )
+            .filter(Event.event_type == "faceoff")
+            .all()
+        )
+        faceoffs_by_game_period = defaultdict(list)
+        for gid, period, pt, pid, outcome in faceoff_events:
+            faceoffs_by_game_period[(gid, period)].append((pt, pid, outcome))
+        del faceoff_events
+
+        # Load block events
+        block_events = (
+            db.session.query(
+                Event.game_id,
+                Event.period,
+                Event.period_time,
+                Event.player_id,
+            )
+            .filter(Event.event_type == "block")
+            .all()
+        )
+        blocks_by_game_period = defaultdict(list)
+        for gid, period, pt, pid in block_events:
+            blocks_by_game_period[(gid, period)].append((pt, pid))
+        del block_events
+
+        # Load check events
+        check_events = (
+            db.session.query(
+                Event.game_id,
+                Event.period,
+                Event.period_time,
+                Event.player_id,
+            )
+            .filter(Event.event_type == "check")
+            .all()
+        )
+        checks_by_game_period = defaultdict(list)
+        for gid, period, pt, pid in check_events:
+            checks_by_game_period[(gid, period)].append((pt, pid))
+        del check_events
+
         all_stints_for_xg = Stint.query.all()
         total_stints_xg = len(all_stints_for_xg)
         for idx, stint in enumerate(all_stints_for_xg, 1):
@@ -737,9 +802,108 @@ def seed():
             stint.pk_assists = tot_assists if is_pk else 0
             stint.pk_points = tot_points if is_pk else 0
 
+            # --- Shots/Faceoffs/Blocks/Checks ---
+            tot_s = 0
+            tot_fow = 0
+            tot_fol = 0
+            tot_blk = 0
+            tot_chk = 0
+
+            has_times = (
+                stint.period_time_start is not None
+                and stint.period_time_end is not None
+            )
+
+            if has_times:
+                for evt_time, evt_pid in shots_by_game_period.get(
+                    (stint.game_id, stint.period), []
+                ):
+                    if (
+                        evt_time is not None
+                        and evt_pid == stint.player_id
+                        and stint.period_time_start <= evt_time < stint.period_time_end
+                    ):
+                        tot_s += 1
+
+                for evt_time, evt_pid, outcome in faceoffs_by_game_period.get(
+                    (stint.game_id, stint.period), []
+                ):
+                    if (
+                        evt_time is not None
+                        and evt_pid == stint.player_id
+                        and stint.period_time_start <= evt_time < stint.period_time_end
+                    ):
+                        if outcome == "successful":
+                            tot_fow += 1
+                        elif outcome == "failed":
+                            tot_fol += 1
+
+                for evt_time, evt_pid in blocks_by_game_period.get(
+                    (stint.game_id, stint.period), []
+                ):
+                    if (
+                        evt_time is not None
+                        and evt_pid == stint.player_id
+                        and stint.period_time_start <= evt_time < stint.period_time_end
+                    ):
+                        tot_blk += 1
+
+                for evt_time, evt_pid in checks_by_game_period.get(
+                    (stint.game_id, stint.period), []
+                ):
+                    if (
+                        evt_time is not None
+                        and evt_pid == stint.player_id
+                        and stint.period_time_start <= evt_time < stint.period_time_end
+                    ):
+                        tot_chk += 1
+
+            stint.tot_shots = tot_s
+            stint.tot_faceoffs_won = tot_fow
+            stint.tot_faceoffs_lost = tot_fol
+            stint.tot_blocks = tot_blk
+            stint.tot_checks = tot_chk
+
+            stint.es_shots = tot_s if is_even else 0
+            stint.ev5_shots = tot_s if is_5v5 else 0
+            stint.pp_shots = tot_s if is_pp else 0
+            stint.pk_shots = tot_s if is_pk else 0
+
+            stint.es_faceoffs_won = tot_fow if is_even else 0
+            stint.ev5_faceoffs_won = tot_fow if is_5v5 else 0
+            stint.pp_faceoffs_won = tot_fow if is_pp else 0
+            stint.pk_faceoffs_won = tot_fow if is_pk else 0
+
+            stint.es_faceoffs_lost = tot_fol if is_even else 0
+            stint.ev5_faceoffs_lost = tot_fol if is_5v5 else 0
+            stint.pp_faceoffs_lost = tot_fol if is_pp else 0
+            stint.pk_faceoffs_lost = tot_fol if is_pk else 0
+
+            stint.es_blocks = tot_blk if is_even else 0
+            stint.ev5_blocks = tot_blk if is_5v5 else 0
+            stint.pp_blocks = tot_blk if is_pp else 0
+            stint.pk_blocks = tot_blk if is_pk else 0
+
+            stint.es_checks = tot_chk if is_even else 0
+            stint.ev5_checks = tot_chk if is_5v5 else 0
+            stint.pp_checks = tot_chk if is_pp else 0
+            stint.pk_checks = tot_chk if is_pk else 0
+
+            # --- TOI ---
+            duration = (
+                (stint.period_time_end - stint.period_time_start) if has_times else 0.0
+            )
+            stint.tot_toi = duration
+            stint.es_toi = duration if is_even else 0.0
+            stint.ev5_toi = duration if is_5v5 else 0.0
+            stint.pp_toi = duration if is_pp else 0.0
+            stint.pk_toi = duration if is_pk else 0.0
+
         db.session.flush()
         del xg_by_game_period, gap_by_game_period, all_stints_for_xg
-        print("Computed stint xG and GAP values")
+        del shots_by_game_period, faceoffs_by_game_period
+        del blocks_by_game_period, checks_by_game_period
+        print("Computed stint xG, GAP, stats, and TOI values")
 
         # --- PlayerStats (per team) ---
         print("Computing player stats (per team)...")
@@ -861,15 +1025,15 @@ def seed():
                 ps.tot_goals = goals
                 ps.tot_assists = assists
                 ps.tot_points = goals + assists
-                ps.shots = total_shots
-                ps.shooting_pct = shooting_pct
-                ps.faceoffs_won = faceoffs_won
-                ps.faceoffs_lost = faceoffs_lost
-                ps.faceoff_pct = faceoff_pct
+                ps.tot_shots = total_shots
+                ps.tot_shooting_pct = shooting_pct
+                ps.tot_faceoffs_won = faceoffs_won
+                ps.tot_faceoffs_lost = faceoffs_lost
+                ps.tot_faceoff_pct = faceoff_pct
                 ps.penalties = penalties
                 ps.penalties_drawn = penalties_drawn
-                ps.blocks = blocks
-                ps.checks = checks
+                ps.tot_blocks = blocks
+                ps.tot_checks = checks
                 ps.tot_i_xg = total_xg
 
                 # Aggregate situation columns from pre-computed stint columns
@@ -924,6 +1088,62 @@ def seed():
                 ]
                 for f in gap_fields:
                     setattr(ps, f, sum(getattr(s, f) or 0 for s in player_stints))
+
+                # Aggregate situation stats from pre-computed stint columns
+                stat_fields = [
+                    "es_shots",
+                    "ev5_shots",
+                    "pp_shots",
+                    "pk_shots",
+                    "es_faceoffs_won",
+                    "ev5_faceoffs_won",
+                    "pp_faceoffs_won",
+                    "pk_faceoffs_won",
+                    "es_faceoffs_lost",
+                    "ev5_faceoffs_lost",
+                    "pp_faceoffs_lost",
+                    "pk_faceoffs_lost",
+                    "es_blocks",
+                    "ev5_blocks",
+                    "pp_blocks",
+                    "pk_blocks",
+                    "es_checks",
+                    "ev5_checks",
+                    "pp_checks",
+                    "pk_checks",
+                ]
+                for f in stat_fields:
+                    setattr(ps, f, sum(getattr(s, f) or 0 for s in player_stints))
+
+                # Compute shooting_pct and faceoff_pct per situation
+                for prefix in ["es", "ev5", "pp", "pk"]:
+                    s_shots = getattr(ps, f"{prefix}_shots") or 0
+                    s_goals = getattr(ps, f"{prefix}_goals") or 0
+                    setattr(
+                        ps,
+                        f"{prefix}_shooting_pct",
+                        round(s_goals / s_shots, 3) if s_shots > 0 else None,
+                    )
+                    s_fow = getattr(ps, f"{prefix}_faceoffs_won") or 0
+                    s_fol = getattr(ps, f"{prefix}_faceoffs_lost") or 0
+                    s_total_fo = s_fow + s_fol
+                    setattr(
+                        ps,
+                        f"{prefix}_faceoff_pct",
+                        round(s_fow / s_total_fo, 3) if s_total_fo > 0 else None,
+                    )
+
+                # Aggregate TOI from stints and compute ATOI
+                for prefix in ["tot", "es", "ev5", "pp", "pk"]:
+                    total_toi = sum(
+                        getattr(s, f"{prefix}_toi") or 0.0 for s in player_stints
+                    )
+                    setattr(
+                        ps,
+                        f"{prefix}_atoi",
+                        round(total_toi / gp, 1) if gp > 0 else None,
+                    )
+
                 ps.age = player_age
 
                 new_player_stats += 1
@@ -1071,6 +1291,57 @@ def seed():
                     ]:
                         stint_agg[f] = sum(getattr(s, f) or 0 for s in game_stints)
 
+                    # Aggregate situation stats from stint columns
+                    for f in [
+                        "es_shots",
+                        "ev5_shots",
+                        "pp_shots",
+                        "pk_shots",
+                        "es_faceoffs_won",
+                        "ev5_faceoffs_won",
+                        "pp_faceoffs_won",
+                        "pk_faceoffs_won",
+                        "es_faceoffs_lost",
+                        "ev5_faceoffs_lost",
+                        "pp_faceoffs_lost",
+                        "pk_faceoffs_lost",
+                        "es_blocks",
+                        "ev5_blocks",
+                        "pp_blocks",
+                        "pk_blocks",
+                        "es_checks",
+                        "ev5_checks",
+                        "pp_checks",
+                        "pk_checks",
+                    ]:
+                        stint_agg[f] = sum(getattr(s, f) or 0 for s in game_stints)
+
+                    # Aggregate TOI from stint columns
+                    for f in [
+                        "tot_toi",
+                        "es_toi",
+                        "ev5_toi",
+                        "pp_toi",
+                        "pk_toi",
+                    ]:
+                        stint_agg[f] = round(
+                            sum(getattr(s, f) or 0.0 for s in game_stints), 1
+                        )
+
+                    # Compute situation shooting_pct and faceoff_pct
+                    for prefix in ["es", "ev5", "pp", "pk"]:
+                        s_shots = stint_agg.get(f"{prefix}_shots", 0)
+                        s_goals = stint_agg.get(f"{prefix}_goals", 0)
+                        stint_agg[f"{prefix}_shooting_pct"] = (
+                            round(s_goals / s_shots, 3) if s_shots > 0 else None
+                        )
+                        s_fow = stint_agg.get(f"{prefix}_faceoffs_won", 0)
+                        s_fol = stint_agg.get(f"{prefix}_faceoffs_lost", 0)
+                        s_total_fo = s_fow + s_fol
+                        stint_agg[f"{prefix}_faceoff_pct"] = (
+                            round(s_fow / s_total_fo, 3) if s_total_fo > 0 else None
+                        )
+
                     pgs_records.append(
                         PlayerGameStats(
                             player_id=pid,
@@ -1080,15 +1351,15 @@ def seed():
                             tot_goals=goals,
                             tot_assists=assists,
                             tot_points=goals + assists,
-                            shots=total_shots,
-                            shooting_pct=shooting_pct,
-                            faceoffs_won=fow,
-                            faceoffs_lost=fol,
-                            faceoff_pct=faceoff_pct,
+                            tot_shots=total_shots,
+                            tot_shooting_pct=shooting_pct,
+                            tot_faceoffs_won=fow,
+                            tot_faceoffs_lost=fol,
+                            tot_faceoff_pct=faceoff_pct,
                             penalties=row.penalties,
                             penalties_drawn=row.penalties_drawn,
-                            blocks=row.blocks,
-                            checks=row.checks,
+                            tot_blocks=row.blocks,
+                            tot_checks=row.checks,
                             tot_i_xg=total_xg,
                             **stint_agg,
                         )

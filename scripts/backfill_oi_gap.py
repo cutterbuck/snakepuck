@@ -75,8 +75,8 @@ def backfill():
                     setattr(pgs, f, 0)
 
             # Recompute shooting_pct based on tot_goals
-            total_shots = pgs.shots or 0
-            pgs.shooting_pct = (
+            total_shots = pgs.tot_shots or 0
+            pgs.tot_shooting_pct = (
                 round(pgs.tot_goals / total_shots, 3) if total_shots > 0 else None
             )
 
@@ -118,8 +118,8 @@ def backfill():
                 setattr(ps, f, agg.get(f, 0))
 
             # Recompute shooting_pct based on tot_goals
-            total_shots = ps.shots or 0
-            ps.shooting_pct = (
+            total_shots = ps.tot_shots or 0
+            ps.tot_shooting_pct = (
                 round(ps.tot_goals / total_shots, 3) if total_shots > 0 else None
             )
 
