@@ -6,6 +6,7 @@ def create_team_detail_layout():
     return dbc.Container(
         [
             dcc.Store(id="team-detail-id"),
+            dcc.Store(id="team-detail-situation", data="tot"),
             dcc.Link(
                 "Back to Standings",
                 href="/",
@@ -28,6 +29,7 @@ def create_team_detail_layout():
                 className="mb-3",
                 style={"display": "flex", "alignItems": "center"},
             ),
+            html.Div(id="team-detail-situation-toggle", className="mb-3"),
             dcc.Store(
                 id="team-detail-sort", data={"column": "PTS", "direction": "desc"}
             ),

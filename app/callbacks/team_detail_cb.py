@@ -1,4 +1,4 @@
-from dash import Input, Output, State, callback_context, dcc, html, no_update
+from dash import ALL, Input, Output, State, callback_context, ctx, dcc, html, no_update
 
 from app.models import Player, PlayerStats, Season, Team
 
@@ -48,6 +48,7 @@ HEADERS = [
     "Age",
     "Pos",
     "GP",
+    "ATOI",
     "G",
     "A",
     "PTS",
@@ -56,28 +57,19 @@ HEADERS = [
     "FOW",
     "FOL",
     "FO%",
-    "PIM",
-    "PD",
     "BLK",
     "HIT",
-    "Tot ixG",
-    "Tot oixGF",
-    "Tot oixGA",
-    "Tot xG%",
-    "ES ixG",
-    "ES oixGF",
-    "ES oixGA",
-    "ES xG%",
-    "5v5 ixG",
-    "5v5 oixGF",
-    "5v5 oixGA",
-    "5v5 xG%",
+    "ixG",
+    "oixGF",
+    "oixGA",
+    "xG%",
 ]
 
 SORTABLE_COLUMNS = [
     "Age",
     "Pos",
     "GP",
+    "ATOI",
     "G",
     "A",
     "PTS",
@@ -86,52 +78,53 @@ SORTABLE_COLUMNS = [
     "FOW",
     "FOL",
     "FO%",
-    "PIM",
-    "PD",
     "BLK",
     "HIT",
-    "Tot ixG",
-    "Tot oixGF",
-    "Tot oixGA",
-    "Tot xG%",
-    "ES ixG",
-    "ES oixGF",
-    "ES oixGA",
-    "ES xG%",
-    "5v5 ixG",
-    "5v5 oixGF",
-    "5v5 oixGA",
-    "5v5 xG%",
+    "ixG",
+    "oixGF",
+    "oixGA",
+    "xG%",
 ]
 
+# Maps header name -> field suffix (will be prefixed with situation prefix)
 COLUMN_TO_FIELD = {
     "Age": "age",
     "Pos": "position",
     "GP": "games_played",
-    "G": "tot_goals",
-    "A": "tot_assists",
-    "PTS": "tot_points",
-    "S": "tot_shots",
-    "S%": "tot_shooting_pct",
-    "FOW": "tot_faceoffs_won",
-    "FOL": "tot_faceoffs_lost",
-    "FO%": "tot_faceoff_pct",
-    "PIM": "penalties",
-    "PD": "penalties_drawn",
-    "BLK": "tot_blocks",
-    "HIT": "tot_checks",
-    "Tot ixG": "tot_i_xg",
-    "Tot oixGF": "tot_oi_xgf",
-    "Tot oixGA": "tot_oi_xga",
-    "Tot xG%": "tot_xg_pct",
-    "ES ixG": "es_i_xg",
-    "ES oixGF": "es_oi_xgf",
-    "ES oixGA": "es_oi_xga",
-    "ES xG%": "es_xg_pct",
-    "5v5 ixG": "ev5_i_xg",
-    "5v5 oixGF": "ev5_oi_xgf",
-    "5v5 oixGA": "ev5_oi_xga",
-    "5v5 xG%": "ev5_xg_pct",
+    "ATOI": "_atoi",
+    "G": "_goals",
+    "A": "_assists",
+    "PTS": "_points",
+    "S": "_shots",
+    "S%": "_shooting_pct",
+    "FOW": "_faceoffs_won",
+    "FOL": "_faceoffs_lost",
+    "FO%": "_faceoff_pct",
+    "BLK": "_blocks",
+    "HIT": "_checks",
+    "ixG": "_i_xg",
+    "oixGF": "_oi_xgf",
+    "oixGA": "_oi_xga",
+    "xG%": "_xg_pct",
+}
+
+# Fields that are NOT situation-dependent
+STATIC_FIELDS = {"age", "position", "games_played", "penalties", "penalties_drawn"}
+
+SITUATIONS = [
+    ("tot", "All"),
+    ("es", "Even Strength"),
+    ("ev5", "5-on-5"),
+    ("pp", "Power Play"),
+    ("pk", "Short-Handed"),
+]
+
+SITUATION_BTN_BASE = {
+    "padding": "4px 12px",
+    "border": "1px solid #ccc",
+    "cursor": "pointer",
+    "fontSize": "14px",
+    "fontWeight": "bold",
 }
 
 
@@ -139,6 +132,23 @@ def _fmt_pct(val):
     if val is None:
         return ""
     return f"{val:.3f}"
+
+
+def _seconds_to_mmss(seconds):
+    """Convert seconds (float) to M:SS format."""
+    if seconds is None:
+        return ""
+    total = int(seconds)
+    m, s = divmod(total, 60)
+    return f"{m}:{s:02d}"
+
+
+def _resolve_field(col_name, prefix):
+    """Return the actual model field name for a column, applying prefix for situational fields."""
+    raw = COLUMN_TO_FIELD.get(col_name, "_points")
+    if raw.startswith("_"):
+        return f"{prefix}{raw}"
+    return raw
 
 
 def _build_thead(sort_col, sort_dir):
@@ -237,6 +247,68 @@ def register_team_detail_callbacks(dash_app):
         ]
         return options, team_id
 
+    @dash_app.callback(
+        Output("team-detail-situation-toggle", "children"),
+        Input("team-detail-id", "data"),
+        Input("team-detail-situation", "data"),
+    )
+    def update_situation_toggle(team_id, selected_situation):
+        if not team_id:
+            return html.Div()
+
+        selected = selected_situation or "tot"
+        buttons = []
+        for idx, (value, label) in enumerate(SITUATIONS):
+            active = selected == value
+            if idx == 0:
+                radius = "4px 0 0 4px"
+            elif idx == len(SITUATIONS) - 1:
+                radius = "0 4px 4px 0"
+            else:
+                radius = "0"
+            style = {
+                **SITUATION_BTN_BASE,
+                "backgroundColor": "#0d6efd" if active else "#fff",
+                "color": "#fff" if active else "#333",
+                "borderRadius": radius,
+            }
+            buttons.append(
+                html.Button(
+                    label,
+                    id={"type": "td-situation-btn", "index": value},
+                    n_clicks=0,
+                    style=style,
+                )
+            )
+
+        return html.Div(
+            [
+                html.Span(
+                    "Situation:",
+                    style={
+                        "fontWeight": "bold",
+                        "marginRight": "8px",
+                        "fontSize": "14px",
+                    },
+                ),
+                html.Div(buttons, style={"display": "flex"}),
+            ],
+            style={"display": "flex", "alignItems": "center"},
+        )
+
+    @dash_app.callback(
+        Output("team-detail-situation", "data"),
+        Input({"type": "td-situation-btn", "index": ALL}, "n_clicks"),
+        State("team-detail-situation", "data"),
+        prevent_initial_call=True,
+    )
+    def toggle_situation(n_clicks, current_situation):
+        if not ctx.triggered_id or not any(n for n in n_clicks if n):
+            from dash.exceptions import PreventUpdate
+
+            raise PreventUpdate
+        return ctx.triggered_id["index"]
+
     # Sort state callback
     @dash_app.callback(
         Output("team-detail-sort", "data"),
@@ -244,14 +316,14 @@ def register_team_detail_callbacks(dash_app):
         State("team-detail-sort", "data"),
     )
     def update_sort(*args):
-        ctx = callback_context
-        if not ctx.triggered or ctx.triggered[0]["prop_id"] == ".":
+        cb_ctx = callback_context
+        if not cb_ctx.triggered or cb_ctx.triggered[0]["prop_id"] == ".":
             return no_update
 
-        prop_id = ctx.triggered[0]["prop_id"]
+        prop_id = cb_ctx.triggered[0]["prop_id"]
 
         # Ignore freshly rendered headers (n_clicks=0)
-        triggered_value = ctx.triggered[0]["value"]
+        triggered_value = cb_ctx.triggered[0]["value"]
         if triggered_value is None or triggered_value == 0:
             return no_update
 
@@ -270,12 +342,14 @@ def register_team_detail_callbacks(dash_app):
         [
             Input("team-detail-sort", "data"),
             Input("season-selector", "value"),
+            Input("team-detail-situation", "data"),
         ],
     )
-    def update_roster(sort_data, active_team_id):
+    def update_roster(sort_data, active_team_id, situation=None):
         if not active_team_id:
             return html.Div()
 
+        prefix = situation or "tot"
         sort_col = sort_data.get("column", "PTS") if sort_data else "PTS"
         sort_dir = sort_data.get("direction", "desc") if sort_data else "desc"
 
@@ -286,7 +360,7 @@ def register_team_detail_callbacks(dash_app):
         )
 
         # Apply sort — push NULL to the bottom
-        field = COLUMN_TO_FIELD.get(sort_col, "tot_points")
+        field = _resolve_field(sort_col, prefix)
         if field == "position":
             order_col = getattr(Player, field)
         else:
@@ -311,30 +385,21 @@ def register_team_detail_callbacks(dash_app):
                 ps.age,
                 pos,
                 ps.games_played,
-                ps.tot_goals,
-                ps.tot_assists,
-                ps.tot_points,
-                ps.tot_shots,
-                _fmt_pct(ps.tot_shooting_pct),
-                ps.tot_faceoffs_won,
-                ps.tot_faceoffs_lost,
-                _fmt_pct(ps.tot_faceoff_pct),
-                ps.penalties,
-                ps.penalties_drawn,
-                ps.tot_blocks,
-                ps.tot_checks,
-                ps.tot_i_xg,
-                ps.tot_oi_xgf,
-                ps.tot_oi_xga,
-                _fmt_pct(ps.tot_xg_pct),
-                ps.es_i_xg,
-                ps.es_oi_xgf,
-                ps.es_oi_xga,
-                _fmt_pct(ps.es_xg_pct),
-                ps.ev5_i_xg,
-                ps.ev5_oi_xgf,
-                ps.ev5_oi_xga,
-                _fmt_pct(ps.ev5_xg_pct),
+                _seconds_to_mmss(getattr(ps, f"{prefix}_atoi")),
+                getattr(ps, f"{prefix}_goals"),
+                getattr(ps, f"{prefix}_assists"),
+                getattr(ps, f"{prefix}_points"),
+                getattr(ps, f"{prefix}_shots"),
+                _fmt_pct(getattr(ps, f"{prefix}_shooting_pct")),
+                getattr(ps, f"{prefix}_faceoffs_won"),
+                getattr(ps, f"{prefix}_faceoffs_lost"),
+                _fmt_pct(getattr(ps, f"{prefix}_faceoff_pct")),
+                getattr(ps, f"{prefix}_blocks"),
+                getattr(ps, f"{prefix}_checks"),
+                getattr(ps, f"{prefix}_i_xg"),
+                getattr(ps, f"{prefix}_oi_xgf"),
+                getattr(ps, f"{prefix}_oi_xga"),
+                _fmt_pct(getattr(ps, f"{prefix}_xg_pct")),
             ]
             stat_cols = HEADERS[1:]  # all columns except Name
             cells = [

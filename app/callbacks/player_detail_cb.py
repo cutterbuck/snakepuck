@@ -22,6 +22,7 @@ STAT_HEADERS = [
     "Season",
     "Team",
     "GP",
+    "ATOI",
     "G",
     "A",
     "PTS",
@@ -30,8 +31,6 @@ STAT_HEADERS = [
     "FOW",
     "FOL",
     "FO%",
-    "PIM",
-    "PD",
     "BLK",
     "HIT",
     "ixG",
@@ -45,6 +44,7 @@ GAME_LOG_HEADERS = [
     "Date",
     "Opp",
     "Result",
+    "TOI",
     "G",
     "A",
     "PTS",
@@ -53,13 +53,12 @@ GAME_LOG_HEADERS = [
     "FOW",
     "FOL",
     "FO%",
-    "PIM",
-    "PD",
     "BLK",
     "HIT",
     "ixG",
     "oixGF",
     "oixGA",
+    "xG%",
 ]
 
 SITUATIONS = [
@@ -83,6 +82,15 @@ def _fmt_pct(val):
     if val is None:
         return ""
     return f"{val:.3f}"
+
+
+def _seconds_to_mmss(seconds):
+    """Convert seconds (float) to M:SS format."""
+    if seconds is None:
+        return ""
+    total = int(seconds)
+    m, s = divmod(total, 60)
+    return f"{m}:{s:02d}"
 
 
 def register_player_detail_callbacks(dash_app):
@@ -304,6 +312,7 @@ def register_player_detail_callbacks(dash_app):
             seen_seasons.add(season_name)
             values = [
                 ps.games_played,
+                _seconds_to_mmss(getattr(ps, f"{prefix}_atoi")),
                 getattr(ps, f"{prefix}_goals"),
                 getattr(ps, f"{prefix}_assists"),
                 getattr(ps, f"{prefix}_points"),
@@ -312,8 +321,6 @@ def register_player_detail_callbacks(dash_app):
                 getattr(ps, f"{prefix}_faceoffs_won"),
                 getattr(ps, f"{prefix}_faceoffs_lost"),
                 _fmt_pct(getattr(ps, f"{prefix}_faceoff_pct")),
-                ps.penalties,
-                ps.penalties_drawn,
                 getattr(ps, f"{prefix}_blocks"),
                 getattr(ps, f"{prefix}_checks"),
                 getattr(ps, f"{prefix}_i_xg"),
@@ -478,6 +485,7 @@ def register_player_detail_callbacks(dash_app):
             date_str = game_date.strftime("%Y-%m-%d") if game_date else ""
 
             values = [
+                _seconds_to_mmss(getattr(pgs, f"{prefix}_toi")),
                 getattr(pgs, f"{prefix}_goals"),
                 getattr(pgs, f"{prefix}_assists"),
                 getattr(pgs, f"{prefix}_points"),
@@ -486,13 +494,25 @@ def register_player_detail_callbacks(dash_app):
                 getattr(pgs, f"{prefix}_faceoffs_won"),
                 getattr(pgs, f"{prefix}_faceoffs_lost"),
                 _fmt_pct(getattr(pgs, f"{prefix}_faceoff_pct")),
-                pgs.penalties,
-                pgs.penalties_drawn,
                 getattr(pgs, f"{prefix}_blocks"),
                 getattr(pgs, f"{prefix}_checks"),
                 getattr(pgs, f"{prefix}_i_xg"),
                 getattr(pgs, f"{prefix}_oi_xgf"),
                 getattr(pgs, f"{prefix}_oi_xga"),
+                _fmt_pct(
+                    round(
+                        getattr(pgs, f"{prefix}_oi_xgf")
+                        / (
+                            getattr(pgs, f"{prefix}_oi_xgf")
+                            + getattr(pgs, f"{prefix}_oi_xga")
+                        ),
+                        3,
+                    )
+                    if (getattr(pgs, f"{prefix}_oi_xgf") or 0)
+                    + (getattr(pgs, f"{prefix}_oi_xga") or 0)
+                    > 0
+                    else None
+                ),
             ]
             cells = [
                 html.Td(date_str, style=CELL_STYLE),
