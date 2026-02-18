@@ -372,10 +372,31 @@ def register_team_detail_callbacks(dash_app):
 
         results = query.all()
 
+        # Partition into skaters and goalies so goalies always appear at bottom
+        skaters = [r for r in results if r[-1] != "G"]
+        goalies = [r for r in results if r[-1] == "G"]
+        goalies.sort(key=lambda r: r[0].games_played or 0, reverse=True)
+        results = skaters + goalies
+
         thead = _build_thead(sort_col, sort_dir)
 
+        num_skaters = len(skaters)
         rows = []
         for i, (ps, pid, first_name, last_name, pos) in enumerate(results):
+            # Insert a separator row between skaters and goalies
+            if i == num_skaters and goalies:
+                rows.append(
+                    html.Tr(
+                        html.Td(
+                            colSpan=len(HEADERS),
+                            style={
+                                "borderTop": "2px solid #343a40",
+                                "padding": "0",
+                                "height": "0",
+                            },
+                        )
+                    )
+                )
             row_style = (
                 {"backgroundColor": "rgb(245, 245, 245)"}
                 if i % 2 == 1

@@ -27,6 +27,7 @@ CELL_STYLE = {
 }
 
 STAT_HEADERS = [
+    "TOI",
     "G",
     "A",
     "PTS",
@@ -39,15 +40,9 @@ STAT_HEADERS = [
     "PD",
     "BLK",
     "HIT",
-    "Tot ixG",
-    "Tot oixGF",
-    "Tot oixGA",
-    "ES ixG",
-    "ES oixGF",
-    "ES oixGA",
-    "5v5 ixG",
-    "5v5 oixGF",
-    "5v5 oixGA",
+    "ixG",
+    "oixGF",
+    "oixGA",
 ]
 
 
@@ -55,6 +50,26 @@ def _fmt_pct(val):
     if val is None:
         return ""
     return f"{val:.3f}"
+
+
+SITUATIONS = [
+    ("tot", "All"),
+    ("es", "Even Strength"),
+    ("ev5", "5-on-5"),
+    ("pp", "Power Play"),
+    ("pk", "Short-Handed"),
+]
+
+SITUATION_BTN_BASE = {
+    "padding": "4px 12px",
+    "border": "1px solid #ccc",
+    "cursor": "pointer",
+    "fontSize": "14px",
+    "fontWeight": "bold",
+}
+
+# Fields that are NOT situation-dependent
+STATIC_FIELDS = {"penalties", "penalties_drawn"}
 
 
 def register_game_report_callbacks(dash_app):
@@ -195,11 +210,74 @@ def register_game_report_callbacks(dash_app):
         )
 
     @dash_app.callback(
+        Output("game-report-situation-toggle", "children"),
+        Input("game-report-player-id", "data"),
+        Input("game-report-situation", "data"),
+    )
+    def update_gr_situation_toggle(player_id, selected_situation):
+        if not player_id:
+            return html.Div()
+
+        selected = selected_situation or "tot"
+        buttons = []
+        for idx, (value, label) in enumerate(SITUATIONS):
+            active = selected == value
+            if idx == 0:
+                radius = "4px 0 0 4px"
+            elif idx == len(SITUATIONS) - 1:
+                radius = "0 4px 4px 0"
+            else:
+                radius = "0"
+            style = {
+                **SITUATION_BTN_BASE,
+                "backgroundColor": "#0d6efd" if active else "#fff",
+                "color": "#fff" if active else "#333",
+                "borderRadius": radius,
+            }
+            buttons.append(
+                html.Button(
+                    label,
+                    id={"type": "gr-situation-btn", "index": value},
+                    n_clicks=0,
+                    style=style,
+                )
+            )
+
+        return html.Div(
+            [
+                html.Span(
+                    "Situation:",
+                    style={
+                        "fontWeight": "bold",
+                        "marginRight": "8px",
+                        "fontSize": "14px",
+                    },
+                ),
+                html.Div(buttons, style={"display": "flex"}),
+            ],
+            style={"display": "flex", "alignItems": "center"},
+        )
+
+    @dash_app.callback(
+        Output("game-report-situation", "data"),
+        Input({"type": "gr-situation-btn", "index": ALL}, "n_clicks"),
+        State("game-report-situation", "data"),
+        prevent_initial_call=True,
+    )
+    def toggle_gr_situation(n_clicks, current_situation):
+        if not ctx.triggered_id or not any(n for n in n_clicks if n):
+            from dash.exceptions import PreventUpdate
+
+            raise PreventUpdate
+        return ctx.triggered_id["index"]
+
+    @dash_app.callback(
         Output("game-report-stats", "children"),
         Input("game-report-player-id", "data"),
         Input("game-report-game-id", "data"),
+        Input("game-report-situation", "data"),
     )
-    def update_game_report_stats(player_id, game_id):
+    def update_game_report_stats(player_id, game_id, situation=None):
         if not player_id or not game_id:
             return html.Div()
 
@@ -213,31 +291,28 @@ def register_game_report_callbacks(dash_app):
         if not pgs:
             return html.Div("No stats found for this game.", style={"color": "#666"})
 
+        prefix = situation or "tot"
+
         header_cells = [html.Th(h, style=HEADER_STYLE) for h in STAT_HEADERS]
         thead = html.Thead(html.Tr(header_cells))
 
         values = [
-            pgs.tot_goals,
-            pgs.tot_assists,
-            pgs.tot_points,
-            pgs.tot_shots,
-            _fmt_pct(pgs.tot_shooting_pct),
-            pgs.tot_faceoffs_won,
-            pgs.tot_faceoffs_lost,
-            _fmt_pct(pgs.tot_faceoff_pct),
+            _seconds_to_mmss(getattr(pgs, f"{prefix}_toi")),
+            getattr(pgs, f"{prefix}_goals"),
+            getattr(pgs, f"{prefix}_assists"),
+            getattr(pgs, f"{prefix}_points"),
+            getattr(pgs, f"{prefix}_shots"),
+            _fmt_pct(getattr(pgs, f"{prefix}_shooting_pct")),
+            getattr(pgs, f"{prefix}_faceoffs_won"),
+            getattr(pgs, f"{prefix}_faceoffs_lost"),
+            _fmt_pct(getattr(pgs, f"{prefix}_faceoff_pct")),
             pgs.penalties,
             pgs.penalties_drawn,
-            pgs.tot_blocks,
-            pgs.tot_checks,
-            pgs.tot_i_xg,
-            pgs.tot_oi_xgf,
-            pgs.tot_oi_xga,
-            pgs.es_i_xg,
-            pgs.es_oi_xgf,
-            pgs.es_oi_xga,
-            pgs.ev5_i_xg,
-            pgs.ev5_oi_xgf,
-            pgs.ev5_oi_xga,
+            getattr(pgs, f"{prefix}_blocks"),
+            getattr(pgs, f"{prefix}_checks"),
+            getattr(pgs, f"{prefix}_i_xg"),
+            getattr(pgs, f"{prefix}_oi_xgf"),
+            getattr(pgs, f"{prefix}_oi_xga"),
         ]
         cells = [html.Td(v, style=CELL_STYLE) for v in values]
         row = html.Tr(cells, style={"backgroundColor": "rgb(255, 255, 255)"})
@@ -256,6 +331,7 @@ def register_game_report_callbacks(dash_app):
 
     STINT_HEADERS = [
         "Shift",
+        "TOI",
         "Start",
         "End",
         "Home Skaters",
@@ -263,15 +339,9 @@ def register_game_report_callbacks(dash_app):
         "Home Net Empty",
         "Away Net Empty",
         "Score",
-        "Tot ixG",
-        "Tot oixGF",
-        "Tot oixGA",
-        "ES ixG",
-        "ES oixGF",
-        "ES oixGA",
-        "5v5 ixG",
-        "5v5 oixGF",
-        "5v5 oixGA",
+        "ixG",
+        "oixGF",
+        "oixGA",
     ]
 
     PERIOD_BTN_BASE = {
@@ -466,6 +536,10 @@ def register_game_report_callbacks(dash_app):
             cells = [
                 html.Td(first.shift, style=CELL_STYLE),
                 html.Td(
+                    _seconds_to_mmss(sum(getattr(s, "tot_toi") or 0 for s in group)),
+                    style=CELL_STYLE,
+                ),
+                html.Td(
                     _seconds_to_mmss(first.period_time_start)
                     if first.period_time_start is not None
                     else "",
@@ -490,12 +564,6 @@ def register_game_report_callbacks(dash_app):
                 html.Td(_sum_field("tot_i_xg"), style=CELL_STYLE),
                 html.Td(_sum_field("tot_oi_xgf"), style=CELL_STYLE),
                 html.Td(_sum_field("tot_oi_xga"), style=CELL_STYLE),
-                html.Td(_sum_field("es_i_xg"), style=CELL_STYLE),
-                html.Td(_sum_field("es_oi_xgf"), style=CELL_STYLE),
-                html.Td(_sum_field("es_oi_xga"), style=CELL_STYLE),
-                html.Td(_sum_field("ev5_i_xg"), style=CELL_STYLE),
-                html.Td(_sum_field("ev5_oi_xgf"), style=CELL_STYLE),
-                html.Td(_sum_field("ev5_oi_xga"), style=CELL_STYLE),
             ]
             rows.append(
                 html.Tr(
@@ -520,6 +588,10 @@ def register_game_report_callbacks(dash_app):
                                 "fontStyle": "italic",
                                 "color": "#666",
                             },
+                        ),
+                        html.Td(
+                            _seconds_to_mmss(stint.tot_toi or 0),
+                            style=sub_cell_style,
                         ),
                         html.Td(
                             _seconds_to_mmss(stint.period_time_start)
@@ -552,12 +624,6 @@ def register_game_report_callbacks(dash_app):
                         html.Td(stint.tot_i_xg or 0, style=sub_cell_style),
                         html.Td(stint.tot_oi_xgf or 0, style=sub_cell_style),
                         html.Td(stint.tot_oi_xga or 0, style=sub_cell_style),
-                        html.Td(stint.es_i_xg or 0, style=sub_cell_style),
-                        html.Td(stint.es_oi_xgf or 0, style=sub_cell_style),
-                        html.Td(stint.es_oi_xga or 0, style=sub_cell_style),
-                        html.Td(stint.ev5_i_xg or 0, style=sub_cell_style),
-                        html.Td(stint.ev5_oi_xgf or 0, style=sub_cell_style),
-                        html.Td(stint.ev5_oi_xga or 0, style=sub_cell_style),
                     ]
                     rows.append(
                         html.Tr(

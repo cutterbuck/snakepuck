@@ -14,6 +14,8 @@ def create_game_report_layout():
                 className="btn btn-secondary btn-sm",
             ),
             html.Div(id="game-report-header", className="mb-3 mt-3"),
+            dcc.Store(id="game-report-situation", data="tot"),
+            html.Div(id="game-report-situation-toggle", className="mb-2"),
             html.Div(id="game-report-stats"),
             dcc.Store(id="game-report-stint-period", data=1),
             dcc.Store(id="game-report-selected-stint", data=None),
