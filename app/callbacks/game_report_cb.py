@@ -777,6 +777,8 @@ def register_game_report_callbacks(dash_app):
                             "y": e.y,
                             "event_type": (e.event_type or "unknown").lower(),
                             "description": e.description or "",
+                            "detail": e.detail or "",
+                            "flags": e.flags or "",
                             "player_id": e.player_id,
                         }
                     )
@@ -1023,7 +1025,18 @@ def register_game_report_callbacks(dash_app):
                                 line=dict(width=2, color="white"),
                             ),
                             hoverinfo="text",
-                            text=[f"{et}: {e['description']}" for e in evs],
+                            text=[
+                                "<br>".join(
+                                    part
+                                    for part in [
+                                        f"{et}: {e['description']}",
+                                        f"Detail: {e['detail']}" if e["detail"] else "",
+                                        f"Flags: {e['flags']}" if e["flags"] else "",
+                                    ]
+                                    if part
+                                )
+                                for e in evs
+                            ],
                             name=et,
                             showlegend=True,
                         )
