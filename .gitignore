@@ -6,7 +6,7 @@ dist/
 build/
 .env
 *.db
-migrations/
+
 .DS_Store
 hockey_hackathon_env/
 .hockey_hackathon_env/
