@@ -1,5 +1,5 @@
 import dash_bootstrap_components as dbc
-from dash import html
+from dash import dcc, html
 
 
 def create_player_analysis_layout():
@@ -21,13 +21,50 @@ def create_player_analysis_layout():
             html.Div(
                 [
                     html.H4("Defensemen", className="mb-3"),
-                    html.H5("Total Loose Puck Recovery", className="mb-1"),
+                    dcc.Dropdown(
+                        id="pa-dmen-lpr-dropdown",
+                        options=[
+                            {
+                                "label": "Total Low Pressure Loose Puck Recovery",
+                                "value": "low",
+                            },
+                            {
+                                "label": "Total High Pressure Loose Puck Recovery",
+                                "value": "high",
+                            },
+                            {
+                                "label": "HiPressLPR Next Play Success",
+                                "value": "high_next_success",
+                            },
+                            {
+                                "label": "HiPressLPR Next Play Failure",
+                                "value": "high_next_failure",
+                            },
+                            {
+                                "label": "HiPress LPR Next Play Success Rate",
+                                "value": "high_next_rate",
+                            },
+                        ],
+                        value="high",
+                        clearable=False,
+                        searchable=False,
+                        className="mb-2",
+                        style={"maxWidth": "450px"},
+                    ),
                     html.P(
-                        "How often do defensemen come away with possession after contesting a loose puck? (min. 15 GP)",
+                        id="pa-dmen-lpr-subtitle",
                         className="text-muted mb-2",
                         style={"fontSize": "14px"},
                     ),
-                    html.Div(id="player-analysis-dmen-lpr"),
+                    dcc.Store(
+                        id="pa-lpr-sort",
+                        data={"column": "xG%", "direction": "desc"},
+                    ),
+                    dcc.Loading(
+                        html.Div(id="player-analysis-dmen-lpr"),
+                        type="default",
+                        style={"minHeight": "100px"},
+                    ),
                 ],
             ),
         ],
