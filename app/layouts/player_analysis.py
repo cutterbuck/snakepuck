@@ -5,7 +5,6 @@ from dash import dcc, html
 def create_player_analysis_layout():
     return dbc.Container(
         [
-            html.H2("Player Analysis", className="mb-4"),
             # Forwards section
             html.Div(
                 [
