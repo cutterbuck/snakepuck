@@ -64,8 +64,6 @@ After evaluation all high-pressure loose puck recoveries, I rated defensemen bas
 ![ hipress-def-lpr-success-rate](/assets/hipress-def-lpr-success-rate.png)
 
 ### Conclusions
-All of the tables shown above can be found in the [Player Analysis](http://localhost:8060/player-analysis) section from the NAV bar. Please excuse the long loading times, as the expected goals per shift and post LPR event data is calculating. I will update the database to hold this data soon.
-
 Drawing clear conclusions from this analysis is challenging. As Howard Marks notes, "Not everything which counts can be counted and not everything which is counted counts." Mauboussin suggests statistics are useful only if they are predictable and reliable. Predictable statistics forecast desired outcomes—such as whether a defenseman's loose puck recovery rate leads to more wins—while reliability means reproducibility across samples. For instance, if Matthew Robertson consistently ranks highly in different 30-game samples, we can confirm his skill under forechecking pressure.
 
 """,
