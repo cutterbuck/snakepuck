@@ -14,3 +14,8 @@ class Config:
         _db_uri = _db_uri.replace("postgres://", "postgresql://", 1)
     SQLALCHEMY_DATABASE_URI = _db_uri
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": 5,
+        "pool_recycle": 300,
+        "pool_pre_ping": True,
+    }
