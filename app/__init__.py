@@ -3,11 +3,15 @@ import os
 import dash
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-from flask import Flask, redirect, request
-from flask_login import current_user
+from flask import Flask
 
 from app.config import Config
-from app.extensions import db, login_manager, migrate
+from app.extensions import db, migrate
+
+# AUTH DISABLED — uncomment to re-enable login
+# from flask import redirect, request
+# from flask_login import current_user
+# from app.extensions import login_manager
 
 
 def create_app():
@@ -17,32 +21,33 @@ def create_app():
 
     # Initialize extensions
     db.init_app(server)
-    login_manager.init_app(server)
+    # AUTH DISABLED — uncomment to re-enable login
+    # login_manager.init_app(server)
     migrate.init_app(server, db)
-    login_manager.login_view = "auth.login"
+    # login_manager.login_view = "auth.login"
 
-    # User loader
-    from app.models.user import User
-
-    @login_manager.user_loader
-    def load_user(user_id):
-        return db.session.get(User, int(user_id))
-
-    # Register auth blueprint
-    from app.auth import auth_bp
-
-    server.register_blueprint(auth_bp, url_prefix="/auth")
-
-    # Protect Dash routes
-    @server.before_request
-    def require_login():
-        allowed_paths = ["/auth/login", "/auth/logout"]
-        if request.path.startswith("/assets") or request.path.startswith("/_dash"):
-            return
-        if request.path in allowed_paths:
-            return
-        if not current_user.is_authenticated:
-            return redirect("/auth/login")
+    # # User loader
+    # from app.models.user import User
+    #
+    # @login_manager.user_loader
+    # def load_user(user_id):
+    #     return db.session.get(User, int(user_id))
+    #
+    # # Register auth blueprint
+    # from app.auth import auth_bp
+    #
+    # server.register_blueprint(auth_bp, url_prefix="/auth")
+    #
+    # # Protect Dash routes
+    # @server.before_request
+    # def require_login():
+    #     allowed_paths = ["/auth/login", "/auth/logout"]
+    #     if request.path.startswith("/assets") or request.path.startswith("/_dash"):
+    #         return
+    #     if request.path in allowed_paths:
+    #         return
+    #     if not current_user.is_authenticated:
+    #         return redirect("/auth/login")
 
     # Create Dash app
     assets_path = os.path.abspath(
@@ -82,6 +87,7 @@ def create_app():
     from app.layouts.navbar import create_navbar
     from app.layouts.player_analysis import create_player_analysis_layout
     from app.layouts.player_detail import create_player_detail_layout
+    from app.layouts.player_stats import create_player_stats_layout
     from app.layouts.sample_data import create_sample_data_layout
     from app.layouts.standings import create_standings_layout
     from app.layouts.team_detail import create_team_detail_layout
@@ -101,7 +107,9 @@ def create_app():
         dash.Input("url", "pathname"),
     )
     def display_page(pathname):
-        if pathname == "/player-analysis":
+        if pathname == "/player-stats":
+            return create_player_stats_layout()
+        elif pathname == "/player-analysis":
             return create_player_analysis_layout()
         elif pathname == "/sample-data":
             return create_sample_data_layout()

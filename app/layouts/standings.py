@@ -37,14 +37,14 @@ def create_standings_layout():
                                         dbc.Button(
                                             "Division",
                                             id="standings-view-division",
-                                            color="primary",
+                                            color="info",
                                             outline=False,
                                             n_clicks=0,
                                         ),
                                         dbc.Button(
                                             "League",
                                             id="standings-view-league",
-                                            color="primary",
+                                            color="info",
                                             outline=True,
                                             n_clicks=0,
                                         ),

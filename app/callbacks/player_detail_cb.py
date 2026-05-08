@@ -6,17 +6,26 @@ from sqlalchemy.orm import aliased
 from app.models import Game, Player, PlayerGameStats, PlayerStats, Season, Team
 
 HEADER_STYLE = {
-    "backgroundColor": "#343a40",
-    "color": "white",
+    "backgroundColor": "#163d5c",
+    "color": "#d0e8f7",
     "fontWeight": "bold",
     "textAlign": "center",
-    "padding": "4px 8px",
+    "padding": "6px 10px",
+    "borderBottom": "2px solid #4fc3f7",
 }
 
 CELL_STYLE = {
     "textAlign": "center",
-    "padding": "4px 8px",
+    "padding": "5px 10px",
 }
+
+TABLE_STYLE = {
+    "width": "100%",
+    "borderCollapse": "collapse",
+    "tableLayout": "fixed",
+}
+
+STAT_COL_WIDTH = "60px"
 
 STAT_HEADERS = [
     "Season",
@@ -190,7 +199,7 @@ def register_player_detail_callbacks(dash_app):
                 radius = "0"
             style = {
                 **SITUATION_BTN_BASE,
-                "backgroundColor": "#0d6efd" if active else "#fff",
+                "backgroundColor": "#1a6fa8" if active else "#fff",
                 "color": "#fff" if active else "#333",
                 "borderRadius": radius,
             }
@@ -265,13 +274,18 @@ def register_player_detail_callbacks(dash_app):
         header_cells = [html.Th(h, style=HEADER_STYLE) for h in STAT_HEADERS]
         thead = html.Thead(html.Tr(header_cells))
 
+        stat_cols = [html.Col(style={"width": "80px"}), html.Col(style={"width": "180px"})]
+        for _ in STAT_HEADERS[2:]:
+            stat_cols.append(html.Col(style={"width": STAT_COL_WIDTH}))
+        colgroup = html.Colgroup(stat_cols)
+
         rows = []
         seen_seasons = set()
         for i, (ps, team_name, tid, team_logo, season_name) in enumerate(stats_list):
             row_style = (
-                {"backgroundColor": "rgb(245, 245, 245)"}
+                {"backgroundColor": "#e8f4fb"}
                 if i % 2 == 1
-                else {"backgroundColor": "rgb(255, 255, 255)"}
+                else {"backgroundColor": "#ffffff"}
             )
             team_children = []
             if team_logo:
@@ -298,14 +312,6 @@ def register_player_detail_callbacks(dash_app):
                 ),
                 href=f"/team/{tid}/{season_name}",
                 className="team-link",
-                style={
-                    "display": "flex",
-                    "alignItems": "center",
-                    "padding": "4px 8px",
-                    "width": "100%",
-                    "height": "100%",
-                    "boxSizing": "border-box",
-                },
             )
             # Only show season name on the first row for that season
             display_season = season_name if season_name not in seen_seasons else ""
@@ -331,15 +337,15 @@ def register_player_detail_callbacks(dash_app):
             cells = [
                 html.Td(display_season, style=CELL_STYLE),
                 html.Td(
-                    team_link, style={**CELL_STYLE, "padding": "0", "textAlign": "left"}
+                    team_link, style={**CELL_STYLE, "textAlign": "left"}
                 ),
             ] + [html.Td(v, style=CELL_STYLE) for v in values]
             rows.append(html.Tr(cells, style=row_style))
         tbody = html.Tbody(rows)
 
         return html.Table(
-            [thead, tbody],
-            style={"overflowX": "auto", "width": "100%", "borderCollapse": "collapse"},
+            [colgroup, thead, tbody],
+            style=TABLE_STYLE,
         )
 
     @dash_app.callback(
@@ -375,6 +381,7 @@ def register_player_detail_callbacks(dash_app):
                 == OppTeam.id,
             )
             .add_columns(
+                Game.id.label("game_pk"),
                 Game.date,
                 Game.home_score,
                 Game.away_score,
@@ -396,9 +403,19 @@ def register_player_detail_callbacks(dash_app):
         header_cells = [html.Th(h, style=HEADER_STYLE) for h in GAME_LOG_HEADERS]
         thead = html.Thead(html.Tr(header_cells))
 
+        gl_cols = [
+            html.Col(style={"width": "110px"}),  # Date
+            html.Col(style={"width": "160px"}),   # Opp
+            html.Col(style={"width": "90px"}),    # Result
+        ]
+        for _ in GAME_LOG_HEADERS[3:]:
+            gl_cols.append(html.Col(style={"width": STAT_COL_WIDTH}))
+        gl_colgroup = html.Colgroup(gl_cols)
+
         rows = []
         for i, (
             pgs,
+            game_pk,
             game_date,
             home_score,
             away_score,
@@ -411,9 +428,9 @@ def register_player_detail_callbacks(dash_app):
             opp_abbrev,
         ) in enumerate(results):
             row_style = (
-                {"backgroundColor": "rgb(245, 245, 245)"}
+                {"backgroundColor": "#e8f4fb"}
                 if i % 2 == 1
-                else {"backgroundColor": "rgb(255, 255, 255)"}
+                else {"backgroundColor": "#ffffff"}
             )
 
             # Determine result
@@ -478,7 +495,6 @@ def register_player_detail_callbacks(dash_app):
                 style={
                     "display": "flex",
                     "alignItems": "center",
-                    "padding": "4px 8px",
                 },
             )
 
@@ -515,10 +531,10 @@ def register_player_detail_callbacks(dash_app):
                 ),
             ]
             cells = [
-                html.Td(date_str, style=CELL_STYLE),
+                html.Td(date_str, style={**CELL_STYLE, "whiteSpace": "nowrap"}),
                 html.Td(
                     opp_cell,
-                    style={**CELL_STYLE, "padding": "0", "textAlign": "left"},
+                    style={**CELL_STYLE, "textAlign": "left"},
                 ),
                 html.Td(result, style=CELL_STYLE),
             ] + [html.Td(v, style=CELL_STYLE) for v in values]
@@ -527,15 +543,15 @@ def register_player_detail_callbacks(dash_app):
                     cells,
                     style=row_style,
                     className="game-log-row",
-                    id={"type": "game-log-row", "index": f"{player_id}_{pgs.game_id}"},
+                    id={"type": "game-log-row", "index": f"{player_id}_{game_pk}"},
                     n_clicks=0,
                 )
             )
 
         tbody = html.Tbody(rows)
         table = html.Table(
-            [thead, tbody],
-            style={"overflowX": "auto", "width": "100%", "borderCollapse": "collapse"},
+            [gl_colgroup, thead, tbody],
+            style=TABLE_STYLE,
         )
 
         return html.Div([html.H4("Game Log"), table])

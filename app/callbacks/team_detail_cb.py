@@ -3,45 +3,63 @@ from dash import ALL, Input, Output, State, callback_context, ctx, dcc, html, no
 from app.models import Player, PlayerStats, Season, Team
 
 HEADER_STYLE = {
-    "backgroundColor": "#343a40",
-    "color": "white",
+    "backgroundColor": "#163d5c",
+    "color": "#d0e8f7",
     "fontWeight": "bold",
     "textAlign": "center",
-    "padding": "4px 8px",
+    "padding": "6px 10px",
     "cursor": "pointer",
     "userSelect": "none",
     "whiteSpace": "nowrap",
+    "borderBottom": "2px solid #4fc3f7",
 }
 
 HEADER_STYLE_NO_SORT = {
-    "backgroundColor": "#343a40",
-    "color": "white",
+    "backgroundColor": "#163d5c",
+    "color": "#d0e8f7",
     "fontWeight": "bold",
     "textAlign": "center",
-    "padding": "4px 8px",
+    "padding": "6px 10px",
+    "borderBottom": "2px solid #4fc3f7",
 }
 
 ACTIVE_HEADER_STYLE = {
-    "backgroundColor": "#4a6fa5",
+    "backgroundColor": "#1a6fa8",
     "color": "white",
     "fontWeight": "bold",
     "textAlign": "center",
-    "padding": "4px 8px",
+    "padding": "6px 10px",
     "cursor": "pointer",
     "userSelect": "none",
     "whiteSpace": "nowrap",
+    "borderBottom": "2px solid #4fc3f7",
 }
 
 CELL_STYLE = {
     "textAlign": "center",
-    "padding": "4px 8px",
+    "padding": "5px 10px",
 }
 
 ACTIVE_CELL_STYLE = {
     "textAlign": "center",
-    "padding": "4px 8px",
-    "backgroundColor": "rgba(74, 111, 165, 0.1)",
+    "padding": "5px 10px",
+    "backgroundColor": "rgba(79, 195, 247, 0.08)",
 }
+
+TABLE_STYLE = {
+    "width": "100%",
+    "borderCollapse": "collapse",
+    "tableLayout": "fixed",
+}
+
+STAT_COL_WIDTH = "60px"
+
+
+def _build_colgroup():
+    cols = [html.Col(style={"width": "180px"})]  # Name column
+    for _ in HEADERS[1:]:
+        cols.append(html.Col(style={"width": STAT_COL_WIDTH}))
+    return html.Colgroup(cols)
 
 HEADERS = [
     "Name",
@@ -268,7 +286,7 @@ def register_team_detail_callbacks(dash_app):
                 radius = "0"
             style = {
                 **SITUATION_BTN_BASE,
-                "backgroundColor": "#0d6efd" if active else "#fff",
+                "backgroundColor": "#1a6fa8" if active else "#fff",
                 "color": "#fff" if active else "#333",
                 "borderRadius": radius,
             }
@@ -390,7 +408,7 @@ def register_team_detail_callbacks(dash_app):
                         html.Td(
                             colSpan=len(HEADERS),
                             style={
-                                "borderTop": "2px solid #343a40",
+                                "borderTop": "2px solid #163d5c",
                                 "padding": "0",
                                 "height": "0",
                             },
@@ -398,9 +416,9 @@ def register_team_detail_callbacks(dash_app):
                     )
                 )
             row_style = (
-                {"backgroundColor": "rgb(245, 245, 245)"}
+                {"backgroundColor": "#e8f4fb"}
                 if i % 2 == 1
-                else {"backgroundColor": "rgb(255, 255, 255)"}
+                else {"backgroundColor": "#ffffff"}
             )
             values = [
                 ps.age,
@@ -442,7 +460,8 @@ def register_team_detail_callbacks(dash_app):
                 )
             rows.append(html.Tr(cells, style=row_style))
 
+        colgroup = _build_colgroup()
         return html.Table(
-            [thead, html.Tbody(rows)],
-            style={"overflowX": "auto", "width": "100%", "borderCollapse": "collapse"},
+            [colgroup, thead, html.Tbody(rows)],
+            style=TABLE_STYLE,
         )

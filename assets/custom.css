@@ -1,3 +1,24 @@
+/* Ice Blue navbar styling */
+.navbar .nav-link {
+    color: #b0d4f1 !important;
+    transition: color 0.2s ease;
+}
+
+.navbar .nav-link:hover {
+    color: #4fc3f7 !important;
+}
+
+.navbar .nav-link.active {
+    color: #4fc3f7 !important;
+    border-bottom: 2px solid #4fc3f7;
+}
+
+.navbar .navbar-brand {
+    color: #ffffff !important;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
 .team-link {
     text-decoration: none;
     color: inherit;
@@ -6,7 +27,7 @@
 
 .team-link:hover {
     text-decoration: underline;
-    color: #0d6efd;
+    color: #1a6fa8;
 }
 
 .game-log-row {

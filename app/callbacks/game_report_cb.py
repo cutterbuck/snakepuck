@@ -14,17 +14,26 @@ def _seconds_to_mmss(seconds):
 
 
 HEADER_STYLE = {
-    "backgroundColor": "#343a40",
-    "color": "white",
+    "backgroundColor": "#163d5c",
+    "color": "#d0e8f7",
     "fontWeight": "bold",
     "textAlign": "center",
-    "padding": "4px 8px",
+    "padding": "6px 10px",
+    "borderBottom": "2px solid #4fc3f7",
 }
 
 CELL_STYLE = {
     "textAlign": "center",
-    "padding": "4px 8px",
+    "padding": "5px 10px",
 }
+
+TABLE_STYLE = {
+    "width": "100%",
+    "borderCollapse": "collapse",
+    "tableLayout": "fixed",
+}
+
+STAT_COL_WIDTH = "60px"
 
 STAT_HEADERS = [
     "TOI",
@@ -83,11 +92,14 @@ def register_game_report_callbacks(dash_app):
     def store_game_report_ids(pathname):
         if pathname and "/game/" in pathname:
             try:
-                # URL: /player/{player_id}/game/{game_id}
+                # URL: /player/{player_id}/game/{game_int_id}
                 parts = pathname.strip("/").split("/")
-                # parts: ["player", player_id, "game", game_id]
                 player_id = int(parts[1])
-                game_id = parts[3]
+                game_int_id = int(parts[3])
+                game = Game.query.get(game_int_id)
+                if not game:
+                    return None, None, "/", "Back to Player"
+                game_id = game.game_id
                 player = Player.query.get(player_id)
                 if player:
                     label = f"Back to {player.firstName} {player.lastName}"
@@ -230,7 +242,7 @@ def register_game_report_callbacks(dash_app):
                 radius = "0"
             style = {
                 **SITUATION_BTN_BASE,
-                "backgroundColor": "#0d6efd" if active else "#fff",
+                "backgroundColor": "#1a6fa8" if active else "#fff",
                 "color": "#fff" if active else "#333",
                 "borderRadius": radius,
             }
@@ -296,6 +308,9 @@ def register_game_report_callbacks(dash_app):
         header_cells = [html.Th(h, style=HEADER_STYLE) for h in STAT_HEADERS]
         thead = html.Thead(html.Tr(header_cells))
 
+        stat_cols = [html.Col(style={"width": STAT_COL_WIDTH}) for _ in STAT_HEADERS]
+        colgroup = html.Colgroup(stat_cols)
+
         values = [
             _seconds_to_mmss(getattr(pgs, f"{prefix}_toi")),
             getattr(pgs, f"{prefix}_goals"),
@@ -315,16 +330,12 @@ def register_game_report_callbacks(dash_app):
             getattr(pgs, f"{prefix}_oi_xga"),
         ]
         cells = [html.Td(v, style=CELL_STYLE) for v in values]
-        row = html.Tr(cells, style={"backgroundColor": "rgb(255, 255, 255)"})
+        row = html.Tr(cells, style={"backgroundColor": "#ffffff"})
         tbody = html.Tbody([row])
 
         table = html.Table(
-            [thead, tbody],
-            style={
-                "overflowX": "auto",
-                "width": "100%",
-                "borderCollapse": "collapse",
-            },
+            [colgroup, thead, tbody],
+            style=TABLE_STYLE,
         )
 
         return html.Div([table], className="mt-3")
@@ -386,7 +397,7 @@ def register_game_report_callbacks(dash_app):
                 radius = "0"
             style = {
                 **PERIOD_BTN_BASE,
-                "backgroundColor": "#0d6efd" if active else "#fff",
+                "backgroundColor": "#1a6fa8" if active else "#fff",
                 "color": "#fff" if active else "#333",
                 "borderRadius": radius,
             }
@@ -522,9 +533,9 @@ def register_game_report_callbacks(dash_app):
             last = group[-1]
             is_selected = first.id == selected_stint
             row_bg = (
-                {"backgroundColor": "rgb(245, 245, 245)"}
+                {"backgroundColor": "#e8f4fb"}
                 if i % 2 == 1
-                else {"backgroundColor": "rgb(255, 255, 255)"}
+                else {"backgroundColor": "#ffffff"}
             )
             row_style = row_bg
             cls = "stint-row selected" if is_selected else "stint-row"
@@ -584,7 +595,7 @@ def register_game_report_callbacks(dash_app):
                             f"Stint {si}",
                             style={
                                 **sub_cell_style,
-                                "borderLeft": "3px solid #0d6efd",
+                                "borderLeft": "3px solid #1a6fa8",
                                 "fontStyle": "italic",
                                 "color": "#666",
                             },
@@ -628,7 +639,7 @@ def register_game_report_callbacks(dash_app):
                     rows.append(
                         html.Tr(
                             sub_cells,
-                            style={"backgroundColor": "rgba(13, 110, 253, 0.05)"},
+                            style={"backgroundColor": "rgba(79, 195, 247, 0.08)"},
                             className="stint-row",
                             id={
                                 "type": "stint-sub-row",
@@ -641,10 +652,7 @@ def register_game_report_callbacks(dash_app):
         tbody = html.Tbody(rows)
         table = html.Table(
             [thead, tbody],
-            style={
-                "width": "100%",
-                "borderCollapse": "collapse",
-            },
+            style=TABLE_STYLE,
         )
 
         return (

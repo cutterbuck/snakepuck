@@ -10,7 +10,7 @@ def create_team_detail_layout():
             dcc.Link(
                 "Back to Standings",
                 href="/",
-                className="btn btn-secondary btn-sm",
+                className="btn btn-info btn-sm",
             ),
             html.Div(id="team-detail-header", className="mb-3 mt-3"),
             html.Div(

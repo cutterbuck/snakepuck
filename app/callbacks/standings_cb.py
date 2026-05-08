@@ -5,44 +5,47 @@ from dash import Input, Output, State, callback_context, dcc, html, no_update
 from app.models import Division, League, Season, Team, TeamStats
 
 HEADER_STYLE = {
-    "backgroundColor": "#343a40",
-    "color": "white",
+    "backgroundColor": "#163d5c",
+    "color": "#d0e8f7",
     "fontWeight": "bold",
     "textAlign": "center",
-    "padding": "4px 8px",
+    "padding": "6px 10px",
     "cursor": "pointer",
     "userSelect": "none",
     "whiteSpace": "nowrap",
+    "borderBottom": "2px solid #4fc3f7",
 }
 
 HEADER_STYLE_NO_SORT = {
-    "backgroundColor": "#343a40",
-    "color": "white",
+    "backgroundColor": "#163d5c",
+    "color": "#d0e8f7",
     "fontWeight": "bold",
     "textAlign": "center",
-    "padding": "4px 8px",
+    "padding": "6px 10px",
+    "borderBottom": "2px solid #4fc3f7",
 }
 
 CELL_STYLE = {
     "textAlign": "center",
-    "padding": "4px 8px",
+    "padding": "5px 10px",
 }
 
 ACTIVE_HEADER_STYLE = {
-    "backgroundColor": "#4a6fa5",
+    "backgroundColor": "#1a6fa8",
     "color": "white",
     "fontWeight": "bold",
     "textAlign": "center",
-    "padding": "4px 8px",
+    "padding": "6px 10px",
     "cursor": "pointer",
     "userSelect": "none",
     "whiteSpace": "nowrap",
+    "borderBottom": "2px solid #4fc3f7",
 }
 
 ACTIVE_CELL_STYLE = {
     "textAlign": "center",
-    "padding": "4px 8px",
-    "backgroundColor": "rgba(74, 111, 165, 0.1)",
+    "padding": "5px 10px",
+    "backgroundColor": "rgba(79, 195, 247, 0.08)",
 }
 
 SORTABLE_COLUMNS = ["GP", "W", "L", "OTL", "PTS", "P%", "RW", "ROW", "GF", "GA", "DIFF"]
@@ -94,11 +97,12 @@ DIVISION_HEADERS = [
 ]
 
 DIVISION_TITLE_STYLE = {
-    "backgroundColor": "#1a1a2e",
-    "color": "white",
+    "backgroundColor": "#0d2137",
+    "color": "#4fc3f7",
     "fontWeight": "bold",
     "fontSize": "16px",
-    "padding": "10px 8px",
+    "padding": "10px 12px",
+    "letterSpacing": "0.5px",
 }
 
 
@@ -180,6 +184,25 @@ def _build_stat_cells(ts, sort_col=None):
         html.Td(v, style=ACTIVE_CELL_STYLE if col == sort_col else CELL_STYLE)
         for col, v in zip(STAT_COLUMNS, values)
     ]
+
+
+TABLE_STYLE = {
+    "width": "100%",
+    "borderCollapse": "collapse",
+    "tableLayout": "fixed",
+}
+
+STAT_COL_WIDTH = "60px"
+
+
+def _build_colgroup(headers):
+    cols = []
+    for h in headers:
+        if h == "Team":
+            cols.append(html.Col(style={"width": "260px"}))
+        else:
+            cols.append(html.Col(style={"width": STAT_COL_WIDTH}))
+    return html.Colgroup(cols)
 
 
 def _build_thead(headers, sort_col, sort_dir):
@@ -355,17 +378,18 @@ def _render_league_view(results, sort_col, sort_dir):
     rows = []
     for i, (ts, team_id, team_name, team_logo, division_name) in enumerate(results):
         row_style = (
-            {"backgroundColor": "rgb(245, 245, 245)"}
+            {"backgroundColor": "#e8f4fb"}
             if i % 2 == 1
-            else {"backgroundColor": "rgb(255, 255, 255)"}
+            else {"backgroundColor": "#ffffff"}
         )
         team_cell = _build_team_cell(team_name, team_logo, team_id)
         stat_cells = _build_stat_cells(ts, sort_col)
         rows.append(html.Tr([team_cell] + stat_cells, style=row_style))
 
+    colgroup = _build_colgroup(LEAGUE_HEADERS)
     return html.Table(
-        [thead, html.Tbody(rows)],
-        style={"overflowX": "auto", "width": "100%", "borderCollapse": "collapse"},
+        [colgroup, thead, html.Tbody(rows)],
+        style=TABLE_STYLE,
     )
 
 
@@ -388,39 +412,34 @@ def _render_division_view(results, sort_col, sort_dir):
             ordered_keys.append(d)
     divisions = OrderedDict((k, divisions[k]) for k in ordered_keys)
 
-    tables = []
+    num_cols = len(DIVISION_HEADERS)
+    thead = _build_thead(DIVISION_HEADERS, sort_col, sort_dir)
+
+    rows = []
     for div_name, teams in divisions.items():
-        # Division title
-        tables.append(
-            html.Div(
-                div_name + " Division",
-                style=DIVISION_TITLE_STYLE,
+        # Division title as a full-width row
+        rows.append(
+            html.Tr(
+                html.Td(
+                    div_name + " Division",
+                    colSpan=num_cols,
+                    style=DIVISION_TITLE_STYLE,
+                )
             )
         )
 
-        thead = _build_thead(DIVISION_HEADERS, sort_col, sort_dir)
-
-        rows = []
         for i, (ts, team_id, team_name, team_logo) in enumerate(teams):
             row_style = (
-                {"backgroundColor": "rgb(245, 245, 245)"}
+                {"backgroundColor": "#e8f4fb"}
                 if i % 2 == 1
-                else {"backgroundColor": "rgb(255, 255, 255)"}
+                else {"backgroundColor": "#ffffff"}
             )
             team_cell = _build_team_cell(team_name, team_logo, team_id)
             stat_cells = _build_stat_cells(ts, sort_col)
             rows.append(html.Tr([team_cell] + stat_cells, style=row_style))
 
-        tables.append(
-            html.Table(
-                [thead, html.Tbody(rows)],
-                style={
-                    "overflowX": "auto",
-                    "width": "100%",
-                    "borderCollapse": "collapse",
-                    "marginBottom": "24px",
-                },
-            )
-        )
-
-    return html.Div(tables)
+    colgroup = _build_colgroup(DIVISION_HEADERS)
+    return html.Table(
+        [colgroup, thead, html.Tbody(rows)],
+        style=TABLE_STYLE,
+    )

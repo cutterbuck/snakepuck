@@ -11,7 +11,7 @@ def create_game_report_layout():
                 "Back to Player",
                 id="game-report-back-link",
                 href="/",
-                className="btn btn-secondary btn-sm",
+                className="btn btn-info btn-sm",
             ),
             html.Div(id="game-report-header", className="mb-3 mt-3"),
             dcc.Store(id="game-report-situation", data="tot"),
@@ -30,7 +30,7 @@ def create_game_report_layout():
                         "Play",
                         id="game-report-play-btn",
                         n_clicks=0,
-                        className="btn btn-primary btn-sm",
+                        className="btn btn-info btn-sm",
                         style={"marginRight": "12px", "minWidth": "70px"},
                     ),
                     html.Div(
