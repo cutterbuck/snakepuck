@@ -9,7 +9,7 @@ def create_navbar():
                 dbc.NavbarBrand("MacNaughton HALO Project", href="/"),
                 dbc.Nav(
                     [
-                        dbc.NavItem(dbc.NavLink("Team Standings", href="/", active="exact")),
+                        dbc.NavItem(dbc.NavLink("Team Standings", href="/team-standings", active="exact")),
                         dbc.NavItem(dbc.NavLink("Player Stats", href="/player-stats", active="exact")),
                         # dbc.NavItem(
                         #     dbc.NavLink("Player Analysis", href="/player-analysis", active="exact")
@@ -18,6 +18,7 @@ def create_navbar():
                             dbc.NavLink("Sample Raw Data", href="/sample-data", active="exact")
                         ),
                         dbc.NavItem(dbc.NavLink("Blog Posts", href="/blog-posts", active="partial")),
+                        dbc.NavItem(dbc.NavLink("About", href="/about", active="exact")),
                         # AUTH DISABLED — uncomment to re-enable logout
                         # dbc.NavItem(
                         #     dbc.NavLink(
@@ -29,6 +30,7 @@ def create_navbar():
                 ),
             ],
             fluid=True,
+            style={"padding": "0 4%"},
         ),
         color=None,
         dark=True,

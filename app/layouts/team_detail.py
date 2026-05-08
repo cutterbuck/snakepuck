@@ -8,8 +8,8 @@ def create_team_detail_layout():
             dcc.Store(id="team-detail-id"),
             dcc.Store(id="team-detail-situation", data="tot"),
             dcc.Link(
-                "Back to Standings",
-                href="/",
+                "Back to Team Standings",
+                href="/team-standings",
                 className="btn btn-info btn-sm",
             ),
             html.Div(id="team-detail-header", className="mb-3 mt-3"),

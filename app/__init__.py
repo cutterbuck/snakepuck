@@ -81,6 +81,7 @@ def create_app():
 </html>"""
 
     # Import layouts
+    from app.layouts.about import create_about_layout
     from app.layouts.blog_post_detail import create_blog_post_detail_layout
     from app.layouts.blog_posts import create_blog_posts_layout
     from app.layouts.game_report import create_game_report_layout
@@ -97,7 +98,7 @@ def create_app():
         [
             dcc.Location(id="url", refresh=False),
             create_navbar(),
-            html.Div(id="page-content"),
+            html.Div(id="page-content", style={"padding": "0 4%"}),
         ]
     )
 
@@ -107,7 +108,11 @@ def create_app():
         dash.Input("url", "pathname"),
     )
     def display_page(pathname):
-        if pathname == "/player-stats":
+        if pathname == "/about":
+            return create_about_layout()
+        elif pathname == "/team-standings":
+            return create_standings_layout()
+        elif pathname == "/player-stats":
             return create_player_stats_layout()
         elif pathname == "/player-analysis":
             return create_player_analysis_layout()

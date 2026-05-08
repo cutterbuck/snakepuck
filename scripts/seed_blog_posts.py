@@ -12,31 +12,11 @@ from app.models.blog_post import BlogPost
 
 POSTS = [
     {
-        "title": "Project Intro; D-zone Puck Retrievals",
+        "title": "HALO Project Intro",
         "slug": "project-intro-dzone-puck-retrievals",
         "published_at": datetime(2026, 2, 19),
         "content": """\
-## HALO Project: Exploring AHL Player Tracking Data
-Welcome to Jake MacNaughton’s HALO Project. This marks the beginning of what, time permitting, will become a series of blog posts. The purpose of this project is to gain familiarity with Teamworks and Sportlogiq AHL player data, aiming to extract meaningful signals from the vast array of player tracking and event data. By delving into millions of rows of this information, the goal is to uncover insights into player evaluation and team success that go beyond the traditional box-score statistics commonly found online.
-
-### Working with Player Tracking Data
-This is my first experience handling player tracking data. Previously, I experimented with mapping data relationships for an application that tracked team and player performance at the season level. However, I have never worked with data at the game-by-game level, let alone the shift-by-shift or stint-by-stint granularity that this dataset provides.
-
-### Processing and Visualizing Raw Data
-After reviewing the raw data contained in the provided parquet files, my initial approach was to build a Flask application. This application would enable users—including hockey players, coaches, and fans—to make sense of the data by visualizing it in intuitive ways. Visualizing samples of the [raw data]( http://localhost:8060/sample-data) helped me determine how to aggregate information into traditional box-score metrics. Most of my work so far has involved organizing this data into formats that are easily understood by humans.
-
-### User Experience Overview
-The user experience is structured as follows: from the NAV bar, you can navigate to the [Standings]( http://localhost:8060/ )  section. Here, you can select any team to view its roster and see player statistics for the 30-game sample provided. On the team page, you can click on any player to see his performance broken down game-by-game. You can then select any game to view the player’s performance shift-by-shift. Finally, you can click on any shift to see all tracking and event data play out sequentially on a hockey rink visualization at the bottom of the page.
-
-### Challenges and Discoveries
-As a visual learner, proceeding with the project in this manner was essential. This approach proved valuable: by watching the player tracking and event data unfold on the hockey rink, I discovered that I had been using incorrect event coordinates. Initially, the tracking data seemed confusing because I relied on x_adj/y_adj, which rendered events as if a team’s offensive zone was always to the right. For half a game, it appeared that the puck and all action happened on one side of the ice, while players skated aimlessly on the other. Any analysis of player performance would have been ineffective using these incorrect coordinates.
-
-### Feedback and Future Improvements
-I hope the visual renderings help users make sense of the tracking data. While the page structure made sense to me, it might not suit everyone. If you have suggestions for improving the user experience, please share your feedback, and I will make adjustments as needed.
-
----
-
-Defensemen D-zone Puck Retrievals
+## Defensemen D-zone Puck Retrievals
 Elliotte Friedman recently noted on the 32 Thought Podcast that hockey operations departments throughout the NHL are still searching for ways to enhance analytics for defensemen. With this in mind, my initial attempt at extracting meaningful insights from the data will focus on evaluating defensive performance.
 My perspective on hockey analytics is significantly shaped by Michael Mauboussin’s book, [The Success Equation: Untangling Skill and Luck in Business, Sports, and Investing](https://www.amazon.com/Success-Equation-Untangling-Business-Investing/dp/1422184234). In this work, Mauboussin introduces a theoretical continuum ranging from 100% luck to 100% skill. He notes that success in domains such as chess is almost entirely attributable to skill, while outcomes in games like roulette are determined predominantly by luck. According to Mauboussin, hockey occupies a balanced position on this continuum, with approximately 53% of success attributed to luck.
 ![Luck-skill continuum](/assets/mauboussin_skill_vs_luck.jpg)
