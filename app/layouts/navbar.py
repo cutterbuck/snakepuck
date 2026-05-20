@@ -21,7 +21,6 @@ def create_navbar():
                                     "Blog Posts",
                                     href="/blog-posts",
                                     active="partial",
-                                    className="nav-link-muted",
                                 )
                             ),
                             dbc.NavItem(dbc.NavLink("About", href="/about", active="exact")),
