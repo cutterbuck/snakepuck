@@ -116,6 +116,44 @@ def register_player_detail_callbacks(dash_app):
         return None
 
     @dash_app.callback(
+        Output("player-detail-breadcrumb", "children"),
+        Input("player-detail-id", "data"),
+    )
+    def update_player_breadcrumb(player_id):
+        if not player_id:
+            return html.Div()
+        player = Player.query.get(player_id)
+        if not player:
+            return html.Div()
+
+        latest_pgs = (
+            PlayerGameStats.query.filter_by(player_id=player.playerId)
+            .join(Game, PlayerGameStats.game_id == Game.game_id)
+            .order_by(Game.date.desc())
+            .first()
+        )
+        team = latest_pgs.team if latest_pgs else None
+        season = latest_pgs.season if latest_pgs else None
+
+        crumbs = [
+            dcc.Link("Team Standings", href="/team-standings", className="breadcrumb-link"),
+            html.Span(" / ", className="breadcrumb-sep"),
+        ]
+        if team and season:
+            crumbs.append(
+                dcc.Link(team.name, href=f"/team/{team.id}/{season.name}", className="breadcrumb-link")
+            )
+            crumbs.append(html.Span(" / ", className="breadcrumb-sep"))
+
+        crumbs.append(
+            html.Span(
+                f"{player.firstName} {player.lastName}",
+                className="breadcrumb-current",
+            )
+        )
+        return html.Div(crumbs, className="breadcrumb-nav")
+
+    @dash_app.callback(
         Output("player-detail-header", "children"),
         Input("player-detail-id", "data"),
     )
@@ -134,20 +172,26 @@ def register_player_detail_callbacks(dash_app):
             .first()
         )
         team = latest_pgs.team if latest_pgs else None
+        season = latest_pgs.season if latest_pgs else None
+        team_href = f"/team/{team.id}/{season.name}" if team and season else None
 
         children = []
         if team and team.logo:
-            children.append(
-                html.Img(
-                    src=team.logo,
-                    style={
-                        "width": "48px",
-                        "height": "48px",
-                        "verticalAlign": "middle",
-                        "marginRight": "12px",
-                    },
-                )
+            logo_img = html.Img(
+                src=team.logo,
+                style={
+                    "width": "48px",
+                    "height": "48px",
+                    "verticalAlign": "middle",
+                    "marginRight": "12px",
+                },
             )
+            if team_href:
+                children.append(
+                    dcc.Link(logo_img, href=team_href, className="team-link")
+                )
+            else:
+                children.append(logo_img)
         children.append(
             html.Span(
                 f"{player.firstName} {player.lastName}",
@@ -160,13 +204,26 @@ def register_player_detail_callbacks(dash_app):
         )
         info_parts = []
         if player.position:
-            info_parts.append(player.position)
+            info_parts.append(
+                html.Span(player.position)
+            )
         if team:
-            info_parts.append(team.name)
+            team_name_span = html.Span(team.name)
+            if team_href:
+                team_name_span = dcc.Link(
+                    team.name, href=team_href, className="team-link"
+                )
+            info_parts.append(team_name_span)
         if info_parts:
+            separator = html.Span(" | ")
+            info_children = []
+            for i, part in enumerate(info_parts):
+                if i > 0:
+                    info_children.append(separator)
+                info_children.append(part)
             children.append(
                 html.Span(
-                    f"  |  {' | '.join(info_parts)}",
+                    ["  |  "] + info_children,
                     style={
                         "fontSize": "16px",
                         "color": "#666",

@@ -15,6 +15,11 @@ POSTS = [
         "title": "HALO Project Intro",
         "slug": "project-intro-dzone-puck-retrievals",
         "published_at": datetime(2026, 2, 19),
+        "summary": (
+            "Analyzing defensemen's D-zone loose puck retrievals using AHL "
+            "player tracking data to evaluate how well they manage forecheck "
+            "pressure and limit opponent scoring chances."
+        ),
         "content": """\
 ## Defensemen D-zone Puck Retrievals
 Elliotte Friedman recently noted on the 32 Thought Podcast that hockey operations departments throughout the NHL are still searching for ways to enhance analytics for defensemen. With this in mind, my initial attempt at extracting meaningful insights from the data will focus on evaluating defensive performance.

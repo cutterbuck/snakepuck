@@ -7,6 +7,7 @@ class BlogPost(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(300), nullable=False)
     slug = db.Column(db.String(300), unique=True, nullable=False)
+    summary = db.Column(db.String(500), nullable=True)
     content = db.Column(db.Text, nullable=False)
     published_at = db.Column(db.DateTime, nullable=False)
 

@@ -192,6 +192,23 @@ def _build_thead(sort_col, sort_dir):
 
 def register_team_detail_callbacks(dash_app):
     @dash_app.callback(
+        Output("team-detail-breadcrumb", "children"),
+        Input("team-detail-id", "data"),
+    )
+    def update_team_breadcrumb(team_id):
+        crumbs = [
+            dcc.Link("Team Standings", href="/team-standings", className="breadcrumb-link"),
+            html.Span(" / ", className="breadcrumb-sep"),
+        ]
+        team_name = "Team"
+        if team_id:
+            team = Team.query.get(team_id)
+            if team:
+                team_name = team.name
+        crumbs.append(html.Span(team_name, className="breadcrumb-current"))
+        return html.Div(crumbs, className="breadcrumb-nav")
+
+    @dash_app.callback(
         Output("team-detail-id", "data"),
         Input("url", "pathname"),
     )
@@ -443,13 +460,8 @@ def register_team_detail_callbacks(dash_app):
             stat_cols = HEADERS[1:]  # all columns except Name
             cells = [
                 html.Td(
-                    html.A(
-                        f"{first_name} {last_name}",
-                        href=f"/player/{pid}",
-                        className="team-link",
-                        style={"display": "block", "padding": "4px 8px"},
-                    ),
-                    style={**CELL_STYLE, "textAlign": "left", "padding": "0"},
+                    f"{first_name} {last_name}",
+                    style={**CELL_STYLE, "textAlign": "left"},
                 )
             ]
             for col, v in zip(stat_cols, values):
@@ -458,10 +470,31 @@ def register_team_detail_callbacks(dash_app):
                         v, style=ACTIVE_CELL_STYLE if col == sort_col else CELL_STYLE
                     )
                 )
-            rows.append(html.Tr(cells, style=row_style))
+            rows.append(
+                html.Tr(
+                    cells,
+                    style={**row_style, "cursor": "pointer"},
+                    className="game-log-row",
+                    id={"type": "team-roster-row", "index": pid},
+                    n_clicks=0,
+                )
+            )
 
         colgroup = _build_colgroup()
         return html.Table(
             [colgroup, thead, html.Tbody(rows)],
             style=TABLE_STYLE,
         )
+
+    @dash_app.callback(
+        Output("url", "pathname", allow_duplicate=True),
+        Input({"type": "team-roster-row", "index": ALL}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def navigate_to_player(n_clicks):
+        if not ctx.triggered_id or not any(n for n in n_clicks if n):
+            from dash.exceptions import PreventUpdate
+
+            raise PreventUpdate
+        player_id = ctx.triggered_id["index"]
+        return f"/player/{player_id}"

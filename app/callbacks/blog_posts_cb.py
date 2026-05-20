@@ -1,3 +1,4 @@
+import dash_bootstrap_components as dbc
 from dash import Input, Output, dcc, html
 
 from app.models.blog_post import BlogPost
@@ -18,28 +19,52 @@ def register_blog_posts_callbacks(dash_app):
         posts = BlogPost.query.order_by(BlogPost.published_at.desc()).all()
 
         if not posts:
-            return html.P("No blog posts yet.", className="text-muted")
-
-        items = []
-        for post in posts:
-            items.append(
-                html.Div(
+            return dbc.Card(
+                dbc.CardBody(
                     [
-                        html.A(
-                            post.title,
-                            href=f"/blog/{post.slug}",
-                            className="blog-post-link",
-                        ),
-                        html.Div(
-                            post.published_at.strftime("%B %-d, %Y"),
-                            className="blog-post-date",
+                        html.H4("Stay Tuned", className="text-center mb-3"),
+                        html.P(
+                            "Blog posts are on the way. Check back soon for "
+                            "analytical deep-dives into AHL player tracking data.",
+                            className="text-center text-muted mb-0",
                         ),
                     ],
-                    className="blog-post-item",
+                ),
+                className="blog-card",
+            )
+
+        cards = []
+        for post in posts:
+            excerpt = post.summary or (post.content[:200] + "...")
+            cards.append(
+                dbc.Card(
+                    dbc.CardBody(
+                        [
+                            html.Div(
+                                post.published_at.strftime("%B %-d, %Y"),
+                                className="blog-card-date",
+                            ),
+                            html.H3(
+                                html.A(
+                                    post.title,
+                                    href=f"/blog/{post.slug}",
+                                    className="blog-card-title-link",
+                                ),
+                                className="blog-card-title",
+                            ),
+                            html.P(excerpt, className="blog-card-excerpt"),
+                            html.A(
+                                "Read more \u2192",
+                                href=f"/blog/{post.slug}",
+                                className="blog-card-read-more",
+                            ),
+                        ]
+                    ),
+                    className="blog-card",
                 )
             )
 
-        return items
+        return cards
 
     # ── Detail page ─────────────────────────────────────────────────
     @dash_app.callback(
@@ -66,15 +91,23 @@ def register_blog_posts_callbacks(dash_app):
         return html.Div(
             [
                 html.A(
-                    "← Back to Blog Posts",
+                    "\u2190 Back to Blog Posts",
                     href="/blog-posts",
-                    className="blog-post-back",
+                    className="blog-detail-back",
                 ),
-                html.H2(post.title, className="mt-3 mb-1"),
                 html.Div(
-                    post.published_at.strftime("%B %-d, %Y"),
-                    className="blog-post-date mb-4",
+                    [
+                        html.H1(post.title, className="blog-detail-title"),
+                        html.Div(
+                            post.published_at.strftime("%B %-d, %Y"),
+                            className="blog-detail-date",
+                        ),
+                    ],
+                    className="blog-detail-header",
                 ),
-                dcc.Markdown(post.content, className="blog-post-body"),
+                html.Div(
+                    dcc.Markdown(post.content, className="blog-post-body"),
+                    className="blog-detail-content",
+                ),
             ]
         )

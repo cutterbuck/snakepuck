@@ -8,5 +8,5 @@ def create_blog_post_detail_layout():
             html.Div(id="blog-post-content"),
         ],
         fluid=True,
-        style={"maxWidth": "720px"},
+        className="blog-detail-container",
     )

@@ -67,6 +67,12 @@ def create_app():
     <head>
         {%metas%}
         <title>{%title%}</title>
+        <meta property="og:title" content="MacNaughton HALO Project" />
+        <meta property="og:description" content="Exploring AHL player tracking data — shift-level visualizations, expected goal models, and deep-dive analytics." />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="MacNaughton HALO Project" />
+        <meta name="twitter:description" content="Exploring AHL player tracking data — shift-level visualizations, expected goal models, and deep-dive analytics." />
         {%favicon%}
         {%css%}
     </head>
@@ -97,8 +103,33 @@ def create_app():
     dash_app.layout = html.Div(
         [
             dcc.Location(id="url", refresh=False),
+            html.Div(id="page-title-dummy", style={"display": "none"}),
             create_navbar(),
-            html.Div(id="page-content", style={"padding": "0 4%"}),
+            html.Div(id="page-content", style={"padding": "0 4%", "minHeight": "calc(100vh - 160px)"}),
+            html.Footer(
+                dbc.Container(
+                    [
+                        html.Span("Jake MacNaughton", className="footer-name"),
+                        html.Span(" · ", className="footer-sep"),
+                        html.A(
+                            "jakemacnaughton@gmail.com",
+                            href="mailto:jakemacnaughton@gmail.com",
+                            className="footer-link",
+                        ),
+                        html.Span(" · ", className="footer-sep"),
+                        html.A(
+                            "LinkedIn",
+                            href="https://www.linkedin.com/in/jakemacnaughton/",
+                            target="_blank",
+                            rel="noopener noreferrer",
+                            className="footer-link",
+                        ),
+                    ],
+                    fluid=True,
+                    className="text-center",
+                ),
+                className="site-footer",
+            ),
         ]
     )
 
@@ -129,7 +160,37 @@ def create_app():
         elif pathname and pathname.startswith("/player/"):
             return create_player_detail_layout()
         else:
-            return create_standings_layout()
+            return create_about_layout()
+
+    # Dynamic page title
+    dash_app.clientside_callback(
+        """
+        function(pathname) {
+            const titles = {
+                "/about": "HALO Project - About",
+                "/team-standings": "HALO Project - Team Standings",
+                "/player-stats": "HALO Project - Player Stats",
+                "/player-analysis": "HALO Project - Player Analysis",
+                "/sample-data": "HALO Project - Sample Raw Data",
+                "/blog-posts": "HALO Project - Blog Posts"
+            };
+            if (pathname && pathname.startsWith("/blog/")) {
+                document.title = "HALO Project - Blog Post";
+            } else if (pathname && pathname.startsWith("/team/")) {
+                document.title = "HALO Project - Team Detail";
+            } else if (pathname && pathname.startsWith("/player/") && pathname.includes("/game/")) {
+                document.title = "HALO Project - Game Report";
+            } else if (pathname && pathname.startsWith("/player/")) {
+                document.title = "HALO Project - Player Detail";
+            } else {
+                document.title = titles[pathname] || "HALO Project";
+            }
+            return "";
+        }
+        """,
+        dash.Output("page-title-dummy", "children"),
+        dash.Input("url", "pathname"),
+    )
 
     # Register data callbacks
     from app.callbacks import register_all_callbacks

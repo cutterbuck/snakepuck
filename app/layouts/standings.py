@@ -60,7 +60,11 @@ def create_standings_layout():
             ),
             dcc.Store(id="standings-view", data="division"),
             dcc.Store(id="standings-sort", data={"column": "PTS", "direction": "desc"}),
-            html.Div(id="standings-table"),
+            dcc.Loading(
+                html.Div(id="standings-table"),
+                type="circle",
+                color="#4fc3f7",
+            ),
         ],
         fluid=True,
     )

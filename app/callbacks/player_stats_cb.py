@@ -440,13 +440,8 @@ def register_player_stats_callbacks(dash_app):
             # Name cell
             cells = [
                 html.Td(
-                    html.A(
-                        f"{first_name} {last_name}",
-                        href=f"/player/{pid}",
-                        className="team-link",
-                        style={"display": "block", "padding": "4px 8px"},
-                    ),
-                    style={**CELL_STYLE, "textAlign": "left", "padding": "0"},
+                    f"{first_name} {last_name}",
+                    style={**CELL_STYLE, "textAlign": "left"},
                 )
             ]
 
@@ -483,7 +478,15 @@ def register_player_stats_callbacks(dash_app):
                         v, style=ACTIVE_CELL_STYLE if col == sort_col else CELL_STYLE
                     )
                 )
-            rows.append(html.Tr(cells, style=row_style))
+            rows.append(
+                html.Tr(
+                    cells,
+                    style={**row_style, "cursor": "pointer"},
+                    className="game-log-row",
+                    id={"type": "ps-player-row", "index": pid},
+                    n_clicks=0,
+                )
+            )
 
         table = html.Table(
             [colgroup, thead, html.Tbody(rows)],
@@ -494,6 +497,19 @@ def register_player_stats_callbacks(dash_app):
         pagination = _build_pagination(page, total_pages, total)
 
         return table, pagination
+
+    @dash_app.callback(
+        Output("url", "pathname", allow_duplicate=True),
+        Input({"type": "ps-player-row", "index": ALL}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def navigate_to_player(n_clicks):
+        if not ctx.triggered_id or not any(n for n in n_clicks if n):
+            from dash.exceptions import PreventUpdate
+
+            raise PreventUpdate
+        player_id = ctx.triggered_id["index"]
+        return f"/player/{player_id}"
 
 
 def _build_pagination(current_page, total_pages, total):

@@ -85,30 +85,58 @@ def register_game_report_callbacks(dash_app):
     @dash_app.callback(
         Output("game-report-player-id", "data"),
         Output("game-report-game-id", "data"),
-        Output("game-report-back-link", "href"),
-        Output("game-report-back-link", "children"),
+        Output("game-report-breadcrumb", "children"),
         Input("url", "pathname"),
     )
     def store_game_report_ids(pathname):
         if pathname and "/game/" in pathname:
             try:
-                # URL: /player/{player_id}/game/{game_int_id}
                 parts = pathname.strip("/").split("/")
                 player_id = int(parts[1])
                 game_int_id = int(parts[3])
                 game = Game.query.get(game_int_id)
                 if not game:
-                    return None, None, "/", "Back to Player"
+                    return None, None, html.Div()
                 game_id = game.game_id
                 player = Player.query.get(player_id)
+
+                # Build breadcrumb
+                crumbs = [
+                    dcc.Link("Team Standings", href="/team-standings", className="breadcrumb-link"),
+                    html.Span(" / ", className="breadcrumb-sep"),
+                ]
+
                 if player:
-                    label = f"Back to {player.firstName} {player.lastName}"
-                else:
-                    label = "Back to Player"
-                return player_id, game_id, f"/player/{player_id}", label
+                    # Get team/season for team link
+                    pgs = PlayerGameStats.query.filter_by(
+                        player_id=player.playerId, game_id=game_id
+                    ).first()
+                    if pgs and pgs.team and pgs.season:
+                        crumbs.append(
+                            dcc.Link(
+                                pgs.team.name,
+                                href=f"/team/{pgs.team.id}/{pgs.season.name}",
+                                className="breadcrumb-link",
+                            )
+                        )
+                        crumbs.append(html.Span(" / ", className="breadcrumb-sep"))
+
+                    crumbs.append(
+                        dcc.Link(
+                            f"{player.firstName} {player.lastName}",
+                            href=f"/player/{player_id}",
+                            className="breadcrumb-link",
+                        )
+                    )
+                    crumbs.append(html.Span(" / ", className="breadcrumb-sep"))
+
+                crumbs.append(html.Span("Game Report", className="breadcrumb-current"))
+                breadcrumb = html.Div(crumbs, className="breadcrumb-nav")
+
+                return player_id, game_id, breadcrumb
             except (ValueError, IndexError):
-                return None, None, "/", "Back to Player"
-        return None, None, "/", "Back to Player"
+                return None, None, html.Div()
+        return None, None, html.Div()
 
     @dash_app.callback(
         Output("game-report-header", "children"),

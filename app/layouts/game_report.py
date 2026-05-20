@@ -7,16 +7,15 @@ def create_game_report_layout():
         [
             dcc.Store(id="game-report-player-id"),
             dcc.Store(id="game-report-game-id"),
-            dcc.Link(
-                "Back to Player",
-                id="game-report-back-link",
-                href="/",
-                className="btn btn-info btn-sm",
-            ),
-            html.Div(id="game-report-header", className="mb-3 mt-3"),
+            html.Div(id="game-report-breadcrumb", className="mb-2"),
+            html.Div(id="game-report-header", className="mb-3 mt-1"),
             dcc.Store(id="game-report-situation", data="tot"),
             html.Div(id="game-report-situation-toggle", className="mb-2"),
-            html.Div(id="game-report-stats"),
+            dcc.Loading(
+                html.Div(id="game-report-stats"),
+                type="circle",
+                color="#4fc3f7",
+            ),
             dcc.Store(id="game-report-stint-period", data=1),
             dcc.Store(id="game-report-selected-stint", data=None),
             dcc.Store(id="game-report-merged-stints", data={}),
@@ -53,7 +52,11 @@ def create_game_report_layout():
                     "marginTop": "8px",
                 },
             ),
-            html.Div(id="game-report-rink", className="mt-3"),
+            dcc.Loading(
+                html.Div(id="game-report-rink", className="mt-3"),
+                type="circle",
+                color="#4fc3f7",
+            ),
             dcc.Interval(
                 id="game-report-interval",
                 interval=1500,

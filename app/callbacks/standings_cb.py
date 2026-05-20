@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from dash import Input, Output, State, callback_context, dcc, html, no_update
+from dash import ALL, Input, Output, State, callback_context, ctx, dcc, html, no_update
 
 from app.models import Division, League, Season, Team, TeamStats
 
@@ -354,6 +354,7 @@ def register_standings_callbacks(dash_app):
 
         results = (
             TeamStats.query.join(Team, TeamStats.team_id == Team.id)
+            .join(Season, TeamStats.season_id == Season.id)
             .outerjoin(Division, TeamStats.division_id == Division.id)
             .filter(Team.league_id == league_id, TeamStats.season_id == season_id)
             .add_columns(
@@ -361,6 +362,7 @@ def register_standings_callbacks(dash_app):
                 Team.name,
                 Team.logo,
                 Division.name.label("division_name"),
+                Season.name.label("season_name"),
             )
             .order_by(*order_clauses)
             .all()
@@ -371,12 +373,24 @@ def register_standings_callbacks(dash_app):
         else:
             return _render_league_view(results, sort_col, sort_dir)
 
+    @dash_app.callback(
+        Output("url", "pathname", allow_duplicate=True),
+        Input({"type": "standings-row", "index": ALL}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def navigate_to_team(n_clicks):
+        if not ctx.triggered_id or not any(n for n in n_clicks if n):
+            from dash.exceptions import PreventUpdate
+
+            raise PreventUpdate
+        return ctx.triggered_id["index"]
+
 
 def _render_league_view(results, sort_col, sort_dir):
     thead = _build_thead(LEAGUE_HEADERS, sort_col, sort_dir)
 
     rows = []
-    for i, (ts, team_id, team_name, team_logo, division_name) in enumerate(results):
+    for i, (ts, team_id, team_name, team_logo, division_name, season_name) in enumerate(results):
         row_style = (
             {"backgroundColor": "#e8f4fb"}
             if i % 2 == 1
@@ -384,7 +398,15 @@ def _render_league_view(results, sort_col, sort_dir):
         )
         team_cell = _build_team_cell(team_name, team_logo, team_id)
         stat_cells = _build_stat_cells(ts, sort_col)
-        rows.append(html.Tr([team_cell] + stat_cells, style=row_style))
+        rows.append(
+            html.Tr(
+                [team_cell] + stat_cells,
+                style={**row_style, "cursor": "pointer"},
+                className="game-log-row",
+                id={"type": "standings-row", "index": f"/team/{team_id}/{season_name}"},
+                n_clicks=0,
+            )
+        )
 
     colgroup = _build_colgroup(LEAGUE_HEADERS)
     return html.Table(
@@ -399,11 +421,11 @@ DIVISION_ORDER = ["Atlantic", "North", "Central", "Pacific"]
 def _render_division_view(results, sort_col, sort_dir):
     # Group results by division
     divisions = {}
-    for ts, team_id, team_name, team_logo, division_name in results:
+    for ts, team_id, team_name, team_logo, division_name, season_name in results:
         div_key = division_name or "Other"
         if div_key not in divisions:
             divisions[div_key] = []
-        divisions[div_key].append((ts, team_id, team_name, team_logo))
+        divisions[div_key].append((ts, team_id, team_name, team_logo, season_name))
 
     # Sort divisions into fixed order
     ordered_keys = [d for d in DIVISION_ORDER if d in divisions]
@@ -428,7 +450,7 @@ def _render_division_view(results, sort_col, sort_dir):
             )
         )
 
-        for i, (ts, team_id, team_name, team_logo) in enumerate(teams):
+        for i, (ts, team_id, team_name, team_logo, season_name) in enumerate(teams):
             row_style = (
                 {"backgroundColor": "#e8f4fb"}
                 if i % 2 == 1
@@ -436,7 +458,15 @@ def _render_division_view(results, sort_col, sort_dir):
             )
             team_cell = _build_team_cell(team_name, team_logo, team_id)
             stat_cells = _build_stat_cells(ts, sort_col)
-            rows.append(html.Tr([team_cell] + stat_cells, style=row_style))
+            rows.append(
+                html.Tr(
+                    [team_cell] + stat_cells,
+                    style={**row_style, "cursor": "pointer"},
+                    className="game-log-row",
+                    id={"type": "standings-row", "index": f"/team/{team_id}/{season_name}"},
+                    n_clicks=0,
+                )
+            )
 
     colgroup = _build_colgroup(DIVISION_HEADERS)
     return html.Table(

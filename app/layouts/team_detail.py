@@ -7,12 +7,8 @@ def create_team_detail_layout():
         [
             dcc.Store(id="team-detail-id"),
             dcc.Store(id="team-detail-situation", data="tot"),
-            dcc.Link(
-                "Back to Team Standings",
-                href="/team-standings",
-                className="btn btn-info btn-sm",
-            ),
-            html.Div(id="team-detail-header", className="mb-3 mt-3"),
+            html.Div(id="team-detail-breadcrumb", className="mb-2"),
+            html.Div(id="team-detail-header", className="mb-3 mt-1"),
             html.Div(
                 [
                     html.Label(
@@ -33,7 +29,11 @@ def create_team_detail_layout():
             dcc.Store(
                 id="team-detail-sort", data={"column": "PTS", "direction": "desc"}
             ),
-            html.Div(id="team-detail-table"),
+            dcc.Loading(
+                html.Div(id="team-detail-table"),
+                type="circle",
+                color="#4fc3f7",
+            ),
         ],
         fluid=True,
     )

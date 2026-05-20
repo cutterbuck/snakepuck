@@ -2,30 +2,116 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html
 
 
+def _section_card(title, content_md):
+    return dbc.Card(
+        dbc.CardBody(
+            [
+                html.H4(title, className="about-section-title"),
+                dcc.Markdown(content_md, className="about-section-body"),
+            ]
+        ),
+        className="about-card mb-4",
+    )
+
+
 def create_about_layout():
-    content = """\
-## Exploring AHL Player Tracking Data
-Welcome to Jake MacNaughton's HALO Project. This marks the beginning of what, time permitting, will become a series of blog posts. The purpose of this project is to gain familiarity with Teamworks and Sportlogiq AHL player data, aiming to extract meaningful signals from the vast array of player tracking and event data. By delving into millions of rows of this information, the goal is to uncover insights into player evaluation and team success that go beyond the traditional box-score statistics commonly found online.
-
-### Processing and Visualizing Raw Player Tracking Data
-This is my first experience handling player tracking data. Previously, I experimented with mapping data relationships for an application that tracked team and player performance at the season level. However, I have never worked with data at the game-by-game level, let alone the shift-by-shift or stint-by-stint granularity that this dataset provides. The data contains a 30 game sample for 1172 AHL players. There are parquet files for players, games, stints, events, and tracking data. This equates to 480 rows of games, over 1.8 millions rows of events that happen in these games, over 2.2 million stints, and over 13.5 million rows of tracking data.
-
-While initially reviewing of the project's parquet files, I was overwhelmed by the depth and quantity of information they contained. How do these different datasets relate to one another? The only way for me to make any sense of the raw data was to first visualize it with a Flask app to see how it could be organized into a schema in the cleanest and simplest manner. You can view this data in the [Sample Raw Data](/sample-data) part of the Navbar. As a visual learner, looking at the raw data allowed me to figure out how to aggregate it into traditional player and team box score statistics. I also created simple expected goal analytics and aggregated a player's stats on a situational basis like Event Strength, 5-on-5, and so on. These efforts have made up the bulk of my work on this project to date. Naturally, unexpected things arise as you move forward with such a project. Certain edge cases became apparent, like dealing with players that played for multiple AHL teams over their 30 game sample size.
-
-### Navigating this Site
-The user experience is structured as follows: from the NAV bar, you can navigate to the [Team Standings](/team-standings) section. Here, you can select any team to view its roster and see player statistics for the 30-game sample provided. On the team page, you can click on any player to see his performance broken down game-by-game. You can then select any game to view the player's performance shift-by-shift. Finally, you can click on any shift to see all tracking and event data play out sequentially on a hockey rink visualization at the bottom of the page.
-
-### Challenges and Discoveries
-As a visual learner, proceeding with the project in this manner was essential. This approach proved valuable: by watching the player tracking and event data unfold on the hockey rink, I discovered that I had been using incorrect event coordinates. Initially, the tracking data seemed confusing because I relied on x_adj/y_adj, which rendered events as if a team's offensive zone was always to the right. For half a game, it appeared that the puck and all action happened on one side of the ice, while players skated aimlessly on the other. Any analysis of player performance would have been ineffective using these incorrect coordinates.
-
-### Feedback and Future Improvements
-I hope the visual renderings help users make sense of the tracking data. While the page structure made sense to me, it might not suit everyone. If you have suggestions for improving the user experience, please share your feedback, and I will make adjustments as needed.
-"""
-
     return dbc.Container(
         [
-            dcc.Markdown(content, className="blog-post-body"),
+            # Hero section
+            html.Div(
+                [
+                    html.H1("The HALO Project", className="about-hero-title"),
+                    html.P(
+                        "Exploring AHL Player Tracking Data",
+                        className="about-hero-subtitle",
+                    ),
+                    html.Hr(className="about-hero-divider"),
+                    html.P(
+                        "This project digs into Teamworks and Sportlogiq AHL player "
+                        "tracking data to surface insights that go beyond traditional "
+                        "box-score statistics. From shift-level visualizations to "
+                        "expected goal models built from raw event data, the goal is "
+                        "to find meaningful signals for player evaluation and team "
+                        "success.",
+                        className="about-hero-intro",
+                    ),
+                ],
+                className="about-hero",
+            ),
+            # Content sections
+            _section_card(
+                "What You Can Do Here",
+                """\
+This site lets you explore AHL player and team performance at a level of granularity \
+you won't find on traditional stats sites:
+
+- **Shift-by-shift breakdowns** — See how a player performed across every shift in a game, \
+not just the final stat line.
+- **Live rink visualizations** — Watch tracking and event data unfold play-by-play on an \
+interactive hockey rink.
+- **Expected goal analytics** — Go beyond goals and assists with xG models derived from \
+raw event data, broken down by situation (5-on-5, power play, etc.).
+- **Deep-dive blog posts** *(coming soon)* — Analytical write-ups that use this data to answer specific \
+questions about player evaluation.
+
+Start with [Team Standings](/team-standings) to pick a team, drill into a player, \
+and follow the data all the way down to individual shifts. You can also jump straight \
+to any player from the [Player Stats](/player-stats) page.""",
+            ),
+            _section_card(
+                "The Data",
+                """\
+The dataset contains a 30-game sample for 1,172 AHL players across parquet files for \
+players, games, stints, events, and tracking data. That adds up to:
+
+- **480** games
+- **1.8 million+** event rows
+- **2.2 million+** stints
+- **13.5 million+** tracking data rows
+
+You can browse the raw data directly in the [Sample Raw Data](/sample-data) section.""",
+            ),
+            dbc.Card(
+                dbc.CardBody(
+                    [
+                        html.H4("Get in Touch", className="about-section-title"),
+                        html.P(
+                            "Have questions, feedback, or ideas for new analyses? "
+                            "I'd love to hear from you.",
+                            className="about-section-body",
+                        ),
+                        html.Ul(
+                            [
+                                html.Li(
+                                    [
+                                        "Email: ",
+                                        html.A(
+                                            "jakemacnaughton@gmail.com",
+                                            href="mailto:jakemacnaughton@gmail.com",
+                                            className="about-contact-link",
+                                        ),
+                                    ]
+                                ),
+                                html.Li(
+                                    [
+                                        "LinkedIn: ",
+                                        html.A(
+                                            "linkedin.com/in/jakemacnaughton",
+                                            href="https://www.linkedin.com/in/jakemacnaughton/",
+                                            target="_blank",
+                                            rel="noopener noreferrer",
+                                            className="about-contact-link",
+                                        ),
+                                    ]
+                                ),
+                            ],
+                            className="about-contact-list",
+                        ),
+                    ]
+                ),
+                className="about-card mb-4",
+            ),
         ],
         fluid=True,
-        style={"maxWidth": "900px", "margin": "0 auto"},
+        className="about-container",
     )

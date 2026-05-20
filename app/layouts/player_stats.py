@@ -35,7 +35,11 @@ def create_player_stats_layout():
             dcc.Store(id="ps-situation", data="tot"),
             dcc.Store(id="ps-sort", data={"column": "PTS", "direction": "desc"}),
             dcc.Store(id="ps-page", data=1),
-            html.Div(id="ps-table"),
+            dcc.Loading(
+                html.Div(id="ps-table"),
+                type="circle",
+                color="#4fc3f7",
+            ),
             html.Div(id="ps-pagination", className="mt-3 mb-3"),
         ],
         fluid=True,
