@@ -25,12 +25,17 @@ Tonight the Montreal Canadiens will take on the Carolina Hurricanes in game one 
 
 ### Quantifying the Hockey Gods
 
-Succeeding in any pursuit, whether it be winning the Stanley Cup, or scoring a perfect 1600 on the SATs, or winning the lottery, will require a certain degree of skill and a certain degree of luck. The statistical framework called [True Score Theory](https://conjointly.com/kb/true-score-theory/) provides a way to quantify just how much luck vs. how much skill may be involved in any of these endeavors. One would intuitively think that it takes more skill than luck to scores a perfect 1600 on the SATs. Likewise, one would think that winning the lottery is inherently lucky because even a child possesses enough skill to come up with a set of Powerball numbers. Consider the following formula:
+Succeeding in any pursuit, whether it be winning the Stanley Cup, or scoring a perfect 1600 on the SATs, or winning the lottery, will require a certain degree of skill and a certain degree of luck. The statistical framework called [True Score Theory](https://conjointly.com/kb/true-score-theory/) provides a way to quantify just how much luck vs. how much skill may be involved in any of these endeavors. One would intuitively think that it takes more skill than luck to scores a perfect 1600 on the SATs. Likewise, one would think that winning the lottery is inherently lucky because even a child possesses enough skill to come up with a set of Powerball numbers. Consider the following formulas:
 
-> variance(observed outcome) = variance(skill) + (variance(luck)
+> variance(observed outcome) = variance(skill) + variance(luck)
 
-We can look up the NHL standings on NHL to come up with one of the terms of this equation: the observed outcome.
+We easily can estimate the variance of luck and the variance of the observed outcome, which allows for us to solve for the variance of skill. Consider the probability of winning a hockey game after striping out all skill. It is a coin toss. If all things are equal, I would expect my team to win 41 games and lose 41 games per season and earn a total of 82 points out of a maximum 164 possible.
 
+> variance(population) = ((individual data point - population mean)^2 for all population data points)/total number of data points
+
+We can solve for the variance of luck by plugging in the numbers we know. Each team will have a 50% points percentage, and the population's mean will also have a 50% points percentage.
+
+> 0.5 ()
 
 In the book, [The Success Equation: Untangling Skill and Luck in Business, Sports, and Investing](https://www.amazon.com/Success-Equation-Untangling-Business-Investing/dp/1422184234), Mauboussin hashes out these ideas and applies them to the sports world. In this work, Mauboussin introduces a theoretical continuum ranging from 100% luck to 100% skill. He notes that success in domains such as chess is almost entirely attributable to skill, while outcomes in games like roulette are determined predominantly by luck. According to Mauboussin, hockey occupies a balanced position on this continuum, with approximately 53% of success attributed to luck.
 
