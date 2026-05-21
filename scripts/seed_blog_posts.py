@@ -55,7 +55,7 @@ These results are in line with Mauboussin's 53% estimate for luck's contribution
 <<Mauboussin table here>>
 ![Luck-skill continuum](/assets/mauboussin_skill_vs_luck.jpg)
 
-Let's think about this for a second. Just by looking at the variance of the standings, we assume that hockey is a far more random game than basketball. LEFT OFF HERE!
+Let's think about this for a second. Just by looking at the variance of the standings, we assume that hockey is a far more random game than basketball. LEFT OFF HERE! why hockey is more random than basketball.
 
 
 
