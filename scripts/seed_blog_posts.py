@@ -12,16 +12,27 @@ from app.models.blog_post import BlogPost
 
 POSTS = [
     {
-        "title": "Macro-level Thoughts",
+        "title": "The Consequences of Randomness in Hockey",
         "slug": "project-intro-dzone-puck-retrievals",
         "published_at": datetime(2026, 2, 19),
         "summary": (
-            "The consequences of randomness in hockey, and why process-driven "
+            "Understanding randomness in hockey, and why process-driven "
             "metrics matter when evaluating team and player performance."
         ),
         "content": """\
-## The Consequences of Randomness in Hockey
-My perspective on hockey analytics is significantly shaped by Michael Mauboussin’s book, [The Success Equation: Untangling Skill and Luck in Business, Sports, and Investing](https://www.amazon.com/Success-Equation-Untangling-Business-Investing/dp/1422184234). In this work, Mauboussin introduces a theoretical continuum ranging from 100% luck to 100% skill. He notes that success in domains such as chess is almost entirely attributable to skill, while outcomes in games like roulette are determined predominantly by luck. According to Mauboussin, hockey occupies a balanced position on this continuum, with approximately 53% of success attributed to luck.
+## The Hockey Gods
+Tonight the Montreal Canadiens will take on the Carolina Hurricanes in game one of the Easter Conference Final after barely surviving game seven in each of their first two series. Montreal, despite being outshot 29-9 and going nearly 27 minutes without registering a shot on goal, defeated Tampa Bay courtesy of Alex Newhook's goal at 11:07 of the 3rd period. They were outplayed by the Buffalo Sabres in their next game seven, albeit not as dramatically, yet won again courtesy of another timely Newhook goal. Does Montreal deserve to be playing in the ECF? Of course they do! Luck and randomness are part of hockey, and so far Montreal has had the Hockey Gods on their side. Can Montreal endure another two game sevens the same way to reclaim the Stanley Cup for Canada for the first time since 1993 when they last won it all? Statistics suggests it is possible but unlikely.
+
+### Quantifying the Hockey Gods
+
+Succeeding in any pursuit, whether it be winning the Stanley Cup, or scoring a perfect 1600 on the SATs, or winning the lottery, will require a certain degree of skill and a certain degree of luck. The statistical framework called [True Score Theory](https://conjointly.com/kb/true-score-theory/) provides a way to quantify just how much luck vs. how much skill may be involved in any of these endeavors. One would intuitively think that it takes more skill than luck to scores a perfect 1600 on the SATs. Likewise, one would think that winning the lottery is inherently lucky because even a child possesses enough skill to come up with a set of Powerball numbers. Consider the following formula:
+
+> variance(observed outcome) = variance(skill) + (variance(luck)
+
+We can look up the NHL standings on NHL to come up with one of the terms of this equation: the observed outcome.
+
+
+In the book, [The Success Equation: Untangling Skill and Luck in Business, Sports, and Investing](https://www.amazon.com/Success-Equation-Untangling-Business-Investing/dp/1422184234), Mauboussin hashes out these ideas and applies them to the sports world. In this work, Mauboussin introduces a theoretical continuum ranging from 100% luck to 100% skill. He notes that success in domains such as chess is almost entirely attributable to skill, while outcomes in games like roulette are determined predominantly by luck. According to Mauboussin, hockey occupies a balanced position on this continuum, with approximately 53% of success attributed to luck.
 
 ![Luck-skill continuum](/assets/mauboussin_skill_vs_luck.jpg)
 
