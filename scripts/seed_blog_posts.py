@@ -20,26 +20,44 @@ POSTS = [
             "metrics matter when evaluating team and player performance."
         ),
         "content": """\
-## The Hockey Gods
-Tonight the Montreal Canadiens will take on the Carolina Hurricanes in game one of the Easter Conference Final after barely surviving game seven in each of their first two series. Montreal, despite being outshot 29-9 and going nearly 27 minutes without registering a shot on goal, defeated Tampa Bay courtesy of Alex Newhook's goal at 11:07 of the 3rd period. They were outplayed by the Buffalo Sabres in their next game seven, albeit not as dramatically, yet won again courtesy of another timely Newhook goal. Does Montreal deserve to be playing in the ECF? Of course they do! Luck and randomness are part of hockey, and so far Montreal has had the Hockey Gods on their side. Can Montreal endure another two game sevens the same way to reclaim the Stanley Cup for Canada for the first time since 1993 when they last won it all? Statistics suggests it is possible but unlikely.
+## The Hockey Gods are Real
+Tonight the Montreal Canadiens will take on the Carolina Hurricanes in game one of the Eastern Conference Final after barely surviving game seven in each of their first two series. Montreal, despite being outshot 29-9 and going nearly 27 minutes without registering a shot on goal, defeated Tampa Bay courtesy of Alex Newhook's goal at 11:07 of the 3rd period. They were outplayed by the Buffalo Sabres in their next game seven, albeit not as dramatically, yet won again courtesy of another timely Newhook goal. Does Montreal deserve to be playing in the ECF? Of course they do! Luck and randomness are part of hockey, and so far Montreal has had the Hockey Gods on their side. Can Montreal endure another two game sevens the same way to reclaim the Stanley Cup for Canada for the first time since 1993 when they last won it all? Statistics suggests it is possible but unlikely.
 
-### Quantifying the Hockey Gods
-
-Succeeding in any pursuit, whether it be winning the Stanley Cup, or scoring a perfect 1600 on the SATs, or winning the lottery, will require a certain degree of skill and a certain degree of luck. The statistical framework called [True Score Theory](https://conjointly.com/kb/true-score-theory/) provides a way to quantify just how much luck vs. how much skill may be involved in any of these endeavors. One would intuitively think that it takes more skill than luck to scores a perfect 1600 on the SATs. Likewise, one would think that winning the lottery is inherently lucky because even a child possesses enough skill to come up with a set of Powerball numbers. Consider the following formulas:
+Success in any pursuit, whether it be winning the Stanley Cup, or scoring a perfect 1600 on the SATs, or winning the lottery, requires a certain degree of skill and a certain degree of luck. The statistical framework called [True Score Theory](https://conjointly.com/kb/true-score-theory/) provides a model for quantifying just how much luck vs. how much skill may be involved in any of these endeavors. One would intuitively think that it takes more skill than luck to scores a perfect 1600 on the SATs. Likewise, one would think that winning the lottery is inherently lucky because even a child possesses enough skill to come up with a set of Powerball numbers. Consider the following formula:
 
 > variance(observed outcome) = variance(skill) + variance(luck)
 
-We easily can estimate the variance of luck and the variance of the observed outcome, which allows for us to solve for the variance of skill. Consider the probability of winning a hockey game after striping out all skill. It is a coin toss. If all things are equal, I would expect my team to win 41 games and lose 41 games per season and earn a total of 82 points out of a maximum 164 possible.
+We easily can estimate the variance of luck and we can calculated variance of the observed outcome using the NHL standings after a full 82-game season. Knowing these two terms terms of the equation allows for us to solve for the estimated variance of skill. Consider the probability of winning a hockey game after striping out all skill. It is a coin toss. If all things are equal, I would expect my team to win 41 games and lose 41 games per season and earn a total of 82 points out of a maximum 164 possible. We can calculate the standard deviation of luck by plugging what we know into its formula below, where p is probability of winning (50%) and n is the number of games played in a season (82):
 
-> variance(population) = ((individual data point - population mean)^2 for all population data points)/total number of data points
+> variance of luck = p * (1-p)/n
+> variance of luck = 0.5 * (1-0.5)/82
+> variance of luck = 0.003048780487804878
 
-We can solve for the variance of luck by plugging in the numbers we know. Each team will have a 50% points percentage, and the population's mean will also have a 50% points percentage.
+Now let's look at the variance of total NHL winning percentages for all teams for the 2025-26.
 
-> 0.5 ()
+> import numpy as np
+> win_percentages = [.738, .689, .683, .665, .646, .646, .634, .610, .604, .598, .598, .579, .579, .567, .561, .561, .561, .561, .555, .549, .530, .524, .524, .524, .512, .500, .482, .476, .470, .470, .439, .354]
+> np.var(win_percentages)
+> win percentage variance of 2025-26 NHL season = 0.006248506835937501
 
-In the book, [The Success Equation: Untangling Skill and Luck in Business, Sports, and Investing](https://www.amazon.com/Success-Equation-Untangling-Business-Investing/dp/1422184234), Mauboussin hashes out these ideas and applies them to the sports world. In this work, Mauboussin introduces a theoretical continuum ranging from 100% luck to 100% skill. He notes that success in domains such as chess is almost entirely attributable to skill, while outcomes in games like roulette are determined predominantly by luck. According to Mauboussin, hockey occupies a balanced position on this continuum, with approximately 53% of success attributed to luck.
+We can estimate the variance of skill by plugging these values into our original equation.
 
+> Variance of skill = 0.006248506835937501 - 0.003048780487804878
+> Variance of skill = 0.0031997263481326225
+
+Michael Mauboussin introduces this approach to thinking about luck and skill in sports in his book [The Success Equation: Untangling Skill and Luck in Business, Sports, and Investing](https://www.amazon.com/Success-Equation-Untangling-Business-Investing/dp/1422184234). Mauboussin uses True Score Theory to create a theoretical continuum ranging from 100% luck (and 0% skill) to 0% luck (and 100% skill). You can place any endeavor along this continuum by dividing the contribution of luck by the observed outcome. In our example, the variance of luck divided by the variance of the 2025-26 NHL season puts hockey right in the middle of this continuum at 49% luck.
+
+> 0.003048780487804878/0.006248506835937501
+> 0.487921445531627
+
+These results are in line with Mauboussin's 53% estimate for luck's contribution to the five NHL seasons ending in 2012.
+
+<<Mauboussin table here>>
 ![Luck-skill continuum](/assets/mauboussin_skill_vs_luck.jpg)
+
+Let's think about this for a second. Just by looking at the variance of the standings, we assume that hockey is a far more random game than basketball. LEFT OFF HERE!
+
+
 
 There are several rational explanations for this, particularly when considering a limited sample size such as a seven-game playoff series. Numerous factors can significantly influence the outcome, including an exceptionally performing opposing goaltender, unfavorable goalie interference reviews, or an unpredictable deflection off a linesman’s skate leading to a scoring opportunity. Hockey is inherently a dynamic sport characterized by considerable randomness. Upon examining some of the raw data, it becomes evident that much of what occurs during a game is attributable to chance. Even elite players typically participate for only around 20 minutes per game and may possess the puck for just 1-2% of total playtime.
 
