@@ -14,16 +14,17 @@ POSTS = [
     {
         "title": "The Consequences of Randomness in Hockey",
         "slug": "project-intro-dzone-puck-retrievals",
-        "published_at": datetime(2026, 2, 19),
+        "published_at": datetime(2026, 5, 21),
         "summary": (
             "Understanding randomness in hockey, and why process-driven "
             "metrics matter when evaluating team and player performance."
         ),
         "content": """\
-### The Hockey Gods are Real
+
+#### Hockey Gods, Parlez Vous Francais?
 Tonight the Montreal Canadiens will take on the Carolina Hurricanes in game one of the Eastern Conference Final after barely surviving game seven in each of their first two series. Montreal, despite being outshot 29-9 and going nearly 27 minutes without registering a shot on goal, defeated Tampa Bay courtesy of Alex Newhook's goal at 11:07 of the 3rd period. They were outplayed by the Buffalo Sabres in their next game seven, albeit not as dramatically, yet won again courtesy of another timely Newhook goal. Does Montreal deserve to be playing in the ECF? Of course they do! Luck and randomness are part of hockey, and so far Montreal has had the Hockey Gods on their side. Can Montreal endure another two game sevens the same way to reclaim the Stanley Cup for Canada for the first time since 1993 when they last won it all? Statistics suggests it is possible but unlikely.
 
-### Quantifying the Hockey Gods
+#### Quantifying the Hockey Gods
 Success in any pursuit, whether it be winning the Stanley Cup, or scoring a perfect 1600 on the SATs, or winning the lottery, requires a certain degree of skill and a certain degree of luck. The statistical framework called [True Score Theory](https://conjointly.com/kb/true-score-theory/) provides a model for quantifying just how much luck vs. how much skill may be involved in any of these endeavors. One would intuitively think that it takes more skill than luck to score a perfect 1600 on the SATs. Likewise, one would think that winning the lottery is inherently lucky because even a child possesses enough skill to come up with a set of Powerball numbers. Consider the following formula:
 
 > variance(observed outcome) = variance(skill) + variance(luck)
@@ -31,9 +32,9 @@ Success in any pursuit, whether it be winning the Stanley Cup, or scoring a perf
 We can easily estimate the variance of luck and calculate the variance of the observed outcome using the NHL standings after a full 82-game season. Knowing these two terms of the equation allows us to solve for the estimated variance of skill. Consider the probability of winning a hockey game after stripping out all skill. It is a coin toss. If all things are equal, I would expect my team to win 41 games and lose 41 games per season and earn a total of 82 points out of a maximum 164 possible. We can calculate the variance of luck by plugging what we know into its formula below, where `p` is probability of winning (0.50) and `n` is the number of games played in a season (82):
 
 ```
-variance of luck = p * (1 - p) / n
-variance of luck = 0.5 * (1 - 0.5) / 82
-variance of luck = 0.003049
+var_of_luck = p * (1 - p) / n
+var_of_luck = 0.5 * (1 - 0.5) / 82
+var_of_luck = 0.003049
 ```
 
 Now let's look at the variance of total NHL winning percentages for all teams for the 2025-26 season:
@@ -44,14 +45,14 @@ win_percentages = [.738, .689, .683, .665, .646, .646, .634, .610,
                    .561, .561, .555, .549, .530, .524, .524, .524,
                    .512, .500, .482, .476, .470, .470, .439, .354]
 
-variance(win_percentages) = 0.006249
+np.var(win_percentages) = 0.006249
 ```
 
 We can estimate the variance of skill by plugging these values into our original equation:
 
 ```
-variance of skill = 0.006249 - 0.003049
-variance of skill = 0.0032
+var_of_skill = 0.006249 - 0.003049
+var_of_skill = 0.0032
 ```
 
 **Michael Mauboussin** introduces this approach to thinking about luck and skill in sports in his book [The Success Equation: Untangling Skill and Luck in Business, Sports, and Investing](https://www.amazon.com/Success-Equation-Untangling-Business-Investing/dp/1422184234). Mauboussin uses True Score Theory to create a theoretical continuum ranging from 100% luck (and 0% skill) to 0% luck (and 100% skill). You can place any endeavor along this continuum by dividing the contribution of luck by the observed outcome. Following along with our example, the variance of luck divided by the variance of the observed outcome suggests that luck contributed 49% of the resulting standings for the 2025-26 season.
@@ -66,11 +67,14 @@ This places hockey in the middle of Mauboussin's continuum:
 And our results are roughly in line with Mauboussin's 53% estimate for the five NHL seasons ending in 2012:
 ![Sports comps](/assets/mauboussin-table4-1.jpg)
 
-Let's think about this for a second. Just by looking at the variance of the standings, we assume that hockey is a far more random game than basketball. LEFT OFF HERE! why hockey is more random than basketball.
+Let's think about this for a second. We determined that hockey is far more random than basketball just by looking at the parity in the NHL and relative lackthereof in the NBA over their respective 82 game seasons. There are many reasons why this holds true. The first statistical rule has to do with the number of players involved and how they impact the game. Generally, the more players participate, the more randomness will play a role in the sport. Basketball and hockey both have five people playing at any time, assuming you do not count the goaltenders. However, hockey has on-the-fly line changes whereas basketball players can only be subbed in during stoppages. Each hockey game features eighteen skaters while the typical basetball rotation only has ten to twelve players. This brings us to a second statistical rule: larger sample sizes has less variance. The best hockey players typically only play 30-40% per game. The best basketball players play over 80% of each game. Also, the best basketball players also tend to dominate possession whereas much of a hockey game is spent with neither team having true possession of the puck. During his peak years, I imagine Kobe Bryant had the ball in his hands for just about every Lakers possession. The most elite hockey players in the world only truly possess the puck for 2-3 minutes per game.
 
-There are several rational explanations for this, particularly when considering a limited sample size such as a seven-game playoff series. Numerous factors can significantly influence the outcome, including an exceptionally performing opposing goaltender, unfavorable goalie interference reviews, or an unpredictable deflection off a linesman’s skate leading to a scoring opportunity. Hockey is inherently a dynamic sport characterized by considerable randomness. Upon examining some of the raw data, it becomes evident that much of what occurs during a game is attributable to chance. Even elite players typically participate for only around 20 minutes per game and may possess the puck for just 1-2% of total playtime.
+![Hockey possession per game leaders](/assets/hockey-possession.png)
 
-### Reversion to the Mean
+Ultimately this means that the most skilled basketball players drive gameplay much more often per game than the best hockey players do. While there are many other reasons why hockey is random, I think the point is clear by now. Luck and randomness play a large role in determining the outcome of hockey games.
+
+
+#### The Hockey Gods Giveth, But They Also Taketh Away
 Activities that involve significant amounts of luck tend to show strong reversion to the mean. Mauboussin introduces a useful concept for quantifying this: the **shrinking factor**. The formula is straightforward:
 
 > Expected result = average + shrinking factor x (observed result - average)
