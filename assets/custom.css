@@ -371,6 +371,30 @@
     color: #333;
 }
 
+.blog-post-body pre {
+    background: #0d2137;
+    color: #b0d4f1;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 20px 0;
+    overflow-x: auto;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    border-left: 4px solid #4fc3f7;
+}
+
+.blog-post-body code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.blog-post-body p code {
+    background: #e8f0f7;
+    color: #0d2137;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
 .blog-post-body h2,
 .blog-post-body h3 {
     color: #0d2137;
