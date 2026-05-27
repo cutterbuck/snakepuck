@@ -74,16 +74,23 @@ Let's think about this for a second. We determined that hockey is far more rando
 Ultimately this means that the most skilled basketball players drive gameplay much more often per game than the best hockey players do. While there are many other reasons why hockey is random, I think the point is clear by now: luck and randomness play a large role in determining the outcome of hockey games.
 
 
-#### The Hockey Gods May Giveth, But They Also Taketh Away
-Activities that involve significant amounts of luck tend to show strong reversion to the mean. Mauboussin introduces a useful concept for quantifying this: the **shrinking factor**. The formula is straightforward:
+#### The Consequences of Randomness in Hockey
 
-> Expected result = average + shrinking factor x (observed result - average)
+**1. The Hockey Gods May Giveth, But They Also Taketh Away...**
+Activities that involve significant amounts of luck will show a **higher rate of reversion to the mean**. Let's first consider a predominantly skill-based activity like chess. Let's say I go down 0-2 in a seven match series against Magnus Carlsson. We can predict with confidence that I will lose the next two matches and lose the series because he is a Grandmaster and I can't even name all of the pieces on the board. Luck plays no part in this seven match series. And each new event will result in a Carlsson win because he is more skilled. Every match is a win for Carlsson and a loss for me, so there is no mean reversion whatsoever.
+
+Now let's consider something that involves lots of luck like winning at roulette by picking the correct number (assuming I don't have Ed Thorp and Claude Shannon's wearable device telling me what to do). Let's say I pick the correct number at the first spin. My win-rate is 100%. Since roulette is almost all luck and no skill, we should expect that each new spin of the wheel will bring my win-rate closer to the expected win rate of 1/38.
+
+Mauboussin introduces a useful concept for quantifying this: the **shrinking factor**. The formula is straightforward:
+
+> expected_result = league_average + shrinking_factor x (observed_result - league_average)
 
 A shrinking factor of 1 means the activity is all skill — there is no reversion, and the observed result is the best predictor of future performance. A shrinking factor of 0 means the activity is all luck — the best prediction for the next outcome is simply the base rate.
 
-To illustrate: in baseball, the shrinking factor for batting average is approximately 0.20. If a player is hitting .350 early in the season, the expected year-end average would be .265 + 0.20 x (.350 - .265) = **.282** — much closer to the league average than the hot start would suggest. The observed result tells us surprisingly little about the player’s true ability.
+To illustrate: in baseball, the shrinking factor for batting average is approximately 0.20. If a player is hitting .350 early in the season, the expected year-end average would be .265 + 0.20 x (.350 - .265) = **.282** — much closer to the league average than the hot start would suggest.
 
-In hockey, where luck accounts for roughly 53% of observed outcomes, we should expect even more aggressive reversion. A player who posts exceptional plus-minus numbers over a 30-game stretch is far more likely to regress toward the mean than to sustain that pace. This doesn’t mean the player lacks skill — it means the metric is capturing a large amount of noise alongside the signal.
+**2. ...Over Time**
+Therefore we should expect more aggressive reversion in hockey, where luck accounts for roughly 53% of observed outcomes. A player who posts exceptional plus-minus numbers over a 30-game stretch is far more likely to regress toward the mean than to sustain that pace. This doesn’t mean the player lacks skill — it means the metric is capturing a large amount of noise alongside the signal.
 
 This is precisely why, in domains with high luck, it is more valuable to focus on the **underlying process** rather than the observed outcomes. Results like wins, losses, goals, assists, and points may deviate considerably from what would be expected over the long term. Process-driven metrics — like expected goals — attempt to measure the quality of chances created and allowed, stripping away some of the randomness that contaminates traditional stats.
 
