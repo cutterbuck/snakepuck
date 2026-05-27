@@ -13,3 +13,5 @@ hockey_hackathon_env/
 data/
 .data/
 *.parquet
+
+.claude/
