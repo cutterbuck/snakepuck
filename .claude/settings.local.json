@@ -7,7 +7,9 @@
       "WebFetch(domain:theahl.com)",
       "WebFetch(domain:miro.medium.com)",
       "Bash(python -c \"from app import create_app; app = create_app\\(\\); ctx = app.app_context\\(\\); ctx.push\\(\\); from app.models import Player; print\\(Player.query.count\\(\\)\\)\")",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "Bash(ssh -T git@github.com)",
+      "Bash(ssh-add -l)"
     ]
   }
 }
