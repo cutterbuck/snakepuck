@@ -89,10 +89,10 @@ A shrinking factor of 1 means the activity is all skill — there is no reversio
 
 To illustrate: in baseball, the shrinking factor for batting average is approximately 0.20. If a player is hitting .350 early in the season, the expected year-end average would be .265 + 0.20 x (.350 - .265) = **.282** — much closer to the league average than the hot start would suggest.
 
-**2. ...Over Time**
-Therefore we should expect more aggressive reversion in hockey, where luck accounts for roughly 53% of observed outcomes. A player who posts exceptional plus-minus numbers over a 30-game stretch is far more likely to regress toward the mean than to sustain that pace. This doesn’t mean the player lacks skill — it means the metric is capturing a large amount of noise alongside the signal.
+We should expect fairly aggressive reversion in hockey, where luck accounts for roughly 53% of observed outcomes. Montreal has made it this far largely thanks to a high shooting percentage in the first two rounds. It is far more likely that their shooting percentage will regress toward their long-term shooting percentage rather than to sustain this pace in the next round against the Hurricanes.
 
-This is precisely why, in domains with high luck, it is more valuable to focus on the **underlying process** rather than the observed outcomes. Results like wins, losses, goals, assists, and points may deviate considerably from what would be expected over the long term. Process-driven metrics — like expected goals — attempt to measure the quality of chances created and allowed, stripping away some of the randomness that contaminates traditional stats.
+**2. ...Over Time**
+What works in Montreal's favor is that a seven game series is a very small sample size for hockey, where randomness plays such a large role in determining who wins and loses. Montreal has only played 14 games in the playoffs so far, and although their shooting percentage in the playoffs is high, we should expect higher variance and randomness when the sample size is so small. Over time Montreal's shooting percentage ought to revert to their long-term shooting percentage, but we should expect it to happen over time. I expect Montreal to continue being outshot and outchanced by the Hurricanes, who tend to dominate possession and throw a lot of pucks on net. It is entirely conceivable that Montreal finds a way to chip in a few more timely goals, assuming Dobes can hold off the barrage of shots by the Hurricanes.
 
 #### Don't Be Fooled By Randomness
 If most hockey statistics revert to the mean, which ones are actually worth paying attention to? Mauboussin proposes two criteria for evaluating any performance metric:
@@ -110,6 +110,11 @@ The most useful statistics score highly on **both** dimensions. In hockey, the y
 A key insight emerges: **the more a statistic depends on the interaction of teammates and opponents, the lower its year-over-year correlation tends to be.** Plus-minus is a team-dependent outcome masquerading as an individual stat. Shooting percentage depends on shot quality, goaltender performance, and deflections. Shots per minute, by contrast, is more directly within a player’s control.
 
 This framework is what motivated the approach taken on this site. Rather than relying on traditional box-score statistics, I used event data to calculate each player’s on-ice expected goals for and against. Expected goal metrics attempt to isolate the quality of the process — the chances created and allowed — from the randomness of whether the puck happened to go in. For defensemen in particular, xG provides a more accurate reflection of on-ice performance than goals, assists, or plus-minus.
+
+
+**** How to Win the Stanley Cup
+This is precisely why, in domains with high luck, it is more valuable to focus on the **underlying process** rather than the observed outcomes. Results like wins, losses, goals, assists, and points may deviate considerably from what would be expected over the long term. Process-driven metrics — like expected goals — attempt to measure the quality of chances created and allowed, stripping away some of the randomness that contaminates traditional stats.
+
 """,
     },
 ]
