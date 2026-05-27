@@ -21,10 +21,10 @@ POSTS = [
         ),
         "content": """\
 
-#### Hockey Gods, Parlez Vous Francais?
+### Hockey Gods, Parlez Vous Francais?
 Tonight the Montreal Canadiens will take on the Carolina Hurricanes in game one of the Eastern Conference Final after barely surviving game seven in each of their first two series. Montreal, despite being outshot 29-9 and going nearly 27 minutes without registering a shot on goal, defeated Tampa Bay courtesy of Alex Newhook's goal at 11:07 of the 3rd period. They were outplayed by the Buffalo Sabres in their next game seven, albeit not as dramatically, yet won again courtesy of another timely Newhook goal. Does Montreal deserve to be playing in the ECF? Of course they do! Luck and randomness are part of hockey, and so far Montreal has had the Hockey Gods on their side. Can Montreal endure another two game sevens the same way to reclaim the Stanley Cup for Canada for the first time since 1993 when they last won it all? Statistics suggests it is possible but unlikely.
 
-#### Quantifying the Hockey Gods
+### Quantifying the Hockey Gods
 Success in any pursuit, whether it be winning the Stanley Cup, or scoring a perfect 1600 on the SATs, or winning the lottery, requires a certain degree of skill and a certain degree of luck. The statistical framework called [True Score Theory](https://conjointly.com/kb/true-score-theory/) provides a model for quantifying just how much luck vs. how much skill may be involved in any of these endeavors. One would intuitively think that it takes more skill than luck to score a perfect 1600 on the SATs. Likewise, one would think that winning the lottery is inherently lucky because even a child possesses enough skill to come up with a set of Powerball numbers. Consider the following formula:
 
 > variance(observed outcome) = variance(skill) + variance(luck)
@@ -67,21 +67,23 @@ This places hockey in the middle of Mauboussin's continuum:
 And our results are roughly in line with Mauboussin's 53% estimate for the five NHL seasons ending in 2012:
 ![Sports comps](/assets/mauboussin-table4-1.jpg)
 
-Let's think about this for a second. We determined that hockey is far more random than basketball just by looking at the parity in the NHL and relative lackthereof in the NBA over their respective 82 game seasons. There are many reasons why this holds true. The first statistical rule has to do with the number of players involved and how they impact the game. Generally, the more players participate, the more randomness will play a role in the sport. Basketball and hockey both have five people playing at any time, assuming you do not count the goaltenders. However, hockey has on-the-fly line changes whereas basketball players can only be subbed in during stoppages. Each hockey game features eighteen skaters while the typical basetball rotation only has ten to twelve players. This brings us to a second statistical rule: larger sample sizes has less variance. The best hockey players typically only play 30-40% per game. The best basketball players play over 80% of each game. Also, the best basketball players also tend to dominate possession whereas much of a hockey game is spent with neither team having true possession of the puck. During his peak years, I imagine Kobe Bryant had the ball in his hands for just about every Lakers possession. The most elite hockey players in the world only truly possess the puck for 2-3 minutes per game.
+We determined that hockey is far more random than basketball just by looking at the parity in the NHL and relative lack thereof in the NBA over their respective 82-game seasons. There are several reasons why this holds true, but they all come back to one idea: **individual skill is diluted in hockey far more than in basketball.**
+
+Start with playing time. The best basketball players log over 80% of each game. The best hockey players, with on-the-fly line changes cycling through eighteen skaters, typically play only 30–40%. That alone means each hockey game contains a smaller sample of any individual player's skill.
+
+Then consider possession. NBA stars routinely post usage rates above 30% — they have the ball in their hands for a significant share of their team's possessions. In hockey, much of the game is spent with neither team in true possession. The most elite players in the world only control the puck for roughly 2–3 minutes per game.
 
 ![Hockey possession per game leaders](/assets/hockey-possession.png)
 
-Ultimately this means that the most skilled basketball players drive gameplay much more often per game than the best hockey players do. While there are many other reasons why hockey is random, I think the point is clear by now: luck and randomness play a large role in determining the outcome of hockey games.
 
+### The Consequences of Randomness in Hockey
 
-#### The Consequences of Randomness in Hockey
+#### The Hockey Gods May Giveth, But They Also Taketh Away...
+Activities that involve significant amounts of luck will show a **higher rate of reversion to the mean**. Consider a predominantly skill-based activity like chess. If I go down 0–2 in a seven-match series against Magnus Carlsen, we can predict with confidence that I will lose the series — he is a Grandmaster and I can't even name all of the pieces on the board. Skill completely determines every match, so there is no mean reversion whatsoever.
 
-**1. The Hockey Gods May Giveth, But They Also Taketh Away...**
-Activities that involve significant amounts of luck will show a **higher rate of reversion to the mean**. Let's first consider a predominantly skill-based activity like chess. Let's say I go down 0-2 in a seven match series against Magnus Carlsson. We can predict with confidence that I will lose the next two matches and lose the series because he is a Grandmaster and I can't even name all of the pieces on the board. Luck plays no part in this seven match series. And each new event will result in a Carlsson win because he is more skilled. Every match is a win for Carlsson and a loss for me, so there is no mean reversion whatsoever.
+Now consider something on the opposite end of the spectrum: picking the correct number at roulette (assuming I don't have Ed Thorp and Claude Shannon's wearable device telling me what to do). If I guess correctly on the first spin, my win rate is 100%. But since roulette is almost entirely luck, each subsequent spin will pull my win rate back toward the expected rate of 1/38.
 
-Now let's consider something that involves lots of luck like winning at roulette by picking the correct number (assuming I don't have Ed Thorp and Claude Shannon's wearable device telling me what to do). Let's say I pick the correct number at the first spin. My win-rate is 100%. Since roulette is almost all luck and no skill, we should expect that each new spin of the wheel will bring my win-rate closer to the expected win rate of 1/38.
-
-Mauboussin introduces a useful concept for quantifying this: the **shrinking factor**. The formula is straightforward:
+These are the extremes. Most activities — hockey included — fall somewhere in between. Mauboussin introduces a useful concept for quantifying where: the **shrinking factor**.
 
 > expected_result = league_average + shrinking_factor x (observed_result - league_average)
 
@@ -89,10 +91,10 @@ A shrinking factor of 1 means the activity is all skill — there is no reversio
 
 To illustrate: in baseball, the shrinking factor for batting average is approximately 0.20. If a player is hitting .350 early in the season, the expected year-end average would be .265 + 0.20 x (.350 - .265) = **.282** — much closer to the league average than the hot start would suggest.
 
-We should expect fairly aggressive reversion in hockey, where luck accounts for roughly 53% of observed outcomes. Montreal has made it this far largely thanks to a high shooting percentage in the first two rounds. It is far more likely that their shooting percentage will regress toward their long-term shooting percentage rather than to sustain this pace in the next round against the Hurricanes.
+In hockey, where luck accounts for roughly half of observed outcomes, we should expect aggressive reversion. Montreal has made it this far largely thanks to a high shooting percentage in the first two rounds. Over a long enough horizon, that shooting percentage will almost certainly regress toward their long-term rate.
 
-**2. ...Over Time**
-What works in Montreal's favor is that a seven game series is a very small sample size for hockey, where randomness plays such a large role in determining who wins and loses. Montreal has only played 14 games in the playoffs so far, and although their shooting percentage in the playoffs is high, we should expect higher variance and randomness when the sample size is so small. Over time Montreal's shooting percentage ought to revert to their long-term shooting percentage, but we should expect it to happen over time. I expect Montreal to continue being outshot and outchanced by the Hurricanes, who tend to dominate possession and throw a lot of pucks on net. It is entirely conceivable that Montreal finds a way to chip in a few more timely goals, assuming Dobes can hold off the barrage of shots by the Hurricanes.
+#### ...Over Time
+But here's what works in Montreal's favor: regression needs volume, and a seven-game series is a tiny sample. Montreal has played only 14 playoff games so far. With so few data points, variance runs high and unsustainable shooting percentages can persist just long enough to win a series. The Hurricanes dominate possession and throw pucks on the net at a high rate throughout the Brindamour era. They will likely continue to do so vs. Montreal, but if Dobes can absorb the volume and Montreal can convert on the chances they do get, the small sample may be all the cover they need to win the ECF.
 
 #### Don't Be Fooled By Randomness
 If most hockey statistics revert to the mean, which ones are actually worth paying attention to? Mauboussin proposes two criteria for evaluating any performance metric:
@@ -112,7 +114,7 @@ A key insight emerges: **the more a statistic depends on the interaction of team
 This framework is what motivated the approach taken on this site. Rather than relying on traditional box-score statistics, I used event data to calculate each player’s on-ice expected goals for and against. Expected goal metrics attempt to isolate the quality of the process — the chances created and allowed — from the randomness of whether the puck happened to go in. For defensemen in particular, xG provides a more accurate reflection of on-ice performance than goals, assists, or plus-minus.
 
 
-**** How to Win the Stanley Cup
+### How to Win the Stanley Cup
 This is precisely why, in domains with high luck, it is more valuable to focus on the **underlying process** rather than the observed outcomes. Results like wins, losses, goals, assists, and points may deviate considerably from what would be expected over the long term. Process-driven metrics — like expected goals — attempt to measure the quality of chances created and allowed, stripping away some of the randomness that contaminates traditional stats.
 
 """,
