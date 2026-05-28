@@ -7,7 +7,7 @@ def _section_card(title, content_md):
         dbc.CardBody(
             [
                 html.H4(title, className="about-section-title"),
-                dcc.Markdown(content_md, className="about-section-body"),
+                dcc.Markdown(content_md, className="about-section-body", link_target="_blank"),
             ]
         ),
         className="about-card mb-4",
