@@ -13,7 +13,7 @@ from app.models.blog_post import BlogPost
 POSTS = [
     {
         "title": "The Consequences of Randomness in Hockey",
-        "slug": "project-intro-dzone-puck-retrievals",
+        "slug": "consequences-of-randomness-in-hockey",
         "published_at": datetime(2026, 5, 21),
         "summary": (
             "Understanding randomness in hockey, and why process-driven "
