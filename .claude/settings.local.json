@@ -10,7 +10,11 @@
       "Bash(python -c \":*)",
       "Bash(ssh -T git@github.com)",
       "Bash(ssh-add -l)",
-      "Bash(ssh -vT git@github.com)"
+      "Bash(ssh -vT git@github.com)",
+      "Bash(du -sh /Users/jakemacnaughton/Desktop/hockey-blog/*.db /Users/jakemacnaughton/Desktop/hockey-blog/**/*.db)",
+      "Bash(du -sh /Users/jakemacnaughton/Desktop/hockey-blog/instance/*.db)",
+      "Bash(psql -d hockey_analytics -c \"SELECT pg_size_pretty\\(pg_database_size\\(''hockey_analytics''\\)\\);\")",
+      "Bash(/Users/jakemacnaughton/Desktop/hockey-blog/hockey_hackathon_env/bin/python --version)"
     ]
   }
 }
