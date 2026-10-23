@@ -1,0 +1,160 @@
+# SnakePuck Migration Plan
+
+A living plan. We migrate piece by piece, and the current Dash site keeps
+working the whole time. Each phase ships on its own and can be reordered,
+reshaped, or dropped as we learn.
+
+## Target architecture
+
+```
+raw Parquet ──► GCS ──► BigQuery (raw)
+                          │
+                          ▼
+                 dbt: staging → intermediate → marts  (tested)
+                          │
+                          ▼
+              export marts to Parquet (GCS)
+                          │
+                          ▼
+        Rust API (Axum) on Cloud Run, marts held in memory
+                          │
+                          ▼
+          Leptos frontend (Rust → WASM) + Markdown blog
+```
+
+Rust also takes on tracking-frame processing where SQL is awkward
+(possession chains, pressure metrics). It is benchmarked against Python.
+
+## Hosting (all GCP)
+
+The API and frontend are a single Rust app (Axum + Leptos server rendering),
+deployed as one Cloud Run service.
+
+```
+domain ──► Firebase Hosting (free HTTPS + CDN) ──► Cloud Run: Rust app
+                                                       │
+                                                       ▼
+                                          GCS: mart + tracking Parquet
+```
+
+| Need | Service |
+|---|---|
+| Run the app | Cloud Run (scale to zero; min-instances=1 optional) |
+| Container images | Artifact Registry |
+| CI/CD | GitHub Actions (or Cloud Build) |
+| Served data files | Cloud Storage |
+| Warehouse + transforms | BigQuery + dbt |
+| Domain, HTTPS, edge cache | Firebase Hosting rewrites → Cloud Run |
+
+## Estimated cost (verify against current GCP pricing)
+
+| Scenario | Est. monthly |
+|---|---|
+| Scale to zero, blog-level traffic | ~$0–2 (BigQuery, Cloud Run, Firebase all within free tiers) |
+| One always-warm Cloud Run instance | ~$10–20 |
+| Today, for comparison (DigitalOcean app + managed Postgres) | ~$20–30+ |
+
+Guardrails: a $10/month budget alert, a BigQuery maximum-bytes-billed limit per
+query, and a daily query quota. Both platforms run in parallel until the
+Phase 7 cutover.
+
+## Where things live today
+
+| Piece | Today | Size |
+|---|---|---|
+| Raw data | `data/*.parquet` → Postgres via `scripts/seed_db.py` | tracking 13.5M, stints 2.2M, events 1.8M rows |
+| Derived stats | `scripts/seed_db.py` (~1,500 lines) + ~20 `backfill_*`/`migrate_*` scripts | shifts, stint xG/GAP, situations, player/game/team stats |
+| Serving | Dash callbacks querying Postgres directly | 9 callback modules |
+| Blog | Markdown strings inside `scripts/seed_blog_posts.py` → `blog_posts` table | 1 post |
+| Hosting | DigitalOcean (gunicorn) + Postgres | |
+| Tests / CI | none | |
+
+---
+
+## Phase 0 — Safety net
+*Goal: lock in today's numbers so every later phase can prove it matches them.*
+
+- [ ] Pin dependencies (`requirements.txt` → exact versions)
+- [ ] Snapshot "golden" outputs from Postgres to Parquet: `player_stats`,
+      `player_game_stats`, `team_stats`, plus a sample of `stints` with xG/GAP
+- [ ] pytest smoke tests: app boots, every route renders, key callbacks return data
+- [ ] GitHub Actions: ruff + pytest on every push
+
+**Done when:** CI is green and the golden snapshots are committed or stored in GCS.
+
+## Phase 1 — Blog posts as Markdown
+*Goal: posts are files you write in an editor, not database rows. Small and independent.*
+
+- [ ] `content/blog/<slug>.md` with YAML frontmatter (title, date, summary)
+- [ ] Move "The Consequences of Randomness in Hockey" out of `seed_blog_posts.py`
+- [ ] Dash blog pages read from the files; remove the `blog_posts` table, seed
+      script, and the `post_deploy.sh` seeding step
+- [ ] Move `scripts/blog_drafts/` into `content/drafts/`
+
+**Done when:** the live blog renders from Markdown. The same files carry over to Leptos unchanged.
+
+## Phase 2 — GCP foundation + raw data in BigQuery
+- [ ] GCP project, $10/month budget alert, service account
+- [ ] BigQuery cost guardrails: maximum bytes billed per query, daily query quota
+- [ ] GCS bucket; upload the 5 raw Parquet files
+- [ ] BigQuery dataset `raw`; load tables (`bq load`), partitioned/clustered by `game_id`
+- [ ] (Optional) Terraform for the above
+
+**Done when:** `raw.tracking` etc. are queryable and row counts match Postgres.
+
+## Phase 3 — dbt rebuilds the pipeline
+*Goal: replace `seed_db.py` and the backfill scripts with tested SQL models. This is the core data-engineering showcase.*
+
+- [ ] dbt project (`dbt-bigquery`) with `staging` / `intermediate` / `marts` layers
+- [ ] Staging: typed, cleaned views over each raw table
+- [ ] Intermediate: shift numbering, stint xG attribution, GAP, game situations (5v5, PP, PK…)
+- [ ] Marts: `player_stats`, `player_game_stats`, `team_stats`, standings, game-report tables
+- [ ] dbt tests: uniqueness, not-null, relationships, accepted values, plus
+      **reconciliation tests against Phase 0 golden snapshots**
+- [ ] dbt docs (lineage graph) published
+
+**Done when:** every mart matches the golden numbers (or every difference is explained as a bug fix).
+
+## Phase 4 — Serving layer: marts → Parquet → Rust API
+- [ ] Export marts to Parquet in GCS (BigQuery `EXPORT DATA`), triggered after dbt runs
+- [ ] Rust (Axum) API: load marts into memory at startup; JSON endpoints per page
+- [ ] Tracking for the rink: per-game files loaded on demand, not all 13.5M rows held in memory
+- [ ] `cargo test` + endpoint tests; deploy to Cloud Run
+- [ ] Benchmark latency and memory vs the Dash/Postgres path; publish the numbers
+
+**Done when:** the API serves every dataset the site needs, with published benchmarks.
+
+## Phase 5 — Leptos frontend, page by page
+- [ ] Leptos app shell (navbar, footer, routing, SnakePuck styling)
+- [ ] Port pages roughly in order of simplicity: About → Blog → Standings →
+      Player Stats → Team Detail → Player Detail → Game Report (rink last)
+- [ ] Pages not yet ported link back to the Dash site during the transition
+- [ ] Playwright smoke tests per page
+
+**Done when:** every page is served by Leptos.
+
+## Phase 6 — Rust tracking processing *(as needed)*
+- [ ] Identify logic that SQL handles poorly (possession chains, pressure/LPR metrics)
+- [ ] Implement in Rust over Arrow/Polars; write results to BigQuery for dbt
+- [ ] Benchmark vs the Python equivalent
+
+## Phase 7 — Decommission
+- [ ] Retire Dash, Postgres, DigitalOcean
+- [ ] Delete superseded scripts
+- [ ] README with architecture diagram, benchmarks, and live link
+
+---
+
+## Open decisions
+- **Golden snapshots:** commit them to the repo (small marts) or keep them in GCS?
+- **Tracking in the API:** per-game Parquet on GCS vs bundled in the container image
+- **Infrastructure as code:** Terraform now, or click-ops first and codify later?
+- **Repo layout:** one repo with `dbt/`, `api/`, `web/` folders (leaning this way) vs separate repos
+- **Domain/hosting cutover:** when to point the live domain at Firebase Hosting / Cloud Run
+- **Cold starts:** scale to zero ($0) vs one always-warm instance (~$10–15) during job applications
+
+## Deferred
+- Smooth player animation on the rink. HALO tracking is per-event snapshots,
+  not continuous frames. Revisit only with frame-level data.
+- Re-enabling login (code kept, commented out)
+- Robustness items (SECRET_KEY fallback, routing refactor, caching) are superseded by the rewrite
