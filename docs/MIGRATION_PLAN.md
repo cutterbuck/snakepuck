@@ -60,6 +60,9 @@ Phase 7 cutover.
 
 ## Repo layout (decided: one repo)
 
+GitHub repo: `cutterbuck/snakepuck`, renamed from `hockey-blog` on 2026-10-23.
+The DigitalOcean source was repointed. The local folder is still `hockey-blog`.
+
 New pieces are added beside the Dash app, and Phase 7 deletes the old ones.
 CI workflows filter by path, so each stack only builds when its folder changes.
 
@@ -165,7 +168,6 @@ They live locally until Phase 2 moves them to a private GCS bucket.
 ## Open decisions
 - **Tracking in the API:** per-game Parquet on GCS vs bundled in the container image
 - **Infrastructure as code:** Terraform now, or click-ops first and codify later?
-- **Repo name:** optionally rename `hockey-blog` → `snakepuck` (GitHub redirects the old URL)
 - **Domain/hosting cutover:** when to point the live domain at Firebase Hosting / Cloud Run
 - **Cold starts:** scale to zero ($0) vs one always-warm instance (~$10–15) during job applications
 

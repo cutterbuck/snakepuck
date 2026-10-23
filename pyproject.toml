@@ -4,6 +4,7 @@ extend-exclude = ["migrations"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 markers = [
     "db: needs the local Postgres database (skipped when unreachable)",
 ]
