@@ -74,13 +74,16 @@ Phase 7 cutover.
 ## Phase 0 — Safety net
 *Goal: lock in today's numbers so every later phase can prove it matches them.*
 
-- [ ] Pin dependencies (`requirements.txt` → exact versions)
-- [ ] Snapshot "golden" outputs from Postgres to Parquet: `player_stats`,
-      `player_game_stats`, `team_stats`, plus a sample of `stints` with xG/GAP
-- [ ] pytest smoke tests: app boots, every route renders, key callbacks return data
-- [ ] GitHub Actions: ruff + pytest on every push
+- [x] Pin dependencies: `requirements.txt` is an exact lock; direct deps are in `requirements.in`
+- [x] Snapshot "golden" outputs from Postgres to Parquet (`python -m scripts.export_golden`):
+      `player_stats`, `player_game_stats`, `team_stats`, and all 2.2M `stints`, keyed by
+      natural keys rather than Postgres ids. `golden/manifest.json` records row counts and column sums.
+- [x] pytest: no-DB smoke tests, plus `db`-marked tests driving each page's callbacks
+- [x] GitHub Actions: ruff check, ruff format, and pytest (db tests skip in CI)
 
-**Done when:** CI is green and the golden snapshots are committed or stored in GCS.
+**Done when:** CI is green and the golden snapshots are stored safely.
+Snapshots are git-ignored (the repo is public and they derive from licensed HALO data).
+They live locally until Phase 2 moves them to a private GCS bucket.
 
 ## Phase 1 — Blog posts as Markdown
 *Goal: posts are files you write in an editor, not database rows. Small and independent.*
@@ -96,7 +99,7 @@ Phase 7 cutover.
 ## Phase 2 — GCP foundation + raw data in BigQuery
 - [ ] GCP project, $10/month budget alert, service account
 - [ ] BigQuery cost guardrails: maximum bytes billed per query, daily query quota
-- [ ] GCS bucket; upload the 5 raw Parquet files
+- [ ] Private GCS bucket; upload the 5 raw Parquet files and the `golden/` snapshots
 - [ ] BigQuery dataset `raw`; load tables (`bq load`), partitioned/clustered by `game_id`
 - [ ] (Optional) Terraform for the above
 
@@ -146,7 +149,6 @@ Phase 7 cutover.
 ---
 
 ## Open decisions
-- **Golden snapshots:** commit them to the repo (small marts) or keep them in GCS?
 - **Tracking in the API:** per-game Parquet on GCS vs bundled in the container image
 - **Infrastructure as code:** Terraform now, or click-ops first and codify later?
 - **Repo layout:** one repo with `dbt/`, `api/`, `web/` folders (leaning this way) vs separate repos

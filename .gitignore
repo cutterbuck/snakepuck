@@ -17,3 +17,6 @@ data/
 *.parquet
 
 .claude/
+
+# Golden snapshots are derived from licensed HALO data; keep out of the public repo
+golden/
