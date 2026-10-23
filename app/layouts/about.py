@@ -51,7 +51,7 @@ not just the final stat line.
 interactive hockey rink.
 - **Expected goal analytics** — Go beyond goals and assists with xG models derived from \
 raw event data, broken down by situation (5-on-5, power play, etc.).
-- **Deep-dive blog posts** *(coming soon)* — Analytical write-ups that use this data to answer specific \
+- **Deep-dive blog posts** — Analytical write-ups that use this data to answer specific \
 questions about player evaluation.
 
 Start with [Team Standings](/team-standings) to pick a team, drill into a player, \
