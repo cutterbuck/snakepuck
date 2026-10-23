@@ -1,10 +1,10 @@
 import random
 
-from dash import Input, Output, State, callback_context, dash_table, html, no_update
+from dash import Input, Output, State, callback_context, dash_table, html
 from sqlalchemy.sql.expression import func
 
 from app.extensions import db
-from app.models import Event, Game, Player, PlayerStats, Stint, Team, Tracking
+from app.models import Event, Game, Player, Stint, Tracking
 
 VIEWS = ["games", "players", "events", "stints", "tracking"]
 

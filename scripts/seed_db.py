@@ -400,7 +400,7 @@ def seed():
                 db.session.bulk_save_objects(stint_records)
                 db.session.flush()
             print(f"  Stints: {total_stints}/{total_stints} rows")
-            print(f"Seeded stints")
+            print("Seeded stints")
 
             # Compute shift numbers for each player/game (skip goalies)
             print("Computing shift numbers...")
@@ -518,7 +518,7 @@ def seed():
                 db.session.bulk_save_objects(event_records)
                 db.session.flush()
             print(f"  Events: {total_events}/{total_events} rows")
-            print(f"Seeded events")
+            print("Seeded events")
         else:
             print(f"Events already seeded ({existing_event_count} rows)")
 

@@ -199,11 +199,11 @@ def register_player_stats_callbacks(dash_app):
     )
     def populate_league_dropdown(pathname):
         leagues = League.query.order_by(League.abbrev.desc()).all()
-        options = [{"label": l.name, "value": l.id} for l in leagues]
+        options = [{"label": lg.name, "value": lg.id} for lg in leagues]
         default = None
-        for l in leagues:
-            if l.abbrev == "AHL":
-                default = l.id
+        for lg in leagues:
+            if lg.abbrev == "AHL":
+                default = lg.id
                 break
         if default is None and leagues:
             default = leagues[0].id

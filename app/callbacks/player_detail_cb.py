@@ -1,4 +1,3 @@
-import dash_bootstrap_components as dbc
 from dash import ALL, Input, Output, State, ctx, dcc, html
 from sqlalchemy import case
 from sqlalchemy.orm import aliased

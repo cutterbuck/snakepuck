@@ -1,10 +1,8 @@
 import json
 
 from dash import ALL, Input, Output, State, ctx, dcc, html
-from sqlalchemy import case
-from sqlalchemy.orm import aliased
 
-from app.models import Event, Game, Player, PlayerGameStats, Stint, Team, Tracking
+from app.models import Event, Game, Player, PlayerGameStats, Stint, Tracking
 from app.utils.rink import create_rink_figure
 
 
