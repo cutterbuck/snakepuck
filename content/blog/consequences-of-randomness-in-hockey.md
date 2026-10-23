@@ -1,25 +1,8 @@
-"""Seed blog posts.
-
-Usage:
-    python -m scripts.seed_blog_posts
-"""
-
-from datetime import datetime
-
-from app import create_app
-from app.extensions import db
-from app.models.blog_post import BlogPost
-
-POSTS = [
-    {
-        "title": "The Consequences of Randomness in Hockey",
-        "slug": "consequences-of-randomness-in-hockey",
-        "published_at": datetime(2026, 5, 21),
-        "summary": (
-            "Understanding randomness in hockey, and why process-driven "
-            "metrics matter when evaluating team and player performance."
-        ),
-        "content": """\
+---
+title: The Consequences of Randomness in Hockey
+date: 2026-05-21
+summary: Understanding randomness in hockey, and why process-driven metrics matter when evaluating team and player performance.
+---
 
 #### Hockey Gods, Parlez Vous Francais?
 Tonight the Montreal Canadiens will take on the Carolina Hurricanes in game one of the Eastern Conference Final after barely surviving game seven in each of their first two series. Montreal, despite being outshot 29-9 and going nearly 27 minutes without registering a shot on goal, defeated Tampa Bay courtesy of Alex Newhook's goal at 11:07 of the 3rd period. They were outplayed by the Buffalo Sabres in their next game seven, albeit not as dramatically, yet won again courtesy of another timely Newhook goal. Does Montreal deserve to be playing in the ECF? Of course they do! Luck and randomness are part of hockey, and so far Montreal has had the Hockey Gods on their side. Can Montreal endure another two game sevens the same way to reclaim the Stanley Cup for Canada for the first time since 1993 when they last won it all? Statistics suggest it is possible but unlikely.
@@ -131,29 +114,3 @@ Mauboussin concludes that when success is probabilistic, the link between cause 
 To win the Cup, a team must win 16 of a possible maximum 28 games. We need to understand that 28 games is a very small sample size for a random sport like hockey. We should expect some surprises to happen in such a small sample. A President's Trophy winner could easily get knocked out for a variety of reasons: a hot opposing goaltender, a couple of bad breaks in close games, poor finishing luck, or injuries to key players. Your organization's best chance of winning a Stanley Cup is to build a core group of players approaching their peak seasons (say ages 25-32) before older age or accumulated injuries begin to take a toll. You almost never see these players make it to unrestricted free agency, so you need to either draft these players or manage your farm system so that you have the assets to acquire an elite player when one becomes available. Once you have this core, your window is open. Over a period of 6-8 years, you must do the work to provide your core with complementary players that will complete your team. With some luck, [all of the cards fall the right way](https://www.youtube.com/watch?v=qepxHMUzIrc&t=1012s).
 
 The HALO dataset gives us millions of rows of raw material to work with. In future posts, I will try to evaluate players at the AHL level using the persistence and predictability framework outlined above. If we can identify which metrics reliably capture repeatable skill in the minors, maybe we can provide value by better identifying winning players and strategies.
-""",
-    },
-]
-
-
-def main():
-    app = create_app()
-    with app.app_context():
-        for post_data in POSTS:
-            existing = BlogPost.query.filter_by(slug=post_data["slug"]).first()
-            if existing:
-                existing.title = post_data["title"]
-                existing.summary = post_data.get("summary")
-                existing.content = post_data["content"]
-                existing.published_at = post_data["published_at"]
-                print(f"Updated: {post_data['title']}")
-            else:
-                post = BlogPost(**post_data)
-                db.session.add(post)
-                print(f"Added: {post_data['title']}")
-        db.session.commit()
-        print("Done.")
-
-
-if __name__ == "__main__":
-    main()

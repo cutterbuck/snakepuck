@@ -9,7 +9,7 @@ def create_blog_posts_layout():
                 [
                     html.H1("Blog Posts", className="blog-list-title"),
                     html.P(
-                        "Analytical deep-dives into AHL player tracking data. Coming soon.",
+                        "Analytical deep-dives into AHL player tracking data.",
                         className="blog-list-subtitle",
                     ),
                 ],

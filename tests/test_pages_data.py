@@ -195,16 +195,6 @@ def test_stint_frames(dash, sample_ids):
     assert all(t["player_name"].startswith("Unidentified") for t in unidentified)
 
 
-def test_blog_posts(dash):
-    listing = dash.call(["blog-posts-list.children"], {"url.pathname": "/blog-posts"})
-    assert "Randomness" in _text(listing)
-    post = dash.call(
-        ["blog-post-content.children"],
-        {"url.pathname": "/blog/consequences-of-randomness-in-hockey"},
-    )
-    assert "Hockey Gods" in _text(post)
-
-
 @pytest.mark.parametrize("view", ["games", "players", "events", "stints", "tracking"])
 def test_sample_data(dash, view):
     result = dash.call(

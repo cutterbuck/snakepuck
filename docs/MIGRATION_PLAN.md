@@ -105,11 +105,18 @@ They live locally until Phase 2 moves them to a private GCS bucket.
 ## Phase 1 — Blog posts as Markdown
 *Goal: posts are files you write in an editor, not database rows. Small and independent.*
 
-- [ ] `content/blog/<slug>.md` with YAML frontmatter (title, date, summary)
-- [ ] Move "The Consequences of Randomness in Hockey" out of `seed_blog_posts.py`
-- [ ] Dash blog pages read from the files; remove the `blog_posts` table, seed
-      script, and the `post_deploy.sh` seeding step
-- [ ] Move `scripts/blog_drafts/` into `content/drafts/`
+- [x] `content/blog/<slug>.md` with YAML front matter (title, date, summary, optional `draft: true`)
+- [x] Move "The Consequences of Randomness in Hockey" out of `seed_blog_posts.py`
+      (verified identical to the database copy)
+- [x] Dash blog pages read the files via `app/blog.py`; removed the `BlogPost` model,
+      seed script, and the `post_deploy.sh` seeding step. The `blog_posts` table is
+      left in place, unused, to avoid a production schema change; it goes away with
+      Postgres in Phase 7.
+- [x] Draft moved to `content/blog/dzone-lpr-analysis.md` with `draft: true`.
+      Drafts are hidden unless `SHOW_DRAFTS=1` (local preview only).
+
+**Writing a post:** add `content/blog/<slug>.md`, preview with
+`SHOW_DRAFTS=1 python run.py` while it's a draft, then remove `draft: true`, commit, and push.
 
 **Done when:** the live blog renders from Markdown. The same files carry over to Leptos unchanged.
 

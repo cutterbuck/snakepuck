@@ -1,3 +1,9 @@
+---
+title: "Defensemen and D-Zone Loose Puck Recoveries (working title)"
+draft: true
+summary: How defensemen's loose puck recoveries under forechecking pressure affect on-ice expected goals.
+---
+
 Elliotte Friedman recently noted on the 32 Thought Podcast that hockey operations departments throughout the NHL are still searching for ways to enhance analytics for defensemen. With this in mind, my initial attempt at extracting meaningful insights from the data will focus on evaluating defensive performance.
 
 ### D-zone LPRs Effect on On-ice Expected Goals

@@ -1,7 +1,12 @@
 import dash_bootstrap_components as dbc
 from dash import Input, Output, dcc, html
 
-from app.models.blog_post import BlogPost
+from app.blog import get_post, load_posts
+
+
+def _post_date_label(post):
+    label = post.date.strftime("%B %-d, %Y") if post.date else "Undated"
+    return f"{label} \u00b7 DRAFT" if post.draft else label
 
 
 def register_blog_posts_callbacks(dash_app):
@@ -16,7 +21,7 @@ def register_blog_posts_callbacks(dash_app):
 
             return no_update
 
-        posts = BlogPost.query.order_by(BlogPost.published_at.desc()).all()
+        posts = load_posts()
 
         if not posts:
             return dbc.Card(
@@ -41,7 +46,7 @@ def register_blog_posts_callbacks(dash_app):
                     dbc.CardBody(
                         [
                             html.Div(
-                                post.published_at.strftime("%B %-d, %Y"),
+                                _post_date_label(post),
                                 className="blog-card-date",
                             ),
                             html.H3(
@@ -78,7 +83,7 @@ def register_blog_posts_callbacks(dash_app):
             return no_update
 
         slug = pathname.split("/blog/", 1)[1]
-        post = BlogPost.query.filter_by(slug=slug).first()
+        post = get_post(slug)
 
         if not post:
             return html.Div(
@@ -99,7 +104,7 @@ def register_blog_posts_callbacks(dash_app):
                     [
                         html.H1(post.title, className="blog-detail-title"),
                         html.Div(
-                            post.published_at.strftime("%B %-d, %Y"),
+                            _post_date_label(post),
                             className="blog-detail-date",
                         ),
                     ],
