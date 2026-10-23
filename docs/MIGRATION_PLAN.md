@@ -58,6 +58,20 @@ Guardrails: a $10/month budget alert, a BigQuery maximum-bytes-billed limit per
 query, and a daily query quota. Both platforms run in parallel until the
 Phase 7 cutover.
 
+## Repo layout (decided: one repo)
+
+New pieces are added beside the Dash app, and Phase 7 deletes the old ones.
+CI workflows filter by path, so each stack only builds when its folder changes.
+
+```
+app/ run.py migrations/ scripts/   current Dash site (removed in Phase 7)
+tests/                             Python tests (Dash + golden reconciliation)
+content/blog/                      Markdown posts, shared by old and new site
+dbt/                               dbt project (Phase 3)
+site/                              Rust crate: Axum API + Leptos frontend (Phases 4–5)
+docs/                              this plan
+```
+
 ## Where things live today
 
 | Piece | Today | Size |
@@ -151,7 +165,7 @@ They live locally until Phase 2 moves them to a private GCS bucket.
 ## Open decisions
 - **Tracking in the API:** per-game Parquet on GCS vs bundled in the container image
 - **Infrastructure as code:** Terraform now, or click-ops first and codify later?
-- **Repo layout:** one repo with `dbt/`, `api/`, `web/` folders (leaning this way) vs separate repos
+- **Repo name:** optionally rename `hockey-blog` → `snakepuck` (GitHub redirects the old URL)
 - **Domain/hosting cutover:** when to point the live domain at Firebase Hosting / Cloud Run
 - **Cold starts:** scale to zero ($0) vs one always-warm instance (~$10–15) during job applications
 
