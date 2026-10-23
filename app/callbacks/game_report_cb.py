@@ -1,9 +1,142 @@
+import json
+
 from dash import ALL, Input, Output, State, ctx, dcc, html
 from sqlalchemy import case
 from sqlalchemy.orm import aliased
 
 from app.models import Event, Game, Player, PlayerGameStats, Stint, Team, Tracking
 from app.utils.rink import create_rink_figure
+
+
+# Playback runs at PLAYBACK_SPEED x real time, clamped so rapid-fire events
+# stay visible and long stoppages don't stall the animation
+PLAYBACK_SPEED = 1
+MIN_FRAME_MS = 800
+MAX_FRAME_MS = 3000
+
+# Client-side renderer: copies the base rink figure and layers the current
+# frame's event markers, team-logo player markers, and name labels on top.
+# Plotly.react diffs the result, so the rink itself is never redrawn.
+RENDER_FRAME_JS = """
+function(base, stintData, frameIndex) {
+    if (!base) {
+        return window.dash_clientside.no_update;
+    }
+    const EVENT_COLORS = __EVENT_COLORS__;
+    const DEFAULT_EVENT_COLOR = __DEFAULT_EVENT_COLOR__;
+
+    const data = base.data.slice();
+    const layout = Object.assign({}, base.layout);
+    const images = (base.layout.images || []).slice();
+    const annotations = (base.layout.annotations || []).slice();
+
+    const frames = stintData && stintData.frames;
+    if (frames && frames.length) {
+        let idx = frameIndex || 0;
+        if (idx >= frames.length) {
+            idx = 0;
+        }
+        const frame = frames[idx];
+        const logoMap = stintData.logo_map || {};
+        const events = frame.events || [];
+
+        // Events, grouped by type: glow layer plus main marker
+        const eventsByType = {};
+        events.forEach(function(e) {
+            (eventsByType[e.event_type] = eventsByType[e.event_type] || []).push(e);
+        });
+        Object.keys(eventsByType).forEach(function(et) {
+            const evs = eventsByType[et];
+            const color = EVENT_COLORS[et] || DEFAULT_EVENT_COLOR;
+            const xs = evs.map(function(e) { return e.x; });
+            const ys = evs.map(function(e) { return e.y; });
+            data.push({
+                type: "scatter", x: xs, y: ys, mode: "markers",
+                marker: {size: 24, color: color, opacity: 0.25},
+                hoverinfo: "skip", showlegend: false,
+            });
+            data.push({
+                type: "scatter", x: xs, y: ys, mode: "markers",
+                marker: {size: 12, color: color, opacity: 1.0, line: {width: 2, color: "white"}},
+                hoverinfo: "text",
+                text: evs.map(function(e) {
+                    return [
+                        et + ": " + e.description,
+                        e.detail ? "Detail: " + e.detail : "",
+                        e.flags ? "Flags: " + e.flags : "",
+                    ].filter(Boolean).join("<br>");
+                }),
+                name: et, showlegend: true,
+            });
+        });
+
+        // Player markers (team logos) and last-name labels
+        const tracking = frame.tracking || [];
+        if (tracking.length) {
+            const eventPlayerIds = new Set(
+                events.filter(function(e) { return e.player_id; })
+                      .map(function(e) { return e.player_id; })
+            );
+            // Cycle label placement (below, above, right, left) to spread labels out
+            const placements = [
+                {xanchor: "center", yanchor: "top", dx: 0, dy: -3.5},
+                {xanchor: "center", yanchor: "bottom", dx: 0, dy: 3.5},
+                {xanchor: "left", yanchor: "middle", dx: 3.5, dy: 0},
+                {xanchor: "right", yanchor: "middle", dx: -3.5, dy: 0},
+            ];
+            tracking.forEach(function(t, i) {
+                const involved = eventPlayerIds.has(t.player_id);
+                const logo = logoMap[t.team_id];
+                if (logo) {
+                    const size = involved ? 7 : 5;
+                    images.push({
+                        source: logo, xref: "x", yref: "y",
+                        x: t.tracking_x, y: t.tracking_y,
+                        xanchor: "center", yanchor: "middle",
+                        sizex: size, sizey: size,
+                        opacity: involved ? 1.0 : 0.5, layer: "above",
+                    });
+                }
+                if (t.last_name) {
+                    const p = placements[i % placements.length];
+                    annotations.push({
+                        x: t.tracking_x + p.dx, y: t.tracking_y + p.dy,
+                        text: involved ? "<b>" + t.last_name + "</b>" : t.last_name,
+                        showarrow: false, font: {size: 8, color: "#333"},
+                        xanchor: p.xanchor, yanchor: p.yanchor,
+                    });
+                }
+            });
+            // Invisible scatter for player-name hover
+            data.push({
+                type: "scatter",
+                x: tracking.map(function(t) { return t.tracking_x; }),
+                y: tracking.map(function(t) { return t.tracking_y; }),
+                mode: "markers", marker: {size: 10, opacity: 0},
+                hoverinfo: "text",
+                text: tracking.map(function(t) { return t.player_name; }),
+                showlegend: false,
+            });
+        }
+    }
+
+    layout.images = images;
+    layout.annotations = annotations;
+    return {data: data, layout: layout};
+}
+"""
+
+
+def _playback_delay_ms(gap_seconds):
+    """Convert the real-time gap between two events to a playback delay."""
+    ms = max(gap_seconds, 0) * 1000 / PLAYBACK_SPEED
+    return int(min(max(ms, MIN_FRAME_MS), MAX_FRAME_MS))
+
+
+def _frame_delay(frame_delays, frame_index):
+    if frame_delays and 0 <= (frame_index or 0) < len(frame_delays):
+        return frame_delays[frame_index or 0]
+    return MAX_FRAME_MS
 
 
 def _seconds_to_mmss(seconds):
@@ -716,6 +849,7 @@ def register_game_report_callbacks(dash_app):
         Output("game-report-playback-controls", "style"),
         Output("game-report-interval", "disabled", allow_duplicate=True),
         Output("game-report-play-btn", "children", allow_duplicate=True),
+        Output("game-report-frame-delays", "data"),
         Input("game-report-selected-stint", "data"),
         State("game-report-player-id", "data"),
         State("game-report-game-id", "data"),
@@ -727,11 +861,11 @@ def register_game_report_callbacks(dash_app):
         visible = {"display": "flex", "alignItems": "center", "marginTop": "8px"}
 
         if not selected_stint or not player_id or not game_id:
-            return None, 0, 0, None, 0, hidden, True, "Play"
+            return None, 0, 0, None, 0, hidden, True, "Play", []
 
         game = Game.query.filter_by(game_id=game_id).first()
         if not game:
-            return None, 0, 0, None, 0, hidden, True, "Play"
+            return None, 0, 0, None, 0, hidden, True, "Play", []
 
         # Use merged time range if available, otherwise fall back to single stint
         merged = (merged_map or {}).get(str(selected_stint))
@@ -743,7 +877,7 @@ def register_game_report_callbacks(dash_app):
         else:
             stint = Stint.query.get(selected_stint)
             if not stint:
-                return None, 0, 0, None, 0, hidden, True, "Play"
+                return None, 0, 0, None, 0, hidden, True, "Play", []
             period = stint.period
             time_start = stint.period_time_start
             time_end = stint.period_time_end
@@ -781,13 +915,12 @@ def register_game_report_callbacks(dash_app):
                 period_time_by_sl_id[e.sl_event_id] = e.period_time
 
         if not ordered_sl_ids:
-            return None, 0, 0, None, 0, hidden, True, "Play"
+            return None, 0, 0, None, 0, hidden, True, "Play", []
 
         # Get all tracking data for these events
         tracking_rows = Tracking.query.filter(
             Tracking.game_id == stint_game_id,
             Tracking.sl_event_id.in_(ordered_sl_ids),
-            Tracking.player_id.isnot(None),
         ).all()
 
         # Index tracking by sl_event_id
@@ -823,7 +956,9 @@ def register_game_report_callbacks(dash_app):
             for t in tracking_by_event.get(sl_id, []):
                 if t.tracking_x is not None and t.tracking_y is not None:
                     last_name = ""
-                    full_name = t.player_name or ""
+                    # ~31% of tracking rows have a location and team but no
+                    # player identity; show them as unlabeled team markers
+                    full_name = t.player_name or f"Unidentified ({t.team_name or 'unknown team'})"
                     if t.player and t.player.lastName:
                         last_name = t.player.lastName
                         full_name = f"{t.player.firstName} {t.player.lastName}"
@@ -910,35 +1045,47 @@ def register_game_report_callbacks(dash_app):
                             "style": boundary_style,
                         }
 
-        return stint_data, max_frame, 0, marks, 0, visible, True, "Play"
+        # Playback delay before advancing past each frame, scaled from the
+        # real gap to the next event
+        frame_delays = []
+        for cur, nxt in zip(frames, frames[1:]):
+            gap = (nxt["period_time"] or 0) - (cur["period_time"] or 0)
+            frame_delays.append(_playback_delay_ms(gap))
+
+        return stint_data, max_frame, 0, marks, 0, visible, True, "Play", frame_delays
 
     @dash_app.callback(
         Output("game-report-interval", "disabled"),
         Output("game-report-play-btn", "children"),
+        Output("game-report-interval", "interval"),
         Input("game-report-play-btn", "n_clicks"),
         State("game-report-interval", "disabled"),
+        State("game-report-frame-index", "data"),
+        State("game-report-frame-delays", "data"),
         prevent_initial_call=True,
     )
-    def toggle_play_pause(n_clicks, currently_disabled):
+    def toggle_play_pause(n_clicks, currently_disabled, current_frame, frame_delays):
         if not n_clicks:
             from dash.exceptions import PreventUpdate
 
             raise PreventUpdate
         new_disabled = not currently_disabled
         label = "Play" if new_disabled else "Pause"
-        return new_disabled, label
+        return new_disabled, label, _frame_delay(frame_delays, current_frame)
 
     @dash_app.callback(
         Output("game-report-frame-index", "data", allow_duplicate=True),
         Output("game-report-frame-slider", "value", allow_duplicate=True),
         Output("game-report-interval", "disabled", allow_duplicate=True),
         Output("game-report-play-btn", "children", allow_duplicate=True),
+        Output("game-report-interval", "interval", allow_duplicate=True),
         Input("game-report-interval", "n_intervals"),
         State("game-report-frame-index", "data"),
         State("game-report-frame-slider", "max"),
+        State("game-report-frame-delays", "data"),
         prevent_initial_call=True,
     )
-    def advance_frame(n_intervals, current_frame, max_frame):
+    def advance_frame(n_intervals, current_frame, max_frame, frame_delays):
         if max_frame is None or max_frame == 0:
             from dash.exceptions import PreventUpdate
 
@@ -946,9 +1093,15 @@ def register_game_report_callbacks(dash_app):
         from dash import no_update
 
         if current_frame >= max_frame:
-            return current_frame, current_frame, True, "Play"
+            return current_frame, current_frame, True, "Play", no_update
         next_frame = current_frame + 1
-        return next_frame, next_frame, no_update, no_update
+        return (
+            next_frame,
+            next_frame,
+            no_update,
+            no_update,
+            _frame_delay(frame_delays, next_frame),
+        )
 
     @dash_app.callback(
         Output("game-report-frame-index", "data"),
@@ -992,157 +1145,29 @@ def register_game_report_callbacks(dash_app):
         return closest_idx, closest_idx
 
     @dash_app.callback(
-        Output("game-report-rink", "children"),
-        Input("game-report-player-id", "data"),
+        Output("game-report-rink-base", "data"),
         Input("game-report-game-id", "data"),
+    )
+    def build_rink_base(game_id):
+        # The rink is drawn once per game; frames are layered on client-side
+        if not game_id:
+            return None
+        center_logo = None
+        game = Game.query.filter_by(game_id=game_id).first()
+        if game and game.home_team and game.home_team.logo:
+            center_logo = game.home_team.logo
+        fig = create_rink_figure(center_logo_url=center_logo, rink_opacity=0.35)
+        fig.update_layout(uirevision="rink")
+        return fig.to_plotly_json()
+
+    # Render the current frame's events and player markers on top of the
+    # base rink in the browser, so playback doesn't rebuild the whole figure
+    dash_app.clientside_callback(
+        RENDER_FRAME_JS.replace("__EVENT_COLORS__", json.dumps(EVENT_COLORS)).replace(
+            "__DEFAULT_EVENT_COLOR__", json.dumps(DEFAULT_EVENT_COLOR)
+        ),
+        Output("game-report-rink-graph", "figure"),
+        Input("game-report-rink-base", "data"),
         Input("game-report-stint-events", "data"),
         Input("game-report-frame-index", "data"),
     )
-    def update_game_report_rink(player_id, game_id, stint_data, frame_index):
-        if not player_id or not game_id:
-            return html.Div()
-
-        import plotly.graph_objects as go
-
-        # Get center logo
-        center_logo = None
-        if stint_data and stint_data.get("center_logo"):
-            center_logo = stint_data["center_logo"]
-        else:
-            game = Game.query.filter_by(game_id=game_id).first()
-            if game and game.home_team and game.home_team.logo:
-                center_logo = game.home_team.logo
-
-        fig = create_rink_figure(center_logo_url=center_logo, rink_opacity=0.35)
-
-        # If stint data exists, render the current frame
-        if stint_data and stint_data.get("frames"):
-            frames = stint_data["frames"]
-            idx = frame_index or 0
-            if idx >= len(frames):
-                idx = 0
-            frame = frames[idx]
-            logo_map = stint_data.get("logo_map", {})
-
-            # Render events for this frame
-            if frame.get("events"):
-                events_by_type = {}
-                for ev in frame["events"]:
-                    et = ev["event_type"]
-                    events_by_type.setdefault(et, []).append(ev)
-
-                for et, evs in events_by_type.items():
-                    color = EVENT_COLORS.get(et, DEFAULT_EVENT_COLOR)
-                    # Glow layer: larger, transparent marker behind
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[e["x"] for e in evs],
-                            y=[e["y"] for e in evs],
-                            mode="markers",
-                            marker=dict(
-                                size=24,
-                                color=color,
-                                opacity=0.25,
-                            ),
-                            hoverinfo="skip",
-                            showlegend=False,
-                        )
-                    )
-                    # Main event marker
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[e["x"] for e in evs],
-                            y=[e["y"] for e in evs],
-                            mode="markers",
-                            marker=dict(
-                                size=12,
-                                color=color,
-                                opacity=1.0,
-                                line=dict(width=2, color="white"),
-                            ),
-                            hoverinfo="text",
-                            text=[
-                                "<br>".join(
-                                    part
-                                    for part in [
-                                        f"{et}: {e['description']}",
-                                        f"Detail: {e['detail']}" if e["detail"] else "",
-                                        f"Flags: {e['flags']}" if e["flags"] else "",
-                                    ]
-                                    if part
-                                )
-                                for e in evs
-                            ],
-                            name=et,
-                            showlegend=True,
-                        )
-                    )
-
-            # Render tracking logos and player names for this frame
-            if frame.get("tracking"):
-                # Collect player_ids involved in current events
-                event_player_ids = set()
-                for ev in frame.get("events", []):
-                    if ev.get("player_id"):
-                        event_player_ids.add(ev["player_id"])
-
-                for t in frame["tracking"]:
-                    logo = logo_map.get(t["team_id"])
-                    if logo:
-                        involved = t.get("player_id") in event_player_ids
-                        logo_size = 7 if involved else 5
-                        fig.add_layout_image(
-                            source=logo,
-                            xref="x",
-                            yref="y",
-                            x=t["tracking_x"],
-                            y=t["tracking_y"],
-                            xanchor="center",
-                            yanchor="middle",
-                            sizex=logo_size,
-                            sizey=logo_size,
-                            opacity=1.0 if involved else 0.5,
-                            layer="above",
-                        )
-
-                # Alternate label placement: cycle through below, above,
-                # right, left to spread labels out
-                placements = [
-                    {"xanchor": "center", "yanchor": "top", "dx": 0, "dy": -3.5},
-                    {"xanchor": "center", "yanchor": "bottom", "dx": 0, "dy": 3.5},
-                    {"xanchor": "left", "yanchor": "middle", "dx": 3.5, "dy": 0},
-                    {"xanchor": "right", "yanchor": "middle", "dx": -3.5, "dy": 0},
-                ]
-                for idx_t, t in enumerate(frame["tracking"]):
-                    last_name = t.get("last_name", "")
-                    if last_name:
-                        involved = t.get("player_id") in event_player_ids
-                        p = placements[idx_t % len(placements)]
-                        fig.add_annotation(
-                            x=t["tracking_x"] + p["dx"],
-                            y=t["tracking_y"] + p["dy"],
-                            text=f"<b>{last_name}</b>" if involved else last_name,
-                            showarrow=False,
-                            font=dict(size=8, color="#333"),
-                            xanchor=p["xanchor"],
-                            yanchor=p["yanchor"],
-                        )
-
-                # Invisible scatter for hover
-                fig.add_trace(
-                    go.Scatter(
-                        x=[t["tracking_x"] for t in frame["tracking"]],
-                        y=[t["tracking_y"] for t in frame["tracking"]],
-                        mode="markers",
-                        marker=dict(size=10, opacity=0),
-                        hoverinfo="text",
-                        text=[t["player_name"] for t in frame["tracking"]],
-                        showlegend=False,
-                    )
-                )
-
-        return dcc.Graph(
-            figure=fig,
-            config={"displayModeBar": False},
-            style={"width": "100%"},
-        )

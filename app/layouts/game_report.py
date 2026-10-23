@@ -23,6 +23,7 @@ def create_game_report_layout():
             html.Div(id="game-report-stints"),
             dcc.Store(id="game-report-stint-events", data=None),
             dcc.Store(id="game-report-frame-index", data=0),
+            dcc.Store(id="game-report-frame-delays", data=[]),
             html.Div(
                 [
                     html.Button(
@@ -52,10 +53,22 @@ def create_game_report_layout():
                     "marginTop": "8px",
                 },
             ),
-            dcc.Loading(
-                html.Div(id="game-report-rink", className="mt-3"),
-                type="circle",
-                color="#4fc3f7",
+            # Persistent graph: the rink is drawn once and only frame
+            # markers update during playback (no Loading wrapper, so no flicker)
+            dcc.Store(id="game-report-rink-base"),
+            dcc.Graph(
+                id="game-report-rink-graph",
+                figure={
+                    "layout": {
+                        "xaxis": {"visible": False},
+                        "yaxis": {"visible": False},
+                        "height": 400,
+                        "plot_bgcolor": "white",
+                    }
+                },
+                config={"displayModeBar": False},
+                style={"width": "100%"},
+                className="mt-3",
             ),
             dcc.Interval(
                 id="game-report-interval",
