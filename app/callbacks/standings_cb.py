@@ -390,7 +390,9 @@ def _render_league_view(results, sort_col, sort_dir):
     thead = _build_thead(LEAGUE_HEADERS, sort_col, sort_dir)
 
     rows = []
-    for i, (ts, team_id, team_name, team_logo, division_name, season_name) in enumerate(results):
+    for i, (ts, team_id, team_name, team_logo, division_name, season_name) in enumerate(
+        results
+    ):
         row_style = (
             {"backgroundColor": "#e8f4fb"}
             if i % 2 == 1
@@ -463,7 +465,10 @@ def _render_division_view(results, sort_col, sort_dir):
                     [team_cell] + stat_cells,
                     style={**row_style, "cursor": "pointer"},
                     className="game-log-row",
-                    id={"type": "standings-row", "index": f"/team/{team_id}/{season_name}"},
+                    id={
+                        "type": "standings-row",
+                        "index": f"/team/{team_id}/{season_name}",
+                    },
                     n_clicks=0,
                 )
             )

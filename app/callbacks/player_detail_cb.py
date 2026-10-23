@@ -135,12 +135,18 @@ def register_player_detail_callbacks(dash_app):
         season = latest_pgs.season if latest_pgs else None
 
         crumbs = [
-            dcc.Link("Team Standings", href="/team-standings", className="breadcrumb-link"),
+            dcc.Link(
+                "Team Standings", href="/team-standings", className="breadcrumb-link"
+            ),
             html.Span(" / ", className="breadcrumb-sep"),
         ]
         if team and season:
             crumbs.append(
-                dcc.Link(team.name, href=f"/team/{team.id}/{season.name}", className="breadcrumb-link")
+                dcc.Link(
+                    team.name,
+                    href=f"/team/{team.id}/{season.name}",
+                    className="breadcrumb-link",
+                )
             )
             crumbs.append(html.Span(" / ", className="breadcrumb-sep"))
 
@@ -203,9 +209,7 @@ def register_player_detail_callbacks(dash_app):
         )
         info_parts = []
         if player.position:
-            info_parts.append(
-                html.Span(player.position)
-            )
+            info_parts.append(html.Span(player.position))
         if team:
             team_name_span = html.Span(team.name)
             if team_href:
@@ -330,7 +334,10 @@ def register_player_detail_callbacks(dash_app):
         header_cells = [html.Th(h, style=HEADER_STYLE) for h in STAT_HEADERS]
         thead = html.Thead(html.Tr(header_cells))
 
-        stat_cols = [html.Col(style={"width": "80px"}), html.Col(style={"width": "180px"})]
+        stat_cols = [
+            html.Col(style={"width": "80px"}),
+            html.Col(style={"width": "180px"}),
+        ]
         for _ in STAT_HEADERS[2:]:
             stat_cols.append(html.Col(style={"width": STAT_COL_WIDTH}))
         colgroup = html.Colgroup(stat_cols)
@@ -392,9 +399,7 @@ def register_player_detail_callbacks(dash_app):
             ]
             cells = [
                 html.Td(display_season, style=CELL_STYLE),
-                html.Td(
-                    team_link, style={**CELL_STYLE, "textAlign": "left"}
-                ),
+                html.Td(team_link, style={**CELL_STYLE, "textAlign": "left"}),
             ] + [html.Td(v, style=CELL_STYLE) for v in values]
             rows.append(html.Tr(cells, style=row_style))
         tbody = html.Tbody(rows)
@@ -461,8 +466,8 @@ def register_player_detail_callbacks(dash_app):
 
         gl_cols = [
             html.Col(style={"width": "110px"}),  # Date
-            html.Col(style={"width": "160px"}),   # Opp
-            html.Col(style={"width": "90px"}),    # Result
+            html.Col(style={"width": "160px"}),  # Opp
+            html.Col(style={"width": "90px"}),  # Result
         ]
         for _ in GAME_LOG_HEADERS[3:]:
             gl_cols.append(html.Col(style={"width": STAT_COL_WIDTH}))

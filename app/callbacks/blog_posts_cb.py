@@ -106,7 +106,9 @@ def register_blog_posts_callbacks(dash_app):
                     className="blog-detail-header",
                 ),
                 html.Div(
-                    dcc.Markdown(post.content, className="blog-post-body", link_target="_blank"),
+                    dcc.Markdown(
+                        post.content, className="blog-post-body", link_target="_blank"
+                    ),
                     className="blog-detail-content",
                 ),
             ]

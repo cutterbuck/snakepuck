@@ -233,7 +233,11 @@ def register_game_report_callbacks(dash_app):
 
                 # Build breadcrumb
                 crumbs = [
-                    dcc.Link("Team Standings", href="/team-standings", className="breadcrumb-link"),
+                    dcc.Link(
+                        "Team Standings",
+                        href="/team-standings",
+                        className="breadcrumb-link",
+                    ),
                     html.Span(" / ", className="breadcrumb-sep"),
                 ]
 
@@ -956,7 +960,10 @@ def register_game_report_callbacks(dash_app):
                     last_name = ""
                     # ~31% of tracking rows have a location and team but no
                     # player identity; show them as unlabeled team markers
-                    full_name = t.player_name or f"Unidentified ({t.team_name or 'unknown team'})"
+                    full_name = (
+                        t.player_name
+                        or f"Unidentified ({t.team_name or 'unknown team'})"
+                    )
                     if t.player and t.player.lastName:
                         last_name = t.player.lastName
                         full_name = f"{t.player.firstName} {t.player.lastName}"

@@ -10,10 +10,24 @@ def create_navbar():
                 dbc.Collapse(
                     dbc.Nav(
                         [
-                            dbc.NavItem(dbc.NavLink("Team Standings", href="/team-standings", active="exact")),
-                            dbc.NavItem(dbc.NavLink("Player Stats", href="/player-stats", active="exact")),
                             dbc.NavItem(
-                                dbc.NavLink("Sample Raw Data", href="/sample-data", active="exact")
+                                dbc.NavLink(
+                                    "Team Standings",
+                                    href="/team-standings",
+                                    active="exact",
+                                )
+                            ),
+                            dbc.NavItem(
+                                dbc.NavLink(
+                                    "Player Stats", href="/player-stats", active="exact"
+                                )
+                            ),
+                            dbc.NavItem(
+                                dbc.NavLink(
+                                    "Sample Raw Data",
+                                    href="/sample-data",
+                                    active="exact",
+                                )
                             ),
                             dbc.NavItem(
                                 dbc.NavLink(
@@ -22,7 +36,9 @@ def create_navbar():
                                     active="partial",
                                 )
                             ),
-                            dbc.NavItem(dbc.NavLink("About", href="/about", active="exact")),
+                            dbc.NavItem(
+                                dbc.NavLink("About", href="/about", active="exact")
+                            ),
                         ],
                         navbar=True,
                     ),

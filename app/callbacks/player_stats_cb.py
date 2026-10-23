@@ -334,7 +334,9 @@ def register_player_stats_callbacks(dash_app):
         ],
         State("ps-page", "data"),
     )
-    def update_page(league_id, season_id, sort_data, situation, page_clicks, current_page):
+    def update_page(
+        league_id, season_id, sort_data, situation, page_clicks, current_page
+    ):
         cb_ctx = callback_context
         if not cb_ctx.triggered or cb_ctx.triggered[0]["prop_id"] == ".":
             return 1
@@ -407,7 +409,16 @@ def register_player_stats_callbacks(dash_app):
         colgroup = _build_colgroup()
 
         rows = []
-        for i, (ps, pid, first_name, last_name, pos, team_abbrev, team_logo, team_id) in enumerate(results):
+        for i, (
+            ps,
+            pid,
+            first_name,
+            last_name,
+            pos,
+            team_abbrev,
+            team_logo,
+            team_id,
+        ) in enumerate(results):
             row_style = (
                 {"backgroundColor": "#e8f4fb"}
                 if i % 2 == 1
@@ -571,8 +582,14 @@ def _build_pagination(current_page, total_pages, total):
                     style=active_btn_style if p == current_page else btn_style,
                 )
             )
-        elif buttons and not isinstance(buttons[-1], str) and getattr(buttons[-1], 'children', None) != "...":
-            buttons.append(html.Span("...", style={"padding": "6px 8px", "fontSize": "14px"}))
+        elif (
+            buttons
+            and not isinstance(buttons[-1], str)
+            and getattr(buttons[-1], "children", None) != "..."
+        ):
+            buttons.append(
+                html.Span("...", style={"padding": "6px 8px", "fontSize": "14px"})
+            )
 
     # Next button
     if current_page < total_pages:

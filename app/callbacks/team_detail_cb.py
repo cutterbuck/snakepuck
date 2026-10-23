@@ -61,6 +61,7 @@ def _build_colgroup():
         cols.append(html.Col(style={"width": STAT_COL_WIDTH}))
     return html.Colgroup(cols)
 
+
 HEADERS = [
     "Name",
     "Age",
@@ -197,7 +198,9 @@ def register_team_detail_callbacks(dash_app):
     )
     def update_team_breadcrumb(team_id):
         crumbs = [
-            dcc.Link("Team Standings", href="/team-standings", className="breadcrumb-link"),
+            dcc.Link(
+                "Team Standings", href="/team-standings", className="breadcrumb-link"
+            ),
             html.Span(" / ", className="breadcrumb-sep"),
         ]
         team_name = "Team"

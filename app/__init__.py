@@ -105,7 +105,10 @@ def create_app():
             dcc.Location(id="url", refresh=False),
             html.Div(id="page-title-dummy", style={"display": "none"}),
             create_navbar(),
-            html.Div(id="page-content", style={"padding": "0 4%", "minHeight": "calc(100vh - 160px)"}),
+            html.Div(
+                id="page-content",
+                style={"padding": "0 4%", "minHeight": "calc(100vh - 160px)"},
+            ),
             html.Footer(
                 dbc.Container(
                     [
