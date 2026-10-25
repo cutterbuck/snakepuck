@@ -10,7 +10,7 @@ reshaped, or dropped as we learn.
 raw Parquet ──► GCS ──► BigQuery (raw)
                           │
                           ▼
-                 dbt: staging → intermediate → marts  (tested)
+                 dbt: staging → intermediate → marts  (tested against BigQuery `golden`)
                           │
                           ▼
               export marts to Parquet (GCS)
@@ -70,6 +70,7 @@ CI workflows filter by path, so each stack only builds when its folder changes.
 app/ run.py migrations/ scripts/   current Dash site (removed in Phase 7)
 tests/                             Python tests (Dash + golden reconciliation)
 content/blog/                      Markdown posts, shared by old and new site
+infra/                             GCP setup notes + BigQuery load script (Phase 2)
 dbt/                               dbt project (Phase 3)
 site/                              Rust crate: Axum API + Leptos frontend (Phases 4–5)
 docs/                              this plan
@@ -121,13 +122,19 @@ They live locally until Phase 2 moves them to a private GCS bucket.
 **Done when:** the live blog renders from Markdown. The same files carry over to Leptos unchanged.
 
 ## Phase 2 — GCP foundation + raw data in BigQuery
-- [ ] GCP project, $10/month budget alert, service account
-- [ ] BigQuery cost guardrails: maximum bytes billed per query, daily query quota
-- [ ] Private GCS bucket; upload the 5 raw Parquet files and the `golden/` snapshots
-- [ ] BigQuery dataset `raw`; load tables (`bq load`), partitioned/clustered by `game_id`
+*Setup commands are recorded in `infra/README.md`.*
+
+- [x] GCP project `snakepuck` (us-central1), $10/month budget alert,
+      keyless service account `snakepuck-pipeline`
+- [x] BigQuery cost guardrails: 50 GiB/day query quota (project and per user, down
+      from the 200 TiB default); 5 GB maximum bytes billed per query
+- [x] Private GCS bucket `gs://snakepuck-data`; uploaded the 5 raw Parquet files and the `golden/` snapshots
+- [x] BigQuery datasets `raw` and `golden`, loaded by `infra/load_raw.sh`. Tables are clustered
+      by `game_id` rather than partitioned (it's a string, and the tables are too small to benefit).
 - [ ] (Optional) Terraform for the above
 
 **Done when:** `raw.tracking` etc. are queryable and row counts match Postgres.
+All 9 tables match Postgres exactly (2026-10-25).
 
 ## Phase 3 — dbt rebuilds the pipeline
 *Goal: replace `seed_db.py` and the backfill scripts with tested SQL models. This is the core data-engineering showcase.*
