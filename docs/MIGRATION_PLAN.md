@@ -146,11 +146,26 @@ All 9 tables match Postgres exactly (2026-10-25).
       (names, logos, divisions formerly hard-coded in `seed_db.py`). 34 tests on keys, nulls,
       relationships, and accepted values; all pass. Event key is `(game_id, sl_event_id)`.
 - [ ] CI: run `dbt build` in GitHub Actions (needs Workload Identity Federation, no keys)
-- [ ] Intermediate: shift numbering, stint xG attribution, GAP, game situations (5v5, PP, PK…)
-- [ ] Marts: `player_stats`, `player_game_stats`, `team_stats`, standings, game-report tables
-- [ ] dbt tests: uniqueness, not-null, relationships, accepted values, plus
-      **reconciliation tests against Phase 0 golden snapshots**
+- [x] Intermediate: `int_stints__enriched` (situations, TOI, shift numbers) and
+      `int_stints__event_stats` (events credited to each stint's time window)
+- [x] Marts: `fct_stints`, `fct_player_game_stats`, `fct_player_season_stats`, `fct_team_season_stats`
+- [x] dbt tests: uniqueness, not-null, relationships, accepted values, plus a
+      `matches_golden` reconciliation test (every row and column, one scan per table)
+- [x] **Parity reached (2026-10-25):** all four marts match golden exactly. The only
+      tolerance is ±0.1 on one-decimal ATOI, where exact ties round differently with
+      Python's vs BigQuery's summation order.
+- [ ] Fix the old pipeline's bugs (below) as deliberate, measured changes
+- [ ] Game-report tables for the rink (events + tracking per stint)
 - [ ] dbt docs (lineage graph) published
+
+**Bugs found in the old pipeline** (reproduced for parity, to fix next):
+1. *Events at a stint boundary.* Stints count events in `[start, end)`. An event at
+   the exact instant a stint ends (a goal, then the line change) isn't credited to
+   the player who made it: 6 goals of 2,816, 15 shots, 1 faceoff. Its on-ice xG goes
+   to the incoming line instead: 111 of 53,980 xG events, 6.6 of 2,781.7 xG.
+2. *Quiet games dropped.* A player-game row exists only if the player recorded an
+   event, and season totals sum those rows. Games with no events still count in GP,
+   but their on-ice xG and TOI are lost, understating ATOI (2 player-seasons).
 
 **Done when:** every mart matches the golden numbers (or every difference is explained as a bug fix).
 

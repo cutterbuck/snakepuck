@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: fct_stints
+    description: One row per player per stint, with stats split by game situation.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [game_id, game_stint, player_id]
+      - matches_golden:
+          arguments:
+            golden: source('golden', 'stints')
+            keys: [game_id, game_stint, player_id]
+
+  - name: fct_player_game_stats
+    description: One row per player per game per team.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [player_id, game_id, team_abbr]
+      - matches_golden:
+          arguments:
+            golden: source('golden', 'player_game_stats')
+            keys: [player_id, game_id, team_abbr]
+
+  - name: fct_player_season_stats
+    description: One row per player per team per season.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [player_id, team_abbr, season]
+      - matches_golden:
+          arguments:
+            golden: source('golden', 'player_stats')
+            keys: [player_id, team_abbr, season]
+            # One-decimal averages: an exact .x5 tie rounds either way depending
+            # on floating-point summation order, which differs from Python's.
+            column_tolerance: {tot_atoi: 0.11, es_atoi: 0.11, ev5_atoi: 0.11, pp_atoi: 0.11, pk_atoi: 0.11}
+
+  - name: fct_team_season_stats
+    description: Standings, one row per team per season.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [team_abbr, season]
+      - matches_golden:
+          arguments:
+            golden: source('golden', 'team_stats')
+            keys: [team_abbr, season]
