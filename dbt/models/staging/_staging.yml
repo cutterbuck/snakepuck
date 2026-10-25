@@ -1,0 +1,117 @@
+version: 2
+
+models:
+  - name: stg_halo__games
+    description: One row per game.
+    columns:
+      - name: game_id
+        data_tests: [unique, not_null]
+      - name: home_team_abbr
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('ahl_teams')
+                field: team_abbr
+      - name: away_team_abbr
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('ahl_teams')
+                field: team_abbr
+      - name: game_outcome
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [home_win, away_win, home_ot_win, away_ot_win, home_so_win, away_so_win]
+      - name: home_start_net
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [pos_x, neg_x]
+
+  - name: stg_halo__players
+    description: One row per player.
+    columns:
+      - name: player_id
+        data_tests: [unique, not_null]
+      - name: position_group
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [F, D, G]
+      - name: handed
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [L, R]
+
+  - name: stg_halo__events
+    description: >
+      One row per event. sl_event_id is only unique within a game,
+      so the key is (game_id, sl_event_id).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [game_id, sl_event_id]
+    columns:
+      - name: game_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_halo__games')
+                field: game_id
+      - name: sl_event_id
+        data_tests: [not_null]
+      - name: player_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_halo__players')
+                field: player_id
+
+  - name: stg_halo__stints
+    description: One row per player per stint.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [game_id, game_stint, player_id]
+    columns:
+      - name: game_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_halo__games')
+                field: game_id
+      - name: player_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_halo__players')
+                field: player_id
+      - name: team_abbr
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('ahl_teams')
+                field: team_abbr
+
+  - name: stg_halo__tracking
+    description: >
+      Skater positions at each event. Identified skaters appear at most once
+      per event; unidentified skaters (no player_id) can appear many times.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [game_id, sl_event_id, player_id]
+          config:
+            where: player_id is not null
+    columns:
+      - name: game_id
+        data_tests: [not_null]
+      - name: sl_event_id
+        data_tests: [not_null]

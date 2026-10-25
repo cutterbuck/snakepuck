@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  - name: halo
+    description: HALO AHL 2023-24 data, loaded untouched from Parquet by infra/load_raw.sh.
+    schema: raw
+    tables:
+      - name: games
+      - name: players
+      - name: events
+      - name: stints
+      - name: tracking
+
+  - name: golden
+    description: >
+      Phase 0 snapshots of stats computed by the old Python pipeline (Postgres).
+      The answer key that the marts are reconciled against.
+    schema: golden
+    tables:
+      - name: player_stats
+      - name: player_game_stats
+      - name: team_stats
+      - name: stints

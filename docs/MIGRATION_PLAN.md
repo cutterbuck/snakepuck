@@ -139,8 +139,13 @@ All 9 tables match Postgres exactly (2026-10-25).
 ## Phase 3 — dbt rebuilds the pipeline
 *Goal: replace `seed_db.py` and the backfill scripts with tested SQL models. This is the core data-engineering showcase.*
 
-- [ ] dbt project (`dbt-bigquery`) with `staging` / `intermediate` / `marts` layers
-- [ ] Staging: typed, cleaned views over each raw table
+- [x] dbt project (`dbt/`, dbt 1.12) with `staging` / `intermediate` / `marts` layers.
+      Run from `dbt/`: `dbt deps && dbt build` (dev → `dbt_dev_*` datasets; `--target prod` → `staging`, `marts`, ...).
+      Per-query cap of 5 GB in `profiles.yml`.
+- [x] Staging: typed, renamed views over each raw table, plus an `ahl_teams` seed
+      (names, logos, divisions formerly hard-coded in `seed_db.py`). 34 tests on keys, nulls,
+      relationships, and accepted values; all pass. Event key is `(game_id, sl_event_id)`.
+- [ ] CI: run `dbt build` in GitHub Actions (needs Workload Identity Federation, no keys)
 - [ ] Intermediate: shift numbering, stint xG attribution, GAP, game situations (5v5, PP, PK…)
 - [ ] Marts: `player_stats`, `player_game_stats`, `team_stats`, standings, game-report tables
 - [ ] dbt tests: uniqueness, not-null, relationships, accepted values, plus

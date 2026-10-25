@@ -1,0 +1,4 @@
+# dbt tooling, kept separate from the Dash app's lock (requirements.txt at the repo root).
+# Install into the same env: pip install -r dbt/requirements.txt
+dbt-core==1.12.6
+dbt-bigquery==1.12.1

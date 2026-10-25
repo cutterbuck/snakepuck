@@ -1,0 +1,20 @@
+version: 2
+
+seeds:
+  - name: ahl_teams
+    description: >
+      Team names, logos, and divisions for the 2023-24 AHL season. Typed by hand
+      (formerly hard-coded in scripts/seed_db.py); not part of the HALO data.
+    columns:
+      - name: team_abbr
+        data_tests: [unique, not_null]
+      - name: team_name
+        data_tests: [unique, not_null]
+      - name: division
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [Atlantic, North, Central, Pacific]
+      - name: logo_url
+        data_tests: [not_null]

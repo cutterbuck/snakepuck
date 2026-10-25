@@ -1,0 +1,20 @@
+name: snakepuck
+version: "1.0.0"
+profile: snakepuck
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  snakepuck:
+    staging:
+      +schema: staging
+      +materialized: view
+
+seeds:
+  snakepuck:
+    +schema: reference

@@ -1,0 +1,23 @@
+# No secrets here: dev authenticates with your gcloud login
+# (`gcloud auth application-default login`).
+snakepuck:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: snakepuck
+      dataset: dbt_dev # dev models land in dbt_dev_staging, dbt_dev_marts, ...
+      location: us-central1
+      threads: 4
+      job_execution_timeout_seconds: 300
+      maximum_bytes_billed: 5000000000 # 5 GB per query; raw.tracking is ~2 GB
+    prod:
+      type: bigquery
+      method: oauth
+      project: snakepuck
+      dataset: analytics # prod models land in staging, marts, ... (see generate_schema_name)
+      location: us-central1
+      threads: 4
+      job_execution_timeout_seconds: 300
+      maximum_bytes_billed: 5000000000
