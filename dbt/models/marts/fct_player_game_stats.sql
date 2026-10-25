@@ -1,12 +1,10 @@
 -- One row per player per game per team.
 --
--- Stats roll up from fct_stints, so an event counts only if it falls inside one
--- of the player's stints. Penalties aren't tracked per stint and are counted
--- from events directly.
+-- Stats roll up from fct_stints: every game the player skated in gets a row.
+-- Penalties aren't tracked per stint and are counted from events directly.
 --
--- Parity with the old pipeline (fixed separately, see docs/MIGRATION_PLAN.md):
---   * A player gets a row only if they recorded at least one event for that
---     team in that game; quiet games are missing.
+-- With legacy_parity, a player gets a row only if they recorded at least one
+-- event for that team in that game, as in the old pipeline (quiet games missing).
 with games as (
     select game_id, season_name from {{ ref('stg_halo__games') }}
 ),
@@ -48,8 +46,8 @@ select
     s.source_team_id,
     s.team_abbr,
     games.season_name as season,
-    e.penalties,
-    e.penalties_drawn,
+    coalesce(e.penalties, 0) as penalties,
+    coalesce(e.penalties_drawn, 0) as penalties_drawn,
     s.* except (player_id, game_id, team_abbr, source_team_id),
     {% for prefix in ['tot'] + situations() | map('first') | list %}
     round(safe_divide(s.{{ prefix }}_goals, s.{{ prefix }}_shots), 3) as {{ prefix }}_shooting_pct,
@@ -59,5 +57,5 @@ select
     ) as {{ prefix }}_faceoff_pct,
     {% endfor %}
 from stint_totals as s
-inner join event_totals as e using (player_id, game_id, team_abbr)
+{{ 'inner' if var('legacy_parity') else 'left' }} join event_totals as e using (player_id, game_id, team_abbr)
 inner join games using (game_id)

@@ -8,6 +8,8 @@ models:
           arguments:
             combination_of_columns: [game_id, game_stint, player_id]
       - matches_golden:
+          config:
+            enabled: "{{ var('legacy_parity') }}"
           arguments:
             golden: source('golden', 'stints')
             keys: [game_id, game_stint, player_id]
@@ -19,6 +21,8 @@ models:
           arguments:
             combination_of_columns: [player_id, game_id, team_abbr]
       - matches_golden:
+          config:
+            enabled: "{{ var('legacy_parity') }}"
           arguments:
             golden: source('golden', 'player_game_stats')
             keys: [player_id, game_id, team_abbr]
@@ -30,6 +34,8 @@ models:
           arguments:
             combination_of_columns: [player_id, team_abbr, season]
       - matches_golden:
+          config:
+            enabled: "{{ var('legacy_parity') }}"
           arguments:
             golden: source('golden', 'player_stats')
             keys: [player_id, team_abbr, season]
@@ -44,6 +50,8 @@ models:
           arguments:
             combination_of_columns: [team_abbr, season]
       - matches_golden:
+          config:
+            enabled: "{{ var('legacy_parity') }}"
           arguments:
             golden: source('golden', 'team_stats')
             keys: [team_abbr, season]

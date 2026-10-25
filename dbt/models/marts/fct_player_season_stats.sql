@@ -3,11 +3,9 @@
 -- Games played counts every game the player skated in; everything else rolls
 -- up from fct_player_game_stats.
 --
--- Parity with the old pipeline (fixed separately, see docs/MIGRATION_PLAN.md):
---   * Games where the player recorded no events have no game row, so their
---     on-ice xG and ice time are left out while still counting toward games
---     played (understating ATOI).
---   * Only players with at least one event are included.
+-- Only players with at least one event are included, as in the old pipeline.
+-- (With legacy_parity, quiet games have no game row, so their on-ice xG and
+-- ice time drop out while still counting toward games played.)
 with seasons as (
     select distinct season_name from {{ ref('stg_halo__games') }}
 ),

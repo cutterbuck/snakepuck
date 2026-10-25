@@ -1487,11 +1487,12 @@ def seed():
             db.session.flush()
             print(f"Upserted {new_team_stats} team stats records")
 
-        # --- Default User ---
+        # --- Default User (only when a password is supplied) ---
+        admin_password = os.environ.get("SNAKEPUCK_ADMIN_PASSWORD")
         user = User.query.filter_by(username="snakepuck").first()
-        if not user:
+        if not user and admin_password:
             user = User(username="snakepuck")
-            user.set_password("operationwincups")
+            user.set_password(admin_password)
             db.session.add(user)
             print("Created user: snakepuck")
 

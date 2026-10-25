@@ -154,18 +154,31 @@ All 9 tables match Postgres exactly (2026-10-25).
 - [x] **Parity reached (2026-10-25):** all four marts match golden exactly. The only
       tolerance is ±0.1 on one-decimal ATOI, where exact ties round differently with
       Python's vs BigQuery's summation order.
-- [ ] Fix the old pipeline's bugs (below) as deliberate, measured changes
+- [x] Fixed the old pipeline's bugs (below). `dbt build --vars 'legacy_parity: true'`
+      still reproduces the old numbers and runs the golden reconciliation, so parity
+      can be re-proven at any time. The default build applies the fixes and tests them.
 - [ ] Game-report tables for the rink (events + tracking per stint)
 - [ ] dbt docs (lineage graph) published
 
-**Bugs found in the old pipeline** (reproduced for parity, to fix next):
-1. *Events at a stint boundary.* Stints count events in `[start, end)`. An event at
-   the exact instant a stint ends (a goal, then the line change) isn't credited to
-   the player who made it: 6 goals of 2,816, 15 shots, 1 faceoff. Its on-ice xG goes
-   to the incoming line instead: 111 of 53,980 xG events, 6.6 of 2,781.7 xG.
-2. *Quiet games dropped.* A player-game row exists only if the player recorded an
-   event, and season totals sum those rows. Games with no events still count in GP,
-   but their on-ice xG and TOI are lost, understating ATOI (2 player-seasons).
+**Bugs found in the old pipeline (fixed 2026-10-25):**
+1. *Boundary plays uncredited.* The old pipeline matched events to stints by time
+   window `[start, end)`. Plays at the exact instant a stint ends, which HALO itself
+   leaves unassigned, were credited to no one: 6 goals, 19 shots.
+   **Fix:** credit events to the stint HALO assigned them (`events.game_stint`, which
+   follows the true order of plays and agrees with the window everywhere else). Fall
+   back to the stint ending at that moment for unassigned plays.
+   **Effect vs the live site:** 6 players +1 goal; 15 player-seasons gain shots; the
+   on-ice xG of those 19 shots moves to the line that was on the ice (432 stints).
+   One faceoff remains uncredited: its player isn't in any stint at that time (data glitch).
+2. *Quiet games dropped.* A player-game row existed only if the player recorded an
+   event, and season totals summed those rows. Games with no events still counted in
+   GP but lost their TOI and on-ice xG.
+   **Fix:** game rows come from stints. **Effect:** 2 goalie games added; those
+   goalies' ATOI rises about 30 seconds.
+
+Checked and *not* a bug: HALO's team-level goal rows sit at the end of the ending
+stint, but every player-credited goal and assist lands in the same stint, and the same
+situation (PP/PK/EV), under both HALO's assignment and the old time window.
 
 **Done when:** every mart matches the golden numbers (or every difference is explained as a bug fix).
 
