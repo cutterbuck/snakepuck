@@ -145,7 +145,14 @@ All 9 tables match Postgres exactly (2026-10-25).
 - [x] Staging: typed, renamed views over each raw table, plus an `ahl_teams` seed
       (names, logos, divisions formerly hard-coded in `seed_db.py`). 34 tests on keys, nulls,
       relationships, and accepted values; all pass. Event key is `(game_id, sl_event_id)`.
-- [ ] CI: run `dbt build` in GitHub Actions (needs Workload Identity Federation, no keys)
+- [x] CI: `.github/workflows/dbt.yml` runs on pushes to main that touch `dbt/`. Keyless auth
+      via Workload Identity Federation (pool `github`, trusting only repo ID 1150873071 on
+      `refs/heads/main`). Slim CI: builds and tests only what changed (`state:modified+`)
+      in `dbt_ci_*` with `--defer` to prod, then deploys the same selection to prod and saves
+      the manifest to `gs://snakepuck-data/dbt-state/prod/`. Manual runs can rebuild
+      everything or re-prove legacy parity.
+- [x] Build cost: about 5 GiB for a full build. `store_failures` is limited to the golden
+      tests, because it turns `not_null`/`unique` into `select *` scans.
 - [x] Intermediate: `int_stints__enriched` (situations, TOI, shift numbers) and
       `int_stints__event_stats` (events credited to each stint's time window)
 - [x] Marts: `fct_stints`, `fct_player_game_stats`, `fct_player_season_stats`, `fct_team_season_stats`
@@ -157,8 +164,9 @@ All 9 tables match Postgres exactly (2026-10-25).
 - [x] Fixed the old pipeline's bugs (below). `dbt build --vars 'legacy_parity: true'`
       still reproduces the old numbers and runs the golden reconciliation, so parity
       can be re-proven at any time. The default build applies the fixes and tests them.
-- [ ] Game-report tables for the rink (events + tracking per stint)
-- [ ] dbt docs (lineage graph) published
+- [x] Game-report tables for the rink: `fct_game_events`, `fct_tracking_snapshots`
+      (display names and team resolved, including "Unidentified (team)"), `fct_shifts`
+- [x] dbt docs (lineage graph) built by CI and published to GitHub Pages
 
 **Bugs found in the old pipeline (fixed 2026-10-25):**
 1. *Boundary plays uncredited.* The old pipeline matched events to stints by time
@@ -175,6 +183,11 @@ All 9 tables match Postgres exactly (2026-10-25).
    GP but lost their TOI and on-ice xG.
    **Fix:** game rows come from stints. **Effect:** 2 goalie games added; those
    goalies' ATOI rises about 30 seconds.
+
+3. *Shifts spanning periods.* Shift numbering linked a stint to the player's next one
+   whenever one's end time equalled the other's start time, ignoring the period. Once in
+   the season, a 1st-period stint ending at 2:19.03 was merged with a 3rd-period stint
+   starting at 2:19.03. **Fix:** the period must match too.
 
 Checked and *not* a bug: HALO's team-level goal rows sit at the end of the ending
 stint, but every player-credited goal and assist lands in the same stint, and the same
@@ -217,6 +230,10 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 - **Infrastructure as code:** Terraform now, or click-ops first and codify later?
 - **Domain/hosting cutover:** when to point the live domain at Firebase Hosting / Cloud Run
 - **Cold starts:** scale to zero ($0) vs one always-warm instance (~$10–15) during job applications
+
+## Reminders
+- BigQuery daily query cap is temporarily 200 GiB (raised 2026-10-26 for build-out).
+  Lower it to 50 GiB once Phases 3–5 settle (command in `infra/README.md`).
 
 ## Deferred
 - Smooth player animation on the rink. HALO tracking is per-event snapshots,

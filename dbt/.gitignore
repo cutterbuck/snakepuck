@@ -3,3 +3,4 @@ dbt_packages/
 logs/
 package-lock.yml
 .user.yml
+prod-state/

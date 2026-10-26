@@ -21,6 +21,18 @@ for q in QueryUsagePerDay QueryUsagePerUserPerDay; do
 done
 ```
 
+**Temporarily raised to 200 GiB/day (2026-10-26) while building out Phases 3–5.**
+Lower it back to 50 GiB when done (no override flag needed when going up; going down
+from 200 GiB to 50 GiB needs `--allow-high-percentage-quota-decrease`):
+
+```bash
+for p in query-usage-per-day-50gib:QueryUsagePerDay query-usage-per-user-per-day-50gib:QueryUsagePerUserPerDay; do
+  gcloud beta quotas preferences update ${p%%:*} --service=bigquery.googleapis.com \
+    --project=snakepuck --quota-id=${p##*:} --preferred-value=51200 \
+    --allow-high-percentage-quota-decrease
+done
+```
+
 Per-query cap: `~/.bigqueryrc` sets `--maximum_bytes_billed=5000000000` (5 GB)
 for the `bq` CLI. dbt sets `maximum_bytes_billed` in its profile (Phase 3).
 For scale, a full scan of `raw.tracking` is about 2 GB.

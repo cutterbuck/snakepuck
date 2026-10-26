@@ -32,9 +32,12 @@ sided as (
 shift_breaks as (
     select
         *,
-        -- 1 when this stint starts a new shift (first stint, or a gap since the last one)
+        -- 1 when this stint starts a new shift (first stint, or a gap since the last one).
+        -- legacy_parity ignores the period, so a stint ending at 2:19 of the 1st
+        -- would join one starting at 2:19 of the 3rd (happens once in the data).
         if(
-            lag(period_time_end) over player_game = period_time_start,
+            lag(period_time_end) over player_game = period_time_start
+            {% if not var('legacy_parity') %}and lag(period) over player_game = period{% endif %},
             0,
             1
         ) as starts_shift

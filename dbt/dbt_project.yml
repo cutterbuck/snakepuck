@@ -27,10 +27,6 @@ models:
       +schema: marts
       +materialized: table
 
-data_tests:
-  snakepuck:
-    +store_failures: true # failing rows are saved to *_dbt_test__audit for inspection
-
 seeds:
   snakepuck:
     +schema: reference

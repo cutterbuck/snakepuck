@@ -12,6 +12,15 @@ snakepuck:
       threads: 4
       job_execution_timeout_seconds: 300
       maximum_bytes_billed: 5000000000 # 5 GB per query; raw.tracking is ~2 GB
+    ci: # GitHub Actions checks changes here before they reach prod
+      type: bigquery
+      method: oauth # GitHub's keyless credentials (Workload Identity Federation)
+      project: snakepuck
+      dataset: dbt_ci
+      location: us-central1
+      threads: 4
+      job_execution_timeout_seconds: 300
+      maximum_bytes_billed: 5000000000
     prod:
       type: bigquery
       method: oauth

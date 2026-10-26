@@ -10,6 +10,7 @@ models:
       - matches_golden:
           config:
             enabled: "{{ var('legacy_parity') }}"
+            store_failures: true # mismatched rows land in *_dbt_test__audit for inspection
           arguments:
             golden: source('golden', 'stints')
             keys: [game_id, game_stint, player_id]
@@ -23,6 +24,7 @@ models:
       - matches_golden:
           config:
             enabled: "{{ var('legacy_parity') }}"
+            store_failures: true # mismatched rows land in *_dbt_test__audit for inspection
           arguments:
             golden: source('golden', 'player_game_stats')
             keys: [player_id, game_id, team_abbr]
@@ -36,6 +38,7 @@ models:
       - matches_golden:
           config:
             enabled: "{{ var('legacy_parity') }}"
+            store_failures: true # mismatched rows land in *_dbt_test__audit for inspection
           arguments:
             golden: source('golden', 'player_stats')
             keys: [player_id, team_abbr, season]
@@ -52,6 +55,36 @@ models:
       - matches_golden:
           config:
             enabled: "{{ var('legacy_parity') }}"
+            store_failures: true # mismatched rows land in *_dbt_test__audit for inspection
           arguments:
             golden: source('golden', 'team_stats')
             keys: [team_abbr, season]
+
+  - name: fct_shifts
+    description: One row per skater shift (consecutive stints with no gap). Goalies have none.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [game_id, player_id, shift]
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "period_time_end > period_time_start"
+
+  - name: fct_game_events
+    description: One row per event, with the fields the game-report rink displays.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [game_id, sl_event_id]
+
+  - name: fct_tracking_snapshots
+    description: >
+      Skater positions at each event, one row per skater per event, with the
+      event's clock time, team, and display name ("Unidentified (<team>)" when
+      HALO couldn't identify the skater).
+    # Uniqueness is tested once, on stg_halo__tracking (this table is a 1:1 subset);
+    # the null checks share one scan of this 13.5M-row table.
+    data_tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "team_abbr is not null and display_name is not null and period_time is not null"

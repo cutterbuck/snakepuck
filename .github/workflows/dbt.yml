@@ -1,0 +1,113 @@
+name: dbt
+
+# Builds and tests the BigQuery pipeline when dbt/ changes on main, then
+# publishes the dbt docs (lineage graph) to GitHub Pages.
+#
+# "Slim CI": only models changed since the last prod run (and everything
+# downstream of them) are rebuilt. Changes are built and tested in the dbt_ci
+# datasets first, reading unchanged models from prod; prod is updated only if
+# that passes.
+
+on:
+  push:
+    branches: [main]
+    paths: ["dbt/**", ".github/workflows/dbt.yml"]
+  workflow_dispatch:
+    inputs:
+      build_everything:
+        description: "Rebuild every model, not just what changed"
+        type: boolean
+        default: false
+      legacy_parity:
+        description: "Also re-prove parity with the old pipeline (golden reconciliation)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: dbt-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # keyless GCP auth (Workload Identity Federation)
+
+env:
+  STATE_URI: gs://snakepuck-data/dbt-state/prod
+  DBT_PROFILES_DIR: .
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dbt
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: dbt/requirements.txt
+
+      - name: Install dbt
+        run: pip install -r requirements.txt
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/65985276875/locations/global/workloadIdentityPools/github/providers/snakepuck-repo
+          service_account: snakepuck-pipeline@snakepuck.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install dbt packages
+        run: dbt deps
+
+      - name: Fetch last prod state
+        id: state
+        run: |
+          mkdir -p prod-state
+          if [ "${{ inputs.build_everything }}" != "true" ] \
+            && gcloud storage cp "$STATE_URI/manifest.json" prod-state/manifest.json; then
+            echo "select=--select state:modified+ --state prod-state" >> "$GITHUB_OUTPUT"
+            echo "defer=--defer" >> "$GITHUB_OUTPUT"
+          else
+            echo "No prior state (or full rebuild requested): building everything"
+          fi
+
+      - name: Build and test changes (dbt_ci datasets)
+        run: dbt build --target ci ${{ steps.state.outputs.select }} ${{ steps.state.outputs.defer }}
+
+      - name: Re-prove parity with the old pipeline
+        if: inputs.legacy_parity
+        run: |
+          dbt build --target ci --vars 'legacy_parity: true'
+
+      - name: Deploy to prod
+        run: dbt build --target prod ${{ steps.state.outputs.select }}
+
+      - name: Save prod state
+        run: gcloud storage cp target/manifest.json "$STATE_URI/manifest.json"
+
+      - name: Generate docs
+        run: |
+          dbt docs generate --target prod --static
+          mkdir -p ../docs-site
+          cp target/static_index.html ../docs-site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs-site
+
+  docs:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
