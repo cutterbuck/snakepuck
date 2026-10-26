@@ -1,6 +1,29 @@
 version: 2
 
 models:
+  - name: dim_games
+    description: One row per game.
+    columns:
+      - name: game_id
+        data_tests: [unique, not_null]
+
+  - name: dim_players
+    description: One row per player.
+    columns:
+      - name: player_id
+        data_tests: [unique, not_null]
+      - name: full_name
+        data_tests: [not_null]
+
+  - name: dim_teams
+    description: One row per team, with HALO's team id. Teams with no games are dropped.
+    columns:
+      - name: team_abbr
+        data_tests: [unique, not_null]
+      - name: source_team_id
+        # Unique also catches two abbreviations mapped to one HALO team.
+        data_tests: [unique, not_null]
+
   - name: fct_stints
     description: One row per player per stint, with stats split by game situation.
     data_tests:

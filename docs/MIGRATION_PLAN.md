@@ -199,6 +199,10 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 - [ ] Export marts to Parquet in GCS (BigQuery `EXPORT DATA`), triggered after dbt runs
 - [ ] Rust (Axum) API: load marts into memory at startup; JSON endpoints per page
 - [ ] Tracking for the rink: per-game files loaded on demand, not all 13.5M rows held in memory
+- [ ] API exposure: endpoints return only what a page needs (one game or stint at a time,
+      only the columns drawn), no bulk-download endpoints, per-client rate limiting.
+      Data is never compiled into the WASM frontend; it always comes through endpoints.
+- [x] HALO license: showing raw tracking publicly is fine (confirmed by Jake, 2026-10-26)
 - [ ] `cargo test` + endpoint tests; deploy to Cloud Run
 - [ ] Benchmark latency and memory vs the Dash/Postgres path; publish the numbers
 
