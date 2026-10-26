@@ -90,7 +90,7 @@ jobs:
       - name: Export marts to Parquet for the API
         run: |
           pip install -r ../infra/requirements.txt
-          ../infra/export_serving.sh marts gs://snakepuck-data/serving/prod
+          python ../infra/export_serving.py marts gs://snakepuck-data/serving/prod
 
       - name: Save prod state
         run: gcloud storage cp target/manifest.json "$STATE_URI/manifest.json"

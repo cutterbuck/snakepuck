@@ -197,7 +197,7 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 
 ## Phase 4 — Serving layer: marts → Parquet → Rust API
 - [ ] Export marts to Parquet in GCS, run by the dbt workflow after each prod deploy
-      (`infra/export_serving.sh`). Uses free extract jobs rather than `EXPORT DATA`, which
+      (`infra/export_serving.py`). Uses free extract jobs rather than `EXPORT DATA`, which
       bills the query. Writes `serving/prod/marts/<table>/*.parquet` (about 70 MB) and
       `serving/prod/tracking/<game_id>.parquet` (479 files, about 310 MB). Game
       `1528a22a…` (WBS vs BEL, 2023-11-04) has no HALO tracking, so the API must handle a

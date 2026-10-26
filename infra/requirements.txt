@@ -1,2 +1,2 @@
-# Serving export (export_serving.sh), kept separate from the app and dbt locks.
+# Serving export (export_serving.py), kept separate from the app and dbt locks.
 pyarrow==24.0.0
