@@ -86,6 +86,12 @@ jobs:
       - name: Deploy to prod
         run: dbt build --target prod ${{ steps.state.outputs.select }}
 
+      # Before saving state, so a failed export is retried by the next run.
+      - name: Export marts to Parquet for the API
+        run: |
+          pip install -r ../infra/requirements.txt
+          ../infra/export_serving.sh marts gs://snakepuck-data/serving/prod
+
       - name: Save prod state
         run: gcloud storage cp target/manifest.json "$STATE_URI/manifest.json"
 

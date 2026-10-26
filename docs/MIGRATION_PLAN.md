@@ -196,7 +196,12 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 **Done when:** every mart matches the golden numbers (or every difference is explained as a bug fix).
 
 ## Phase 4 — Serving layer: marts → Parquet → Rust API
-- [ ] Export marts to Parquet in GCS (BigQuery `EXPORT DATA`), triggered after dbt runs
+- [ ] Export marts to Parquet in GCS, run by the dbt workflow after each prod deploy
+      (`infra/export_serving.sh`). Uses free extract jobs rather than `EXPORT DATA`, which
+      bills the query. Writes `serving/prod/marts/<table>/*.parquet` (about 70 MB) and
+      `serving/prod/tracking/<game_id>.parquet` (479 files, about 310 MB). Game
+      `1528a22a…` (WBS vs BEL, 2023-11-04) has no HALO tracking, so the API must handle a
+      game with no tracking file.
 - [ ] Rust (Axum) API: load marts into memory at startup; JSON endpoints per page
 - [ ] Tracking for the rink: per-game files loaded on demand, not all 13.5M rows held in memory
 - [ ] API exposure: endpoints return only what a page needs (one game or stint at a time,
@@ -230,7 +235,6 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 ---
 
 ## Open decisions
-- **Tracking in the API:** per-game Parquet on GCS vs bundled in the container image
 - **Infrastructure as code:** Terraform now, or click-ops first and codify later?
 - **Domain/hosting cutover:** when to point the live domain at Firebase Hosting / Cloud Run
 - **Cold starts:** scale to zero ($0) vs one always-warm instance (~$10–15) during job applications
@@ -238,6 +242,11 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 ## Reminders
 - BigQuery daily query cap is temporarily 200 GiB (raised 2026-10-26 for build-out).
   Lower it to 50 GiB once Phases 3–5 settle (command in `infra/README.md`).
+
+## Decided
+- **Tracking in the API (2026-10-26):** per-game Parquet in GCS, loaded on demand, not
+  bundled into the container image. New data is expected, so data deploys stay
+  separate from code deploys.
 
 ## Deferred
 - Smooth player animation on the rink. HALO tracking is per-event snapshots,
