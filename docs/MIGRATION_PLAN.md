@@ -196,7 +196,7 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 **Done when:** every mart matches the golden numbers (or every difference is explained as a bug fix).
 
 ## Phase 4 — Serving layer: marts → Parquet → Rust API
-- [ ] Export marts to Parquet in GCS, run by the dbt workflow after each prod deploy
+- [x] Export marts to Parquet in GCS, run by the dbt workflow after each prod deploy
       (`infra/export_serving.py`). Uses free extract jobs rather than `EXPORT DATA`, which
       bills the query. Writes `serving/prod/marts/<table>/*.parquet` (about 70 MB) and
       `serving/prod/tracking/<game_id>.parquet` (479 files, about 310 MB). Game
