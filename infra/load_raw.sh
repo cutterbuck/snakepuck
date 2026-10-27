@@ -3,6 +3,7 @@
 # Re-runnable: each load replaces its table. Upload first with:
 #   gcloud storage cp data/*.parquet gs://snakepuck-data/raw/
 #   gcloud storage cp golden/* gs://snakepuck-data/golden/
+# golden/defense_lpr.parquet comes from scripts/export_golden_defense_lpr.py (Phase 4).
 set -euo pipefail
 
 PROJECT=snakepuck
@@ -21,6 +22,7 @@ TABLES=(
   "golden player_game_stats game_id,player_id"
   "golden team_stats"
   "golden stints game_id,player_id"
+  "golden defense_lpr"
 )
 
 for dataset in raw golden; do

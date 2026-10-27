@@ -24,6 +24,39 @@ models:
         # Unique also catches two abbreviations mapped to one HALO team.
         data_tests: [unique, not_null]
 
+  - name: fct_defense_lpr
+    description: >
+      The Player Analysis page's defensemen LPR table: one row per defenseman per view
+      (low, high, high_next_success, high_next_failure, high_next_rate). Every
+      defenseman with an LPR in a view has a row; the page's minimums (20 GP, 15 LPRs)
+      are applied by the API.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [player_id, view]
+      - matches_golden:
+          config:
+            enabled: "{{ var('legacy_parity') }}"
+            store_failures: true # mismatched rows land in *_dbt_test__audit for inspection
+            where: "games_played >= 20 and lpr_count >= 15" # the rows the page shows
+          arguments:
+            golden: source('golden', 'defense_lpr')
+            keys: [player_id, view]
+            # The page rounds averages to 3 decimals, totals to 2, percentages to 0.1%.
+            column_tolerance:
+              avg_oi_xgf: 0.00051
+              avg_oi_xga: 0.00051
+              total_oi_xgf: 0.0051
+              total_oi_xga: 0.0051
+              xg_pct: 0.00051
+              success_rate: 0.00051
+    columns:
+      - name: view
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [low, high, high_next_success, high_next_failure, high_next_rate]
+
   - name: fct_stints
     description: One row per player per stint, with stats split by game situation.
     data_tests:

@@ -220,9 +220,17 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
   - [x] `/api/games/{game_id}/players/{player_id}?situation` (header, stat line, shifts)
   - [x] `/api/games/{game_id}/players/{player_id}/shifts/{shift}` (stint rows + rink frames)
   - [x] `/api/sample/{name}` (fixed 100-row sample per table, replacing Sample Data's random rows)
-- [ ] Player Analysis needs a dbt mart first: one row per defenseman × LPR type, covering
-      all 5 dropdown views. Dash computes it per request from most of `events` and all of
-      `stints`.
+- [x] Player Analysis (defensemen LPR table), 2026-10-27. Dash computed it per request
+      from most of `events` and all of `stints`; it's now `int_lpr_events` (one row per
+      5-on-5 defenseman LPR, with next-play result and post-LPR on-ice xG) and
+      `fct_defense_lpr` (one row per defenseman × dropdown view), served by
+      `/api/player-analysis/defense-lpr?view&sort&dir` with the page's minimums (20 GP,
+      15 LPRs) and Total row. **Parity:** `golden.defense_lpr` snapshots the page as
+      displayed for all 5 views (`scripts/export_golden_defense_lpr.py`). The legacy-parity
+      build matches all 645 rows within the page's rounding, with counts exact. With the
+      bug fixes, 12 of 1,761 mart rows move (on-ice xG of the boundary shots, at most 0.17).
+      Ties at the same instant are ordered by `sl_event_id`, which matches the old
+      Postgres `id` order exactly.
 - [x] API exposure: endpoints return only what a page needs (one game or stint at a time,
       only the columns drawn), no bulk-download endpoints, per-client rate limiting.
       Data is never compiled into the WASM frontend; it always comes through endpoints.

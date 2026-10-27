@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: int_lpr_events
+    description: >
+      One row per loose puck recovery by a defenseman at 5-on-5: its pressure, whether
+      his next play within 5 s succeeded, and his on-ice xG for the rest of the shift.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [game_id, sl_event_id]
+    columns:
+      - name: pressure
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [high, low]
+      - name: next_play_success
+        data_tests: [not_null]
+      - name: post_lpr_oi_xga
+        description: Null when the player has no stint with a shift at the LPR.
+        data_tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"

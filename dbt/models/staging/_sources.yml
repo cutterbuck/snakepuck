@@ -21,3 +21,7 @@ sources:
       - name: player_game_stats
       - name: team_stats
       - name: stints
+      - name: defense_lpr
+        description: >
+          The Dash Player Analysis page's LPR table for every view, as displayed
+          (scripts/export_golden_defense_lpr.py, Phase 4). Rounded as shown.
