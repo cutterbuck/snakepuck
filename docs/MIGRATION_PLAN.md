@@ -257,6 +257,8 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 
 **Done when:** the API serves every dataset the site needs, with published benchmarks.
 
+**Phase 4 complete (2026-10-27).** Every Dash page's data is served by the live API.
+
 ## Phase 5 — Leptos frontend, page by page
 - [ ] Leptos app shell (navbar, footer, routing, SnakePuck styling)
 - [ ] Port pages roughly in order of simplicity: About → Blog → Standings →
