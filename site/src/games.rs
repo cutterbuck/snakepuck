@@ -138,18 +138,26 @@ impl GameCache {
             .get_or_insert_with(game_id, || self.load(game_id).map(Arc::new))
     }
 
+    /// Reads the four files in parallel: over the Cloud Storage mount each read is a
+    /// network round trip, so this takes about as long as the slowest one.
     fn load(&self, game_id: &str) -> Result<GameFiles> {
         let path = |table: &str| self.dir.join(table).join(format!("{game_id}.parquet"));
         let tracking = path("fct_tracking_snapshots");
-        Ok(GameFiles {
-            shifts: read_files(&[path("fct_shifts")], "")?,
-            stints: read_files(&[path("fct_stints")], "")?,
-            events: read_files(&[path("fct_game_events")], "")?,
-            tracking: if tracking.exists() {
-                read_files(&[tracking], "")?
-            } else {
-                Vec::new()
-            },
+        std::thread::scope(|s| {
+            let shifts = s.spawn(|| read_files(&[path("fct_shifts")], ""));
+            let stints = s.spawn(|| read_files(&[path("fct_stints")], ""));
+            let events = s.spawn(|| read_files(&[path("fct_game_events")], ""));
+            let tracking = s.spawn(|| match tracking.exists() {
+                true => read_files(&[tracking], ""),
+                false => Ok(Vec::new()),
+            });
+            let panicked = |_| anyhow::anyhow!("reading game {game_id} panicked");
+            Ok(GameFiles {
+                shifts: shifts.join().map_err(panicked)??,
+                stints: stints.join().map_err(panicked)??,
+                events: events.join().map_err(panicked)??,
+                tracking: tracking.join().map_err(panicked)??,
+            })
         })
     }
 

@@ -222,12 +222,22 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 - [ ] Player Analysis needs a dbt mart first: one row per defenseman × LPR type, covering
       all 5 dropdown views. Dash computes it per request from most of `events` and all of
       `stints`.
-- [ ] API exposure: endpoints return only what a page needs (one game or stint at a time,
+- [x] API exposure: endpoints return only what a page needs (one game or stint at a time,
       only the columns drawn), no bulk-download endpoints, per-client rate limiting.
-      Done except rate limiting.
       Data is never compiled into the WASM frontend; it always comes through endpoints.
+      Rate limit: 5 requests/s sustained, bursts of 50, per client IP, per instance (max 2
+      instances). The key is the last `X-Forwarded-For` entry, which Cloud Run appends
+      (checked 2026-10-26: forged earlier entries are ignored). **Recheck
+      `TRUSTED_PROXY_HOPS` if Firebase Hosting goes in front**, since it adds a hop.
 - [x] HALO license: showing raw tracking publicly is fine (confirmed by Jake, 2026-10-26)
-- [ ] `cargo test` + endpoint tests (CI: `.github/workflows/site.yml`); deploy to Cloud Run
+- [x] `cargo test` + endpoint tests (CI: `.github/workflows/site.yml`); deploy to Cloud Run.
+      Live at https://snakepuck-api-xxquvkhdxq-uc.a.run.app (e.g. `/api/standings?league=AHL&season=2023-24`).
+      CI builds a distroless image (about 73 MB) and applies `site/service.yaml`: scale to
+      zero, max 2 instances, bucket mounted read-only with only `serving/prod` visible.
+      After each export, the dbt workflow rolls a new revision so instances load the new
+      marts. Setup is recorded in `infra/README.md`. Startup loads the marts in about 1 s
+      over the mount (3 s before files were read whole). Warm requests take about 1 ms on
+      the server; from the East Coast, round trip dominates at 80–100 ms.
 - [ ] Benchmark latency and memory vs the Dash/Postgres path; publish the numbers
 
 **Done when:** the API serves every dataset the site needs, with published benchmarks.
