@@ -1,3 +1,5 @@
 -r requirements.txt
 pytest==8.4.2
+# Browser smoke tests for the Leptos site (site/e2e; local only, they need the HALO data)
+pytest-playwright==0.10.0
 ruff==0.14.1

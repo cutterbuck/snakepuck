@@ -289,8 +289,12 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
         now echoes the sort it used) and `/sample-data?table`. Every page is now on Leptos,
         so the placeholder that linked back to the Dash site is gone
 - [x] Pages not yet ported link back to the Dash site during the transition
-- [ ] Playwright smoke tests per page (for now, a headless-Chrome check that hydration,
-      the menu and client-side navigation work, with no console errors)
+- [x] Playwright smoke tests per page, 2026-10-27: `site/e2e` (pytest + Playwright, driving
+      the installed Chrome). Each page loads, hydrates, its controls work and clicks
+      navigate in place, with no console errors; unknown pages are 404s. They walk the
+      site as a visitor would and find their team, player and game at run time, so no
+      HALO data is written into the repo. Local only, since they need the data:
+      `pytest site/e2e` builds and serves on :3010 (about 30 s once built)
 
 Data for pages: each endpoint's response type is shared by both builds. Server rendering
 calls the endpoint's function directly; navigation in the browser fetches the same
