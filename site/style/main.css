@@ -693,3 +693,120 @@
 .game-opponent span {
     margin: 0 6px;
 }
+
+/* Game Report (inline styles on the Dash page) */
+.game-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.game-header-name {
+    font-size: 24px;
+    font-weight: bold;
+    margin-right: 6px;
+}
+
+.game-header-sep {
+    color: #666;
+    margin: 0 6px;
+}
+
+.shifts-header {
+    display: flex;
+    align-items: center;
+    margin-top: 3px;
+}
+
+.shifts-header h4 {
+    margin: 0 32px 0 0;
+}
+
+.shift-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    white-space: normal;
+}
+
+.stats-table tr.stint-sub {
+    background-color: rgba(79, 195, 247, 0.08);
+}
+
+.stats-table tr.stint-sub td {
+    font-size: 13px;
+}
+
+.stats-table tr.stint-sub td:first-child {
+    border-left: 3px solid #1a6fa8;
+    font-style: italic;
+    color: #666;
+}
+
+.playback-controls {
+    display: flex;
+    align-items: flex-start;
+    margin-top: 8px;
+    gap: 12px;
+}
+
+.playback-button {
+    min-width: 70px;
+}
+
+.playback-slider {
+    flex: 1;
+    position: relative;
+    padding-bottom: 22px;
+}
+
+.slider-marks {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    top: 22px;
+}
+
+.slider-mark {
+    position: absolute;
+    transform: translateX(-50%);
+    color: #dc3545;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.playback-time {
+    min-width: 40px;
+    font-variant-numeric: tabular-nums;
+}
+
+.rink-row {
+    display: flex;
+    align-items: flex-start;
+}
+
+.rink {
+    flex: 1;
+    max-height: 400px;
+    min-width: 0;
+}
+
+.rink-legend {
+    width: 150px;
+    padding-left: 12px;
+    font-size: 13px;
+}
+
+.rink-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rink-legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px #ccc;
+}

@@ -281,7 +281,10 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
         The player tables share `src/app/stats_table.rs`
   - [x] Player Detail, 2026-10-27: `/player/<player_id>?situation`. Game log rows open
         `/player/<player_id>/game/<game_id>`, the Dash site's Game Report URL
-  - [ ] Game Report
+  - [x] Game Report, 2026-10-27: `/player/<player_id>/game/<game_id>?situation&period&shift`.
+        The rink is SVG drawn by Leptos (ported from `app/utils/rink.py`), not Plotly: it
+        renders on the server and playback redraws only the frame's markers. Playback
+        timing and the slider's stint marks follow Dash
   - [ ] Player Analysis, Sample Data
 - [x] Pages not yet ported link back to the Dash site during the transition
 - [ ] Playwright smoke tests per page (for now, a headless-Chrome check that hydration,

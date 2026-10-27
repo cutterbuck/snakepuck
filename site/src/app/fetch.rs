@@ -3,8 +3,8 @@
 //! Either way the page gets the same response type from `crate::types`.
 
 use crate::types::{
-    PageError, PlayerDetail, PlayerStats, PlayerStatsQuery, Post, PostSummary, SituationQuery,
-    Standings, TableQuery, TeamDetail,
+    GameReport, PageError, PlayerDetail, PlayerStats, PlayerStatsQuery, Post, PostSummary,
+    ShiftDetail, SituationQuery, Standings, TableQuery, TeamDetail,
 };
 
 pub async fn blog_posts() -> Result<Vec<PostSummary>, PageError> {
@@ -92,6 +92,45 @@ pub async fn player(player_id: String, q: SituationQuery) -> Result<PlayerDetail
             "/api/players/{}{}",
             encode(&player_id),
             query_string(&q)
+        ))
+        .await
+    }
+}
+
+pub async fn game_report(
+    game_id: String,
+    player_id: String,
+    q: SituationQuery,
+) -> Result<GameReport, PageError> {
+    #[cfg(feature = "ssr")]
+    {
+        Ok(crate::server::api::game::report(&store(), &game_id, &player_id, q).await?)
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        let (game_id, player_id) = (encode(&game_id), encode(&player_id));
+        get(&format!(
+            "/api/games/{game_id}/players/{player_id}{}",
+            query_string(&q)
+        ))
+        .await
+    }
+}
+
+pub async fn shift(
+    game_id: String,
+    player_id: String,
+    shift: i64,
+) -> Result<ShiftDetail, PageError> {
+    #[cfg(feature = "ssr")]
+    {
+        Ok(crate::server::api::game::shift(&store(), &game_id, &player_id, shift).await?)
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        let (game_id, player_id) = (encode(&game_id), encode(&player_id));
+        get(&format!(
+            "/api/games/{game_id}/players/{player_id}/shifts/{shift}"
         ))
         .await
     }

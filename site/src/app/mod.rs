@@ -3,9 +3,11 @@
 mod about;
 mod blog;
 mod fetch;
+mod game_report;
 mod layout;
 mod player_detail;
 mod player_stats;
+mod rink;
 mod standings;
 mod stats_table;
 mod team_detail;
@@ -17,6 +19,7 @@ use leptos_router::{SsrMode, path};
 
 use about::About;
 use blog::{BlogList, BlogPost};
+use game_report::GameReportPage;
 use layout::{Footer, Navbar, NotFound, Unported};
 use player_detail::PlayerDetailPage;
 use player_stats::PlayerStatsPage;
@@ -89,7 +92,8 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/player/:player_id") view=PlayerDetailPage ssr=SsrMode::Async />
                     <Route
                         path=path!("/player/:player_id/game/:game_id")
-                        view=|| view! { <Unported title="Game Report" old_path="/player-stats" /> }
+                        view=GameReportPage
+                        ssr=SsrMode::Async
                     />
                 </Routes>
             </main>

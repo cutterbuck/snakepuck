@@ -205,11 +205,11 @@ fn tds(values: Vec<String>) -> impl IntoView {
 }
 
 /// Seconds as m:ss.
-fn mmss(seconds: f64) -> String {
+pub fn mmss(seconds: f64) -> String {
     let total = seconds as i64;
     format!("{}:{:02}", total / 60, total % 60)
 }
 
-fn pct(v: Option<f64>) -> String {
+pub fn pct(v: Option<f64>) -> String {
     v.map(|v| format!("{v:.3}")).unwrap_or_default()
 }

@@ -443,6 +443,9 @@ async fn game_report_is_one_player_game() {
     assert_eq!(body["periods"], serde_json::json!([1, 2]));
     assert_eq!(column(&body["shifts"], "shift"), [1, 2]);
     assert!(body["shifts"][0].get("player_id").is_none());
+    // Their stints across both shifts; another player's (a goalie's, no shift) left out.
+    assert_eq!(column(&body["stints"], "game_stint"), [1, 2, 5]);
+    assert_eq!(column(&body["stints"], "shift"), [1, 1, 2]);
 }
 
 #[tokio::test]

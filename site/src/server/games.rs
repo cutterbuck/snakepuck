@@ -5,94 +5,59 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Result;
-use quick_cache::sync::Cache;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::server::data::read_files;
+pub use crate::types::{Event, Shift, Snapshot, Stint};
+
+/// A `fct_stints` row as stored; served as a `Stint`, without the `tot_` prefixes.
+#[derive(Deserialize)]
+struct StintRow {
+    player_id: String,
+    shift: Option<i64>,
+    game_stint: i64,
+    period: i64,
+    period_time_start: f64,
+    period_time_end: f64,
+    n_home_skaters: i64,
+    n_away_skaters: i64,
+    is_home_net_empty: bool,
+    is_away_net_empty: bool,
+    home_score: i64,
+    away_score: i64,
+    tot_toi: f64,
+    tot_i_xg: f64,
+    tot_oi_xgf: f64,
+    tot_oi_xga: f64,
+}
+
+impl From<StintRow> for Stint {
+    fn from(r: StintRow) -> Self {
+        Self {
+            player_id: r.player_id,
+            shift: r.shift,
+            game_stint: r.game_stint,
+            period: r.period,
+            period_time_start: r.period_time_start,
+            period_time_end: r.period_time_end,
+            n_home_skaters: r.n_home_skaters,
+            n_away_skaters: r.n_away_skaters,
+            is_home_net_empty: r.is_home_net_empty,
+            is_away_net_empty: r.is_away_net_empty,
+            home_score: r.home_score,
+            away_score: r.away_score,
+            toi: r.tot_toi,
+            i_xg: r.tot_i_xg,
+            oi_xgf: r.tot_oi_xgf,
+            oi_xga: r.tot_oi_xga,
+        }
+    }
+}
+use anyhow::Result;
+use quick_cache::sync::Cache;
 
 /// Games held in memory at once. A game's files take roughly 10 MB as rows.
 const CACHED_GAMES: usize = 16;
-
-/// `fct_shifts`
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct Shift {
-    #[serde(skip_serializing)]
-    pub player_id: String,
-    pub shift: i64,
-    pub period: i64,
-    pub period_time_start: f64,
-    pub period_time_end: f64,
-    pub toi: f64,
-    pub n_home_skaters: i64,
-    pub n_away_skaters: i64,
-    pub is_home_net_empty: bool,
-    pub is_away_net_empty: bool,
-    pub home_score: i64,
-    pub away_score: i64,
-    pub i_xg: f64,
-    pub oi_xgf: f64,
-    pub oi_xga: f64,
-}
-
-/// `fct_stints`, all-situations stats only. Goalies have no shift.
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct Stint {
-    #[serde(skip_serializing)]
-    pub player_id: String,
-    #[serde(skip_serializing)]
-    pub shift: Option<i64>,
-    pub game_stint: i64,
-    pub period: i64,
-    pub period_time_start: f64,
-    pub period_time_end: f64,
-    pub n_home_skaters: i64,
-    pub n_away_skaters: i64,
-    pub is_home_net_empty: bool,
-    pub is_away_net_empty: bool,
-    pub home_score: i64,
-    pub away_score: i64,
-    #[serde(rename(serialize = "toi"))]
-    pub tot_toi: f64,
-    #[serde(rename(serialize = "i_xg"))]
-    pub tot_i_xg: f64,
-    #[serde(rename(serialize = "oi_xgf"))]
-    pub tot_oi_xgf: f64,
-    #[serde(rename(serialize = "oi_xga"))]
-    pub tot_oi_xga: f64,
-}
-
-/// `fct_game_events`. Events with no player (stoppages, period ends) have no team or location.
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct Event {
-    pub sl_event_id: i64,
-    #[serde(skip_serializing)]
-    pub period: i64,
-    pub period_time: f64,
-    pub player_id: Option<String>,
-    pub team_abbr: Option<String>,
-    pub event_type: String,
-    pub outcome: Option<String>,
-    pub description: String,
-    pub detail: String,
-    pub flags: Option<String>,
-    pub x: Option<f64>,
-    pub y: Option<f64>,
-}
-
-/// `fct_tracking_snapshots`: one skater's position at one event. Skaters HALO couldn't
-/// identify have no player_id.
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct Snapshot {
-    #[serde(skip_serializing)]
-    pub sl_event_id: i64,
-    pub team_abbr: String,
-    pub player_id: Option<String>,
-    pub last_name: Option<String>,
-    pub display_name: String,
-    pub tracking_x: f64,
-    pub tracking_y: f64,
-}
 
 /// One game's per-game marts. Rows are in the order the export sorts them:
 /// shifts by (player, shift), stints by stint, events and tracking by event id.
@@ -145,7 +110,7 @@ impl GameCache {
         let tracking = path("fct_tracking_snapshots");
         std::thread::scope(|s| {
             let shifts = s.spawn(|| read_files(&[path("fct_shifts")], ""));
-            let stints = s.spawn(|| read_files(&[path("fct_stints")], ""));
+            let stints = s.spawn(|| read_files::<StintRow>(&[path("fct_stints")], ""));
             let events = s.spawn(|| read_files(&[path("fct_game_events")], ""));
             let tracking = s.spawn(|| match tracking.exists() {
                 true => read_files(&[tracking], ""),
@@ -154,7 +119,12 @@ impl GameCache {
             let panicked = |_| anyhow::anyhow!("reading game {game_id} panicked");
             Ok(GameFiles {
                 shifts: shifts.join().map_err(panicked)??,
-                stints: stints.join().map_err(panicked)??,
+                stints: stints
+                    .join()
+                    .map_err(panicked)??
+                    .into_iter()
+                    .map(Stint::from)
+                    .collect(),
                 events: events.join().map_err(panicked)??,
                 tracking: tracking.join().map_err(panicked)??,
             })
@@ -164,5 +134,21 @@ impl GameCache {
     #[cfg(test)]
     pub fn insert(&self, game_id: &str, files: GameFiles) {
         self.cache.insert(game_id.to_string(), Arc::new(files));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The loader reads the columns a row type names, found by tracing the type. A type
+    /// that can't be traced (say, a serde alias naming a column twice) fails every game at
+    /// runtime, which tests that build `GameFiles` directly wouldn't notice.
+    #[test]
+    fn every_game_file_row_type_can_be_read() {
+        read_files::<Shift>(&[], "").unwrap();
+        read_files::<StintRow>(&[], "").unwrap();
+        read_files::<Event>(&[], "").unwrap();
+        read_files::<Snapshot>(&[], "").unwrap();
     }
 }

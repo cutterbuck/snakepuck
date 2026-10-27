@@ -3,7 +3,7 @@
 
 mod analysis;
 pub mod blog;
-mod game;
+pub mod game;
 mod sample;
 pub mod stats;
 #[cfg(test)]
@@ -31,11 +31,11 @@ pub fn router(store: AppState) -> Router {
         .route("/api/players/{player_id}", get(stats::player_handler))
         .route(
             "/api/games/{game_id}/players/{player_id}",
-            get(game::report),
+            get(game::report_handler),
         )
         .route(
             "/api/games/{game_id}/players/{player_id}/shifts/{shift}",
-            get(game::shift),
+            get(game::shift_handler),
         )
         .route(
             "/api/player-analysis/defense-lpr",
