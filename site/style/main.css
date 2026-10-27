@@ -646,3 +646,24 @@
     color: #6c757d;
     margin-top: 6px;
 }
+
+/* Team Detail (inline styles on the Dash page) */
+.team-header {
+    display: flex;
+    align-items: center;
+}
+
+.team-header img {
+    margin-right: 12px;
+}
+
+.team-header span {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.stats-table tr.roster-separator td {
+    border-top: 2px solid #163d5c;
+    padding: 0;
+    height: 0;
+}

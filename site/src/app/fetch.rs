@@ -2,7 +2,9 @@
 //! endpoint's function directly (no HTTP); in the browser it fetches `/api/...`.
 //! Either way the page gets the same response type from `crate::types`.
 
-use crate::types::{PageError, PlayerStats, PlayerStatsQuery, Post, PostSummary, Standings};
+use crate::types::{
+    PageError, PlayerStats, PlayerStatsQuery, Post, PostSummary, Standings, TableQuery, TeamDetail,
+};
 
 pub async fn blog_posts() -> Result<Vec<PostSummary>, PageError> {
     #[cfg(feature = "ssr")]
@@ -50,6 +52,31 @@ pub async fn player_stats(q: PlayerStatsQuery) -> Result<PlayerStats, PageError>
     #[cfg(not(feature = "ssr"))]
     {
         get(&format!("/api/player-stats{}", query_string(&q))).await
+    }
+}
+
+pub async fn team(
+    team_abbr: String,
+    season: String,
+    t: TableQuery,
+) -> Result<TeamDetail, PageError> {
+    #[cfg(feature = "ssr")]
+    {
+        Ok(crate::server::api::stats::team(
+            &store(),
+            &team_abbr,
+            &season,
+            t,
+        )?)
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        let (team_abbr, season) = (encode(&team_abbr), encode(&season));
+        get(&format!(
+            "/api/teams/{team_abbr}/{season}{}",
+            query_string(&t)
+        ))
+        .await
     }
 }
 

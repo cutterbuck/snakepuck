@@ -398,10 +398,13 @@ async fn team_roster_for_one_team_season() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["team_name"], "ABB Team");
     assert_eq!(body["seasons"], serde_json::json!(["2023-24"]));
-    assert_eq!(
-        column(&body["roster"], "last_name"),
-        ["Alpha", "Beta", "Gamma"]
-    );
+    assert_eq!(column(&body["skaters"], "last_name"), ["Alpha", "Beta"]);
+    assert_eq!(column(&body["goalies"], "last_name"), ["Gamma"]);
+
+    // Goalies stay below the skaters, by games played, whatever the sort.
+    let (_, body) = get("/api/teams/ABB/2023-24?sort=name&dir=desc").await;
+    assert_eq!(column(&body["skaters"], "last_name"), ["Beta", "Alpha"]);
+    assert_eq!(column(&body["goalies"], "last_name"), ["Gamma"]);
 
     let (status, _) = get("/api/teams/XXX/2023-24").await;
     assert_eq!(status, StatusCode::NOT_FOUND);

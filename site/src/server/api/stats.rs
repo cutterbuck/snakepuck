@@ -11,6 +11,7 @@ use super::{ApiError, AppState, TeamRef, not_found};
 use crate::server::data::{GameStats, Player, PlayerSeason, Season, SeasonStats, Situation, Store};
 use crate::types::{
     Dir, PlayerSeasonLine, PlayerStats, PlayerStatsQuery, SortField, Standings, StandingsRow,
+    TableQuery, TeamDetail,
 };
 
 /// Rows per page on Player Stats.
@@ -89,16 +90,6 @@ pub async fn standings_handler(
     Query(q): Query<StandingsQuery>,
 ) -> Result<Json<Standings>, ApiError> {
     Ok(Json(standings(&store, q)?))
-}
-
-#[derive(Deserialize)]
-pub struct TableQuery {
-    #[serde(default)]
-    situation: Situation,
-    #[serde(default)]
-    sort: SortField,
-    #[serde(default)]
-    dir: Dir,
 }
 
 /// One player-team-season in one situation.
@@ -263,57 +254,60 @@ pub async fn player_stats_handler(
     Ok(Json(player_stats(&store, q)?))
 }
 
-#[derive(Serialize)]
-pub struct TeamPage<'a> {
-    #[serde(flatten)]
-    team: TeamRef<'a>,
-    division: &'a str,
-    league: &'a str,
-    season: &'a str,
-    /// Seasons this team has stats for, newest first (the season dropdown).
-    seasons: Vec<&'a str>,
-    roster: Vec<PlayerSeasonOut<'a>>,
-}
-
-/// Team Detail: one team-season's roster.
-pub async fn team(
-    State(store): State<AppState>,
-    Path((team_abbr, season)): Path<(String, String)>,
-    Query(t): Query<TableQuery>,
-) -> Result<Response, ApiError> {
-    let key = (team_abbr.clone(), season.clone());
+/// Team Detail: one team-season's roster, skaters then goalies.
+pub fn team(
+    store: &Store,
+    team_abbr: &str,
+    season: &str,
+    t: TableQuery,
+) -> Result<TeamDetail, ApiError> {
+    let key = (team_abbr.to_string(), season.to_string());
     let (Some(team), Some(indexes)) = (
-        store.teams.get(&team_abbr),
+        store.teams.get(team_abbr),
         store.player_seasons_by_team_season.get(&key),
     ) else {
         return Err(not_found(format!("team {team_abbr} in {season}")));
     };
 
-    let mut roster: Vec<_> = indexes
+    let (mut goalies, mut skaters): (Vec<_>, Vec<_>) = indexes
         .iter()
-        .map(|&i| PlayerSeasonOut::new(&store, &store.player_seasons[i], t.situation))
-        .collect();
-    sort_players(&mut roster, t.sort, t.dir);
+        .map(|&i| PlayerSeasonOut::new(store, &store.player_seasons[i], t.situation))
+        .partition(|p| p.position_group == "G");
+    sort_players(&mut skaters, t.sort, t.dir);
+    sort_players(&mut goalies, SortField::GamesPlayed, Dir::Desc);
 
     let seasons = store
         .seasons
         .iter()
         .filter(|s| {
-            let key = (team_abbr.clone(), s.season.clone());
+            let key = (team_abbr.to_string(), s.season.clone());
             store.player_seasons_by_team_season.contains_key(&key)
         })
-        .map(|s| s.season.as_str())
+        .map(|s| s.season.clone())
         .collect();
 
-    let body = TeamPage {
-        team: TeamRef::new(&store, &team.team_abbr),
-        division: &team.division,
-        league: &team.league,
-        season: &season,
+    Ok(TeamDetail {
+        team_abbr: team.team_abbr.clone(),
+        team_name: team.team_name.clone(),
+        logo_url: team.logo_url.clone(),
+        division: team.division.clone(),
+        league: team.league.clone(),
+        season: season.to_string(),
         seasons,
-        roster,
-    };
-    Ok(Json(body).into_response())
+        situation: t.situation,
+        sort: t.sort,
+        dir: t.dir,
+        skaters: skaters.iter().map(PlayerSeasonOut::line).collect(),
+        goalies: goalies.iter().map(PlayerSeasonOut::line).collect(),
+    })
+}
+
+pub async fn team_handler(
+    State(store): State<AppState>,
+    Path((team_abbr, season)): Path<(String, String)>,
+    Query(t): Query<TableQuery>,
+) -> Result<Json<TeamDetail>, ApiError> {
+    Ok(Json(team(&store, &team_abbr, &season, t)?))
 }
 
 #[derive(Deserialize)]

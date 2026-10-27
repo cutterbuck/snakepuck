@@ -6,6 +6,8 @@ mod fetch;
 mod layout;
 mod player_stats;
 mod standings;
+mod stats_table;
+mod team_detail;
 
 use leptos::prelude::*;
 use leptos_meta::{Link, Meta, MetaTags, Stylesheet, provide_meta_context};
@@ -17,6 +19,7 @@ use blog::{BlogList, BlogPost};
 use layout::{Footer, Navbar, NotFound, Unported};
 use player_stats::PlayerStatsPage;
 use standings::StandingsPage;
+use team_detail::TeamDetailPage;
 
 /// The current (Dash) site, where pages not yet ported still live.
 pub const OLD_SITE: &str = "https://snakepuck.com";
@@ -79,11 +82,8 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/blog/:slug") view=BlogPost ssr=SsrMode::Async />
                     <Route path=path!("/team-standings") view=StandingsPage ssr=SsrMode::Async />
                     <Route path=path!("/player-stats") view=PlayerStatsPage ssr=SsrMode::Async />
-                    // Stats tables link to these; the Dash site's URLs use database ids.
-                    <Route
-                        path=path!("/team/:team_abbr/:season")
-                        view=|| view! { <Unported title="Team Detail" old_path="/team-standings" /> }
-                    />
+                    // Stats tables link here; the Dash site's URLs use database ids.
+                    <Route path=path!("/team/:team_abbr/:season") view=TeamDetailPage ssr=SsrMode::Async />
                     <Route
                         path=path!("/player/:player_id")
                         view=|| view! { <Unported title="Player Detail" old_path="/player-stats" /> }

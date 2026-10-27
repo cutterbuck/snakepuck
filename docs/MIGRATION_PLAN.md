@@ -276,7 +276,9 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
   - [x] Player Stats, 2026-10-27: every choice is in the URL, which the page parses
         into the same `PlayerStatsQuery` the API reads. The server sorts and pages; a page
         past the end now means the last page, as on Dash
-  - [ ] Team Detail
+  - [x] Team Detail, 2026-10-27: `/team/<team_abbr>/<season>?situation&sort&dir`. The API
+        returns `skaters` and `goalies` separately (goalies by games played, as on Dash).
+        The player tables share `src/app/stats_table.rs`
   - [ ] Player Detail
   - [ ] Game Report
   - [ ] Player Analysis, Sample Data

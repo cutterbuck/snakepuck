@@ -27,7 +27,7 @@ pub fn router(store: AppState) -> Router {
         .route("/api/seasons", get(stats::seasons))
         .route("/api/standings", get(stats::standings_handler))
         .route("/api/player-stats", get(stats::player_stats_handler))
-        .route("/api/teams/{team_abbr}/{season}", get(stats::team))
+        .route("/api/teams/{team_abbr}/{season}", get(stats::team_handler))
         .route("/api/players/{player_id}", get(stats::player))
         .route(
             "/api/games/{game_id}/players/{player_id}",

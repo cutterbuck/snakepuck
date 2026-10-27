@@ -175,6 +175,18 @@ pub struct PlayerStatsQuery {
     pub page: Option<usize>,
 }
 
+/// How a player table is shown: `?situation=pp&sort=goals&dir=asc` (Team Detail's URL
+/// and `/api/teams/...`). Defaults are left out when serialized.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct TableQuery {
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub situation: Situation,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub sort: SortField,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub dir: Dir,
+}
+
 fn is_default<T: Default + PartialEq>(v: &T) -> bool {
     *v == T::default()
 }
@@ -194,6 +206,26 @@ pub struct PlayerStats {
     pub page: usize,
     pub page_size: usize,
     pub rows: Vec<PlayerSeasonLine>,
+}
+
+/// Team Detail: one team-season's roster.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TeamDetail {
+    pub team_abbr: String,
+    pub team_name: String,
+    pub logo_url: String,
+    pub division: String,
+    pub league: String,
+    pub season: String,
+    /// Seasons this team has stats for, newest first (the season dropdown).
+    pub seasons: Vec<String>,
+    pub situation: Situation,
+    pub sort: SortField,
+    pub dir: Dir,
+    /// Sorted as asked.
+    pub skaters: Vec<PlayerSeasonLine>,
+    /// Always most games played first, below the skaters.
+    pub goalies: Vec<PlayerSeasonLine>,
 }
 
 /// A blog post as the listing shows it.

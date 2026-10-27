@@ -6,42 +6,13 @@
 
 use leptos::prelude::*;
 use leptos_meta::Title;
-use leptos_router::NavigateOptions;
-use leptos_router::hooks::{use_location, use_navigate};
 
 use super::fetch;
 use super::layout::{PageMessage, row_link};
-use crate::types::{Dir, PlayerSeasonLine, PlayerStats, PlayerStatsQuery, Situation, SortField};
-
-const SITUATIONS: [(Situation, &str); 5] = [
-    (Situation::Tot, "All"),
-    (Situation::Es, "Even Strength"),
-    (Situation::Ev5, "5-on-5"),
-    (Situation::Pp, "Power Play"),
-    (Situation::Pk, "Short-Handed"),
-];
-
-/// The stat columns after Name and Team, in order.
-const COLUMNS: [(SortField, &str); 18] = [
-    (SortField::Age, "Age"),
-    (SortField::Position, "Pos"),
-    (SortField::GamesPlayed, "GP"),
-    (SortField::Atoi, "ATOI"),
-    (SortField::Goals, "G"),
-    (SortField::Assists, "A"),
-    (SortField::Points, "PTS"),
-    (SortField::Shots, "S"),
-    (SortField::ShootingPct, "S%"),
-    (SortField::FaceoffsWon, "FOW"),
-    (SortField::FaceoffsLost, "FOL"),
-    (SortField::FaceoffPct, "FO%"),
-    (SortField::Blocks, "BLK"),
-    (SortField::Checks, "HIT"),
-    (SortField::IXg, "ixG"),
-    (SortField::OiXgf, "oixGF"),
-    (SortField::OiXga, "oixGA"),
-    (SortField::XgPct, "xG%"),
-];
+use super::stats_table::{
+    go_to, options, situation_toggle, sort_headers, stat_cells, stat_cols, url_query,
+};
+use crate::types::{PlayerSeasonLine, PlayerStats, PlayerStatsQuery, SortField};
 
 fn href(q: &PlayerStatsQuery) -> String {
     format!("/player-stats{}", fetch::query_string(q))
@@ -49,14 +20,7 @@ fn href(q: &PlayerStatsQuery) -> String {
 
 #[component]
 pub fn PlayerStatsPage() -> impl IntoView {
-    let search = use_location().search;
-    // An unreadable URL (say, an unknown sort) shows the default table.
-    let query = move || {
-        let search = search.get();
-        serde_urlencoded::from_str::<PlayerStatsQuery>(search.trim_start_matches('?'))
-            .unwrap_or_default()
-    };
-    let stats = Resource::new(query, fetch::player_stats);
+    let stats = Resource::new(url_query::<PlayerStatsQuery>(), fetch::player_stats);
 
     view! {
         <Title text="HALO Project - Player Stats" />
@@ -99,84 +63,40 @@ fn Loaded(stats: PlayerStats) -> impl IntoView {
         .map(|s| s.season.clone())
         .collect();
 
-    let navigate = use_navigate();
-    let go = move |q: PlayerStatsQuery| {
-        // Re-sorting or switching situation keeps the reader's place on the page.
-        let options = NavigateOptions {
-            scroll: false,
-            ..Default::default()
-        };
-        navigate(&href(&q), options);
-    };
+    let go = go_to();
     let on_league = {
         let go = go.clone();
         move |ev| {
-            go(PlayerStatsQuery {
+            go(&href(&PlayerStatsQuery {
                 league: Some(event_target_value(&ev)),
                 ..Default::default()
-            })
+            }))
         }
     };
     let on_season = {
-        let go = go.clone();
         let league = stats.league.clone();
         move |ev| {
-            go(PlayerStatsQuery {
+            go(&href(&PlayerStatsQuery {
                 league: Some(league.clone()),
                 season: Some(event_target_value(&ev)),
                 ..Default::default()
-            })
+            }))
         }
     };
 
-    let situation_buttons = SITUATIONS
-        .iter()
-        .map(|&(situation, label)| {
-            let go = go.clone();
-            let q = PlayerStatsQuery {
-                situation,
-                ..current.clone()
-            };
-            view! {
-                <button
-                    type="button"
-                    class:active=situation == stats.situation
-                    on:click=move |_| go(q.clone())
-                >
-                    {label}
-                </button>
-            }
+    let situations = situation_toggle(stats.situation, |situation| {
+        href(&PlayerStatsQuery {
+            situation,
+            ..current.clone()
         })
-        .collect_view();
-
-    let headers = COLUMNS
-        .iter()
-        .map(|&(field, label)| {
-            let go = go.clone();
-            let active = field == stats.sort;
-            // Click to sort descending; click the sorted column again to flip it.
-            let dir = match (active, stats.dir) {
-                (true, Dir::Desc) => Dir::Asc,
-                _ => Dir::Desc,
-            };
-            let q = PlayerStatsQuery {
-                sort: field,
-                dir,
-                ..current.clone()
-            };
-            let label = match (active, stats.dir) {
-                (true, Dir::Desc) => format!("{label} ▼"),
-                (true, Dir::Asc) => format!("{label} ▲"),
-                _ => label.to_string(),
-            };
-            view! {
-                <th class="sortable" class:active=active on:click=move |_| go(q.clone())>
-                    {label}
-                </th>
-            }
+    });
+    let headers = sort_headers(stats.sort, stats.dir, |sort, dir| {
+        href(&PlayerStatsQuery {
+            sort,
+            dir,
+            ..current.clone()
         })
-        .collect_view();
-
+    });
     let sorted_by = stats.sort;
     let rows = stats
         .rows
@@ -200,15 +120,12 @@ fn Loaded(stats: PlayerStats) -> impl IntoView {
                 </select>
             </div>
         </div>
-        <div class="situation-toggle mb-3">
-            <span class="situation-label">"Situation:"</span>
-            <div class="situation-buttons">{situation_buttons}</div>
-        </div>
+        {situations}
         <table class="stats-table">
             <colgroup>
                 <col style="width: 180px" />
                 <col style="width: 90px" />
-                {COLUMNS.iter().map(|_| view! { <col style="width: 60px" /> }).collect_view()}
+                {stat_cols()}
             </colgroup>
             <thead>
                 <tr>
@@ -223,46 +140,9 @@ fn Loaded(stats: PlayerStats) -> impl IntoView {
     }
 }
 
-fn options(values: Vec<String>, selected: &str) -> impl IntoView + use<> {
-    values
-        .into_iter()
-        .map(|v| {
-            let is_selected = v == selected;
-            let label = v.clone();
-            view! { <option value=v selected=is_selected>{label}</option> }
-        })
-        .collect_view()
-}
-
 fn player_row(r: &PlayerSeasonLine, i: usize, sorted_by: SortField) -> impl IntoView + use<> {
     let player_href = format!("/player/{}", r.player_id);
     let team_href = format!("/team/{}/{}", r.team_abbr, r.season);
-    let s = &r.stats;
-    let cells: [String; 18] = [
-        r.age.to_string(),
-        r.position.clone(),
-        r.games_played.to_string(),
-        mmss(s.atoi),
-        s.goals.to_string(),
-        s.assists.to_string(),
-        s.points.to_string(),
-        s.shots.to_string(),
-        pct(s.shooting_pct),
-        s.faceoffs_won.to_string(),
-        s.faceoffs_lost.to_string(),
-        pct(s.faceoff_pct),
-        s.blocks.to_string(),
-        s.checks.to_string(),
-        format!("{:.2}", s.i_xg),
-        format!("{:.2}", s.oi_xgf),
-        format!("{:.2}", s.oi_xga),
-        pct(s.xg_pct),
-    ];
-    let cells = COLUMNS
-        .iter()
-        .zip(cells)
-        .map(|(&(field, _), v)| view! { <td class:active=field == sorted_by>{v}</td> })
-        .collect_view();
     let on_click = row_link(player_href.clone());
     view! {
         <tr class="game-log-row" class:stats-alt=i % 2 == 1 on:click=on_click>
@@ -277,19 +157,9 @@ fn player_row(r: &PlayerSeasonLine, i: usize, sorted_by: SortField) -> impl Into
                     <span>{r.team_abbr.clone()}</span>
                 </a>
             </td>
-            {cells}
+            {stat_cells(r, sorted_by)}
         </tr>
     }
-}
-
-/// Seconds as m:ss.
-fn mmss(seconds: f64) -> String {
-    let total = seconds as i64;
-    format!("{}:{:02}", total / 60, total % 60)
-}
-
-fn pct(v: Option<f64>) -> String {
-    v.map(|v| format!("{v:.3}")).unwrap_or_default()
 }
 
 /// Prev, the page numbers (the first, the last and two either side of this one), Next.

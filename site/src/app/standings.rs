@@ -10,6 +10,7 @@ use leptos_router::hooks::{use_navigate, use_query_map};
 
 use super::fetch;
 use super::layout::{PageMessage, row_link};
+use super::stats_table::options;
 use crate::types::{Standings, StandingsRow, TeamSeason};
 
 /// Division order on the page; any others follow, as the data has them.
@@ -192,17 +193,6 @@ fn Loaded(standings: Standings, view: RwSignal<View>) -> impl IntoView {
         </div>
         <Table rows season sort view />
     }
-}
-
-fn options(values: Vec<String>, selected: &str) -> impl IntoView + use<> {
-    values
-        .into_iter()
-        .map(|v| {
-            let is_selected = v == selected;
-            let label = v.clone();
-            view! { <option value=v selected=is_selected>{label}</option> }
-        })
-        .collect_view()
 }
 
 #[component]
