@@ -4,14 +4,13 @@ use std::cmp::Ordering;
 
 use axum::Json;
 use axum::extract::{Path, Query, State};
-use axum::response::{IntoResponse, Response};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use super::{ApiError, AppState, TeamRef, not_found};
-use crate::server::data::{GameStats, Player, PlayerSeason, Season, SeasonStats, Situation, Store};
+use crate::server::data::{Player, PlayerSeason, Season, SeasonStats, Situation, Store};
 use crate::types::{
-    Dir, PlayerSeasonLine, PlayerStats, PlayerStatsQuery, SortField, Standings, StandingsRow,
-    TableQuery, TeamDetail,
+    Dir, GameLogLine, LatestTeam, PlayerDetail, PlayerSeasonLine, PlayerStats, PlayerStatsQuery,
+    SituationQuery, SortField, Standings, StandingsRow, TableQuery, TeamDetail,
 };
 
 /// Rows per page on Player Stats.
@@ -92,20 +91,18 @@ pub async fn standings_handler(
     Ok(Json(standings(&store, q)?))
 }
 
-/// One player-team-season in one situation.
-#[derive(Serialize)]
-pub struct PlayerSeasonOut<'a> {
+/// One player-team-season in one situation, borrowed from the store: what the tables
+/// sort, before the rows they return become `PlayerSeasonLine`s.
+struct PlayerSeasonOut<'a> {
     player_id: &'a str,
     full_name: &'a str,
     last_name: &'a str,
     position: &'a str,
     position_group: &'a str,
     season: &'a str,
-    #[serde(flatten)]
     team: TeamRef<'a>,
     age: i64,
     games_played: i64,
-    #[serde(flatten)]
     stats: &'a SeasonStats,
 }
 
@@ -310,64 +307,19 @@ pub async fn team_handler(
     Ok(Json(team(&store, &team_abbr, &season, t)?))
 }
 
-#[derive(Deserialize)]
-pub struct SituationQuery {
-    #[serde(default)]
-    pub situation: Situation,
-}
-
-/// A player's game, as the Player Detail game log shows it.
-#[derive(Serialize)]
-pub struct GameLogRow<'a> {
-    game_id: &'a str,
-    game_date: &'a str,
-    team: TeamRef<'a>,
-    opponent: TeamRef<'a>,
-    is_home: bool,
-    result: &'a str,
-    team_score: i64,
-    opp_score: i64,
-    #[serde(flatten)]
-    stats: &'a GameStats,
-}
-
-/// The team and season of a player's most recent game.
-#[derive(Serialize)]
-pub struct LatestTeam<'a> {
-    #[serde(flatten)]
-    team: TeamRef<'a>,
-    season: &'a str,
-}
-
-#[derive(Serialize)]
-pub struct PlayerPage<'a> {
-    player_id: &'a str,
-    full_name: &'a str,
-    position: &'a str,
-    latest_team: Option<LatestTeam<'a>>,
-    /// Oldest season first; within a season, the team they played most for first.
-    seasons: Vec<PlayerSeasonOut<'a>>,
-    /// Newest game first.
-    games: Vec<GameLogRow<'a>>,
-}
-
 /// Player Detail: season stats and the game log.
-pub async fn player(
-    State(store): State<AppState>,
-    Path(player_id): Path<String>,
-    Query(q): Query<SituationQuery>,
-) -> Result<Response, ApiError> {
+pub fn player(store: &Store, player_id: &str, q: SituationQuery) -> Result<PlayerDetail, ApiError> {
     let player = store
         .players
-        .get(&player_id)
+        .get(player_id)
         .ok_or_else(|| not_found(format!("player {player_id}")))?;
 
     let mut seasons: Vec<_> = store
         .player_seasons_by_player
-        .get(&player_id)
+        .get(player_id)
         .into_iter()
         .flatten()
-        .map(|&i| PlayerSeasonOut::new(&store, &store.player_seasons[i], q.situation))
+        .map(|&i| PlayerSeasonOut::new(store, &store.player_seasons[i], q.situation))
         .collect();
     seasons.sort_by(|a, b| {
         a.season
@@ -375,47 +327,58 @@ pub async fn player(
             .then(b.games_played.cmp(&a.games_played))
     });
 
-    let games: Vec<_> = store
+    let games = store
         .player_games_by_player
-        .get(&player_id)
+        .get(player_id)
         .into_iter()
         .flatten()
         .map(|&i| {
             let pg = &store.player_games[i];
             let r = &pg.row;
-            GameLogRow {
-                game_id: &r.game_id,
-                game_date: store.games.get(&r.game_id).map_or("", |g| &g.game_date),
-                team: TeamRef::new(&store, &r.team_abbr),
-                opponent: TeamRef::new(&store, &r.opp_team_abbr),
+            GameLogLine {
+                game_id: r.game_id.clone(),
+                game_date: store
+                    .games
+                    .get(&r.game_id)
+                    .map_or(String::new(), |g| g.game_date.clone()),
+                team: TeamRef::new(store, &r.team_abbr).info(),
+                opponent: TeamRef::new(store, &r.opp_team_abbr).info(),
                 is_home: r.is_home,
-                result: &r.result,
+                result: r.result.clone(),
                 team_score: r.team_score,
                 opp_score: r.opp_score,
-                stats: pg.stats(q.situation),
+                stats: pg.stats(q.situation).clone(),
             }
         })
         .collect();
 
     let latest_team = store
         .player_games_by_player
-        .get(&player_id)
+        .get(player_id)
         .and_then(|rows| rows.first())
         .map(|&i| {
             let r = &store.player_games[i].row;
             LatestTeam {
-                team: TeamRef::new(&store, &r.team_abbr),
-                season: &r.season,
+                team: TeamRef::new(store, &r.team_abbr).info(),
+                season: r.season.clone(),
             }
         });
 
-    let body = PlayerPage {
-        player_id: &player.player_id,
-        full_name: &player.full_name,
-        position: &player.primary_position,
+    Ok(PlayerDetail {
+        player_id: player.player_id.clone(),
+        full_name: player.full_name.clone(),
+        position: player.primary_position.clone(),
         latest_team,
-        seasons,
+        situation: q.situation,
+        seasons: seasons.iter().map(PlayerSeasonOut::line).collect(),
         games,
-    };
-    Ok(Json(body).into_response())
+    })
+}
+
+pub async fn player_handler(
+    State(store): State<AppState>,
+    Path(player_id): Path<String>,
+    Query(q): Query<SituationQuery>,
+) -> Result<Json<PlayerDetail>, ApiError> {
+    Ok(Json(player(&store, &player_id, q)?))
 }

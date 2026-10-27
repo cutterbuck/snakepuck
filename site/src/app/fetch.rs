@@ -3,7 +3,8 @@
 //! Either way the page gets the same response type from `crate::types`.
 
 use crate::types::{
-    PageError, PlayerStats, PlayerStatsQuery, Post, PostSummary, Standings, TableQuery, TeamDetail,
+    PageError, PlayerDetail, PlayerStats, PlayerStatsQuery, Post, PostSummary, SituationQuery,
+    Standings, TableQuery, TeamDetail,
 };
 
 pub async fn blog_posts() -> Result<Vec<PostSummary>, PageError> {
@@ -75,6 +76,22 @@ pub async fn team(
         get(&format!(
             "/api/teams/{team_abbr}/{season}{}",
             query_string(&t)
+        ))
+        .await
+    }
+}
+
+pub async fn player(player_id: String, q: SituationQuery) -> Result<PlayerDetail, PageError> {
+    #[cfg(feature = "ssr")]
+    {
+        Ok(crate::server::api::stats::player(&store(), &player_id, q)?)
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        get(&format!(
+            "/api/players/{}{}",
+            encode(&player_id),
+            query_string(&q)
         ))
         .await
     }

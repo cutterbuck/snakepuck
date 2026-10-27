@@ -667,3 +667,29 @@
     padding: 0;
     height: 0;
 }
+
+/* Player Detail (inline styles on the Dash page) */
+.player-info {
+    font-size: 16px;
+    color: #666;
+    margin-left: 8px;
+    white-space: pre;
+}
+
+.player-team {
+    display: flex;
+    align-items: center;
+}
+
+.player-team span {
+    padding-left: 8px;
+}
+
+.game-opponent {
+    display: flex;
+    align-items: center;
+}
+
+.game-opponent span {
+    margin: 0 6px;
+}

@@ -7,10 +7,10 @@ use axum::extract::{Path, Query, State};
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 
-use super::stats::SituationQuery;
 use super::{ApiError, AppState, TeamRef, not_found};
 use crate::server::data::{Game, GameStats, PlayerGame};
 use crate::server::games::{Event, GameFiles, Shift, Snapshot, Stint};
+use crate::types::SituationQuery;
 
 /// Check the game and player-game exist, then load the game's files (blocking I/O,
 /// so off the async threads). The game_id check also keeps it from being used as an

@@ -28,7 +28,7 @@ pub fn router(store: AppState) -> Router {
         .route("/api/standings", get(stats::standings_handler))
         .route("/api/player-stats", get(stats::player_stats_handler))
         .route("/api/teams/{team_abbr}/{season}", get(stats::team_handler))
-        .route("/api/players/{player_id}", get(stats::player))
+        .route("/api/players/{player_id}", get(stats::player_handler))
         .route(
             "/api/games/{game_id}/players/{player_id}",
             get(game::report),
@@ -97,6 +97,14 @@ struct TeamRef<'a> {
 }
 
 impl<'a> TeamRef<'a> {
+    fn info(&self) -> crate::types::TeamInfo {
+        crate::types::TeamInfo {
+            team_abbr: self.team_abbr.into(),
+            team_name: self.team_name.into(),
+            logo_url: self.logo_url.into(),
+        }
+    }
+
     fn new(store: &'a Store, team_abbr: &'a str) -> Self {
         let team = store.teams.get(team_abbr);
         Self {

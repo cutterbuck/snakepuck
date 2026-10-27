@@ -101,6 +101,27 @@ pub struct SeasonStats {
     pub xg_pct: Option<f64>,
 }
 
+/// Game stats in one situation (`fct_player_game_stats`, `<situation>_*` columns).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct GameStats {
+    /// Time on ice, seconds.
+    pub toi: f64,
+    pub goals: i64,
+    pub assists: i64,
+    pub points: i64,
+    pub shots: i64,
+    pub shooting_pct: Option<f64>,
+    pub faceoffs_won: i64,
+    pub faceoffs_lost: i64,
+    pub faceoff_pct: Option<f64>,
+    pub blocks: i64,
+    pub checks: i64,
+    pub i_xg: f64,
+    pub oi_xgf: f64,
+    pub oi_xga: f64,
+    pub xg_pct: Option<f64>,
+}
+
 /// Column to sort a player table by.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -187,6 +208,13 @@ pub struct TableQuery {
     pub dir: Dir,
 }
 
+/// `?situation=pp` (Player Detail's URL and `/api/players/...`).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct SituationQuery {
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub situation: Situation,
+}
+
 fn is_default<T: Default + PartialEq>(v: &T) -> bool {
     *v == T::default()
 }
@@ -226,6 +254,52 @@ pub struct TeamDetail {
     pub skaters: Vec<PlayerSeasonLine>,
     /// Always most games played first, below the skaters.
     pub goalies: Vec<PlayerSeasonLine>,
+}
+
+/// A team as other responses reference it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TeamInfo {
+    pub team_abbr: String,
+    pub team_name: String,
+    pub logo_url: String,
+}
+
+/// Player Detail: season stats and the game log, in one situation.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PlayerDetail {
+    pub player_id: String,
+    pub full_name: String,
+    pub position: String,
+    /// The team and season of their most recent game.
+    pub latest_team: Option<LatestTeam>,
+    pub situation: Situation,
+    /// Oldest season first; within a season, the team they played most for first.
+    pub seasons: Vec<PlayerSeasonLine>,
+    /// Newest game first.
+    pub games: Vec<GameLogLine>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LatestTeam {
+    #[serde(flatten)]
+    pub team: TeamInfo,
+    pub season: String,
+}
+
+/// One of a player's games, as the game log shows it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GameLogLine {
+    pub game_id: String,
+    pub game_date: String,
+    pub team: TeamInfo,
+    pub opponent: TeamInfo,
+    pub is_home: bool,
+    /// W, OTW, SOW, L, OTL or SOL.
+    pub result: String,
+    pub team_score: i64,
+    pub opp_score: i64,
+    #[serde(flatten)]
+    pub stats: GameStats,
 }
 
 /// A blog post as the listing shows it.

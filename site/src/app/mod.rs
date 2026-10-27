@@ -4,6 +4,7 @@ mod about;
 mod blog;
 mod fetch;
 mod layout;
+mod player_detail;
 mod player_stats;
 mod standings;
 mod stats_table;
@@ -17,6 +18,7 @@ use leptos_router::{SsrMode, path};
 use about::About;
 use blog::{BlogList, BlogPost};
 use layout::{Footer, Navbar, NotFound, Unported};
+use player_detail::PlayerDetailPage;
 use player_stats::PlayerStatsPage;
 use standings::StandingsPage;
 use team_detail::TeamDetailPage;
@@ -84,9 +86,10 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/player-stats") view=PlayerStatsPage ssr=SsrMode::Async />
                     // Stats tables link here; the Dash site's URLs use database ids.
                     <Route path=path!("/team/:team_abbr/:season") view=TeamDetailPage ssr=SsrMode::Async />
+                    <Route path=path!("/player/:player_id") view=PlayerDetailPage ssr=SsrMode::Async />
                     <Route
-                        path=path!("/player/:player_id")
-                        view=|| view! { <Unported title="Player Detail" old_path="/player-stats" /> }
+                        path=path!("/player/:player_id/game/:game_id")
+                        view=|| view! { <Unported title="Game Report" old_path="/player-stats" /> }
                     />
                 </Routes>
             </main>

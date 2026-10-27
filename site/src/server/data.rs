@@ -23,7 +23,7 @@ use serde_arrow::schema::{SchemaLike, TracingOptions};
 
 use crate::server::blog::Blog;
 use crate::server::games::GameCache;
-pub use crate::types::{Season, SeasonStats, Situation, TeamSeason};
+pub use crate::types::{GameStats, Season, SeasonStats, Situation, TeamSeason};
 
 impl Situation {
     fn prefix(self) -> &'static str {
@@ -112,26 +112,6 @@ pub struct PlayerGameRow {
     pub result: String,
     pub penalties: i64,
     pub penalties_drawn: i64,
-}
-
-/// Game stats in one situation (`fct_player_game_stats`, `<situation>_*` columns).
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct GameStats {
-    pub toi: f64,
-    pub goals: i64,
-    pub assists: i64,
-    pub points: i64,
-    pub shots: i64,
-    pub shooting_pct: Option<f64>,
-    pub faceoffs_won: i64,
-    pub faceoffs_lost: i64,
-    pub faceoff_pct: Option<f64>,
-    pub blocks: i64,
-    pub checks: i64,
-    pub i_xg: f64,
-    pub oi_xgf: f64,
-    pub oi_xga: f64,
-    pub xg_pct: Option<f64>,
 }
 
 pub type PlayerSeason = Situational<PlayerSeasonRow, SeasonStats>;

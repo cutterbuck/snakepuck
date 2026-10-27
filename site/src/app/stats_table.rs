@@ -1,12 +1,13 @@
-//! What the player tables share (Player Stats, Team Detail): the stat columns, sortable
-//! headers and the situation toggle. Each choice is a link: the server sorts.
+//! What the player tables share (Player Stats, Team Detail, Player Detail): the stat
+//! columns, sortable headers and the situation toggle. Each choice is a link: the server
+//! sorts.
 
 use leptos::prelude::*;
 use leptos_router::NavigateOptions;
 use leptos_router::hooks::{use_location, use_navigate};
 use serde::de::DeserializeOwned;
 
-use crate::types::{Dir, PlayerSeasonLine, Situation, SortField};
+use crate::types::{Dir, GameStats, PlayerSeasonLine, Situation, SortField};
 
 const SITUATIONS: [(Situation, &str); 5] = [
     (Situation::Tot, "All"),
@@ -38,6 +39,29 @@ const COLUMNS: [(SortField, &str); 18] = [
     (SortField::XgPct, "xG%"),
 ];
 
+/// Time on ice to xG%, as shown, from `SeasonStats` (`atoi`) or `GameStats` (`toi`).
+macro_rules! stat_values {
+    ($s:expr, $toi:ident) => {{
+        let s = $s;
+        [
+            mmss(s.$toi),
+            s.goals.to_string(),
+            s.assists.to_string(),
+            s.points.to_string(),
+            s.shots.to_string(),
+            pct(s.shooting_pct),
+            s.faceoffs_won.to_string(),
+            s.faceoffs_lost.to_string(),
+            pct(s.faceoff_pct),
+            s.blocks.to_string(),
+            s.checks.to_string(),
+            format!("{:.2}", s.i_xg),
+            format!("{:.2}", s.oi_xgf),
+            format!("{:.2}", s.oi_xga),
+            pct(s.xg_pct),
+        ]
+    }};
+}
 /// The page's query string, parsed. An unreadable one (say, an unknown sort) gives the
 /// default, so a bad link shows the default table.
 pub fn url_query<T: DeserializeOwned + Default>() -> impl Fn() -> T + Copy {
@@ -140,31 +164,43 @@ pub fn sort_headers(sort: SortField, dir: Dir, href: impl Fn(SortField, Dir) -> 
 
 /// A `<td>` per stat column, the sorted column highlighted.
 pub fn stat_cells(r: &PlayerSeasonLine, sorted_by: SortField) -> impl IntoView + use<> {
-    let s = &r.stats;
-    let values: [String; 18] = [
+    let mut values = vec![
         r.age.to_string(),
         r.position.clone(),
         r.games_played.to_string(),
-        mmss(s.atoi),
-        s.goals.to_string(),
-        s.assists.to_string(),
-        s.points.to_string(),
-        s.shots.to_string(),
-        pct(s.shooting_pct),
-        s.faceoffs_won.to_string(),
-        s.faceoffs_lost.to_string(),
-        pct(s.faceoff_pct),
-        s.blocks.to_string(),
-        s.checks.to_string(),
-        format!("{:.2}", s.i_xg),
-        format!("{:.2}", s.oi_xgf),
-        format!("{:.2}", s.oi_xga),
-        pct(s.xg_pct),
     ];
+    values.extend(stat_values!(&r.stats, atoi));
     COLUMNS
         .iter()
         .zip(values)
         .map(|(&(field, _), v)| view! { <td class:active=field == sorted_by>{v}</td> })
+        .collect_view()
+}
+
+/// Unsortable `<th>`s from time on ice to xG%, the first labelled `toi` (ATOI or TOI).
+pub fn plain_headers(toi: &'static str) -> impl IntoView {
+    std::iter::once(toi)
+        .chain(COLUMNS[4..].iter().map(|&(_, label)| label))
+        .map(|label| view! { <th>{label}</th> })
+        .collect_view()
+}
+
+/// `<td>`s for a season row from GP to xG% (Player Detail's seasons).
+pub fn season_cells(r: &PlayerSeasonLine) -> impl IntoView + use<> {
+    let mut values = vec![r.games_played.to_string()];
+    values.extend(stat_values!(&r.stats, atoi));
+    tds(values)
+}
+
+/// `<td>`s for a game from TOI to xG% (the game log).
+pub fn game_cells(s: &GameStats) -> impl IntoView + use<> {
+    tds(stat_values!(s, toi).into())
+}
+
+fn tds(values: Vec<String>) -> impl IntoView {
+    values
+        .into_iter()
+        .map(|v| view! { <td>{v}</td> })
         .collect_view()
 }
 

@@ -279,7 +279,8 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
   - [x] Team Detail, 2026-10-27: `/team/<team_abbr>/<season>?situation&sort&dir`. The API
         returns `skaters` and `goalies` separately (goalies by games played, as on Dash).
         The player tables share `src/app/stats_table.rs`
-  - [ ] Player Detail
+  - [x] Player Detail, 2026-10-27: `/player/<player_id>?situation`. Game log rows open
+        `/player/<player_id>/game/<game_id>`, the Dash site's Game Report URL
   - [ ] Game Report
   - [ ] Player Analysis, Sample Data
 - [x] Pages not yet ported link back to the Dash site during the transition
