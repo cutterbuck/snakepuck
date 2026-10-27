@@ -1,14 +1,17 @@
 //! The site's pages: rendered on the server, then hydrated in the browser.
 
 mod about;
+mod blog;
+mod fetch;
 mod layout;
 
 use leptos::prelude::*;
 use leptos_meta::{Link, Meta, MetaTags, Stylesheet, provide_meta_context};
 use leptos_router::components::{Route, Router, Routes};
-use leptos_router::path;
+use leptos_router::{SsrMode, path};
 
 use about::About;
+use blog::{BlogList, BlogPost};
 use layout::{Footer, Navbar, NotFound, Unported};
 
 /// The current (Dash) site, where pages not yet ported still live.
@@ -74,10 +77,10 @@ pub fn App() -> impl IntoView {
                         path=path!("/sample-data")
                         view=|| view! { <Unported title="Sample Raw Data" old_path="/sample-data" /> }
                     />
-                    <Route
-                        path=path!("/blog-posts")
-                        view=|| view! { <Unported title="Blog Posts" old_path="/blog-posts" /> }
-                    />
+                    // Pages with data render once it's loaded (SsrMode::Async), so the
+                    // HTML is complete and a missing item gets a real 404.
+                    <Route path=path!("/blog-posts") view=BlogList ssr=SsrMode::Async />
+                    <Route path=path!("/blog/:slug") view=BlogPost ssr=SsrMode::Async />
                 </Routes>
             </main>
             <Footer />

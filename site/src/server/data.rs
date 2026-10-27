@@ -21,6 +21,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_arrow::schema::{SchemaLike, TracingOptions};
 
+use crate::server::blog::Blog;
 use crate::server::games::GameCache;
 
 /// Game situation; the marts prefix each situational stat column with it (`pp_goals`).
@@ -296,6 +297,8 @@ pub struct Store {
     /// By view.
     pub defense_lpr: HashMap<String, Vec<DefenseLpr>>,
     pub samples: HashMap<String, Bytes>,
+    /// Loaded separately (see main); empty until then.
+    pub blog: Blog,
     pub game_files: GameCache,
 }
 
@@ -394,6 +397,7 @@ impl Store {
                     by_view
                 }),
             samples: marts.samples,
+            blog: Blog::default(),
             game_files: GameCache::new(data_dir),
         }
     }

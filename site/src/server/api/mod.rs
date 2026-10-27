@@ -2,6 +2,7 @@
 //! one situation's stats, one page of a table, one shift of a game.
 
 mod analysis;
+pub mod blog;
 mod game;
 mod sample;
 mod stats;
@@ -40,6 +41,8 @@ pub fn router(store: AppState) -> Router {
             "/api/player-analysis/defense-lpr",
             get(analysis::defense_lpr),
         )
+        .route("/api/blog", get(blog::list_handler))
+        .route("/api/blog/{slug}", get(blog::post_handler))
         .route("/api/sample/{name}", get(sample::sample))
         .with_state(store)
 }
@@ -65,6 +68,19 @@ impl IntoResponse for ApiError {
             }
         };
         (status, Json(serde_json::json!({ "error": message }))).into_response()
+    }
+}
+
+/// For server rendering, which calls endpoint functions directly.
+impl From<ApiError> for crate::types::PageError {
+    fn from(e: ApiError) -> Self {
+        match e {
+            ApiError::NotFound(m) => Self::NotFound(m),
+            ApiError::Internal(e) => {
+                tracing::error!("{e:#}");
+                Self::Failed("internal error".into())
+            }
+        }
     }
 }
 

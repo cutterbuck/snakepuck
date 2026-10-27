@@ -2,6 +2,7 @@
 //! browser bundle.
 
 pub mod api;
+pub mod blog;
 pub mod data;
 pub mod games;
 pub mod limit;

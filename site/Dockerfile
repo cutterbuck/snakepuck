@@ -29,7 +29,9 @@ RUN cargo leptos build --release
 FROM gcr.io/distroless/cc-debian13:nonroot
 COPY --from=build /src/site/target/release/snakepuck /snakepuck
 COPY --from=build /src/site/target/site /site
+COPY content/blog /content/blog
 ENV DATA_DIR=/data/serving/prod \
+    CONTENT_DIR=/content/blog \
     LEPTOS_OUTPUT_NAME=snakepuck \
     LEPTOS_SITE_ROOT=/site \
     LEPTOS_SITE_PKG_DIR=pkg \

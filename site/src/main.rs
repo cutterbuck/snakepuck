@@ -2,6 +2,7 @@
 //!
 //! Environment:
 //!   DATA_DIR  serving files from infra/export_serving.py (default: data/serving)
+//!   CONTENT_DIR  blog posts (default: ../content/blog); SHOW_DRAFTS=1 to include drafts
 //!   PORT      listen port (Cloud Run sets it); otherwise the Leptos site address
 //!   TRUSTED_PROXY_HOPS  proxies appending to X-Forwarded-For after the client (default: 0)
 //!   RATE_LIMIT_PER_SECOND, RATE_LIMIT_BURST  per-client limit (default: 5/s, bursts of 50)
@@ -22,7 +23,7 @@ use axum::Router;
 use leptos::prelude::*;
 use leptos_axum::{LeptosRoutes, generate_route_list};
 use snakepuck::app::{App, shell};
-use snakepuck::server::{api, data, limit};
+use snakepuck::server::{api, blog, data, limit};
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
@@ -38,7 +39,12 @@ async fn main() -> Result<()> {
     let data_dir =
         PathBuf::from(std::env::var("DATA_DIR").unwrap_or_else(|_| "data/serving".into()));
     let started = Instant::now();
-    let store = Arc::new(data::Store::load(&data_dir)?);
+    let mut store = data::Store::load(&data_dir)?;
+    let content_dir =
+        PathBuf::from(std::env::var("CONTENT_DIR").unwrap_or_else(|_| "../content/blog".into()));
+    let show_drafts = std::env::var("SHOW_DRAFTS").is_ok_and(|v| v == "1");
+    store.blog = blog::Blog::load(&content_dir, show_drafts)?;
+    let store = Arc::new(store);
     tracing::info!(
         players = store.players.len(),
         games = store.games.len(),

@@ -5,6 +5,7 @@ use leptos_meta::Title;
 use leptos_router::hooks::use_location;
 
 use super::OLD_SITE;
+use crate::types::PageError;
 
 const NAV: [(&str, &str); 5] = [
     ("Team Standings", "/team-standings"),
@@ -100,6 +101,29 @@ pub fn Unported(title: &'static str, old_path: &'static str) -> impl IntoView {
                 <a href=format!("{OLD_SITE}{old_path}")>"View it on the current site"</a>
                 "."
             </p>
+        </div>
+    }
+}
+
+/// Shown when a page's data couldn't be loaded. Sets the HTTP status when server
+/// rendering (pages with data render in SsrMode::Async, so the status isn't sent yet).
+#[component]
+pub fn PageMessage(error: PageError) -> impl IntoView {
+    #[cfg(feature = "ssr")]
+    if let Some(response) = use_context::<leptos_axum::ResponseOptions>() {
+        response.set_status(match error {
+            PageError::NotFound(_) => axum::http::StatusCode::NOT_FOUND,
+            PageError::Failed(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+        });
+    }
+    let (title, detail) = match error {
+        PageError::NotFound(m) => ("Not found", m),
+        PageError::Failed(m) => ("Something went wrong", m),
+    };
+    view! {
+        <div class="about-container">
+            <h3>{title}</h3>
+            <p class="text-muted">{detail}</p>
         </div>
     }
 }

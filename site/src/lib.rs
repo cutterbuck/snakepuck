@@ -7,6 +7,7 @@
 pub mod app;
 #[cfg(feature = "ssr")]
 pub mod server;
+pub mod types;
 
 /// Browser entry point: attach to the server-rendered page.
 #[cfg(feature = "hydrate")]
