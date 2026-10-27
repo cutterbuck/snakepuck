@@ -80,10 +80,11 @@ impl KeyExtractor for ClientIp {
     type Key = IpAddr;
 
     fn extract<T>(&self, req: &Request<T>) -> Result<IpAddr, GovernorError> {
-        let forwarded = req
+        let header = req
             .headers()
             .get("x-forwarded-for")
-            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.to_str().ok());
+        let forwarded = header
             .and_then(|v| v.rsplit(',').nth(self.trusted_hops))
             .and_then(|ip| ip.trim().parse().ok());
         let peer = || {
@@ -91,6 +92,9 @@ impl KeyExtractor for ClientIp {
                 .get::<ConnectInfo<SocketAddr>>()
                 .map(|c| c.0.ip())
         };
+        // RUST_LOG=snakepuck::limit=debug shows how a proxy's header maps to the key,
+        // for checking TRUSTED_PROXY_HOPS.
+        tracing::debug!(x_forwarded_for = header, key = ?forwarded, "rate limit key");
         forwarded
             .or_else(peer)
             .ok_or(GovernorError::UnableToExtractKey)

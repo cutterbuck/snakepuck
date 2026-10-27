@@ -6,7 +6,6 @@
 //! and only those are read. Per-game marts are in [`crate::games`].
 
 use std::collections::{BTreeSet, HashMap};
-use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -231,7 +230,8 @@ fn read_samples(dir: &Path) -> Result<HashMap<String, Bytes>> {
         let Some(name) = path.file_stem().and_then(|s| s.to_str()) else {
             continue;
         };
-        let reader = ParquetRecordBatchReaderBuilder::try_new(File::open(&path)?)?.build()?;
+        let bytes = Bytes::from(std::fs::read(&path)?);
+        let reader = ParquetRecordBatchReaderBuilder::try_new(bytes)?.build()?;
         let mut writer = WriterBuilder::new()
             .with_explicit_nulls(true)
             .build::<_, JsonArray>(Vec::new());
@@ -365,10 +365,11 @@ where
     R: DeserializeOwned,
     S: DeserializeOwned,
 {
-    let rows: Vec<R> = read_dir(dir, "")?;
+    let files = load(&list_dir(dir)?)?;
+    let rows: Vec<R> = parse(&files, "")?;
     let mut stats = Situation::ALL
         .iter()
-        .map(|s| Ok(read_dir::<S>(dir, s.prefix())?.into_iter()))
+        .map(|s| Ok(parse::<S>(&files, s.prefix())?.into_iter()))
         .collect::<Result<Vec<_>>>()?;
     Ok(rows
         .into_iter()
@@ -381,18 +382,48 @@ where
 
 /// Read every Parquet file in `dir` into rows of `T`. See [`read_files`].
 pub fn read_dir<T: DeserializeOwned>(dir: &Path, prefix: &str) -> Result<Vec<T>> {
+    parse(&load(&list_dir(dir)?)?, prefix)
+}
+
+/// Read Parquet files into rows of `T`, reading only the columns `T` declares, each
+/// with `prefix` prepended (so `prefix = "pp_"` fills field `goals` from `pp_goals`).
+pub fn read_files<T: DeserializeOwned>(paths: &[PathBuf], prefix: &str) -> Result<Vec<T>> {
+    parse(&load(paths)?, prefix)
+}
+
+fn list_dir(dir: &Path) -> Result<Vec<PathBuf>> {
     let mut paths: Vec<_> = std::fs::read_dir(dir)
         .with_context(|| format!("reading {}", dir.display()))?
         .map(|entry| entry.map(|e| e.path()))
         .collect::<Result<_, _>>()?;
     paths.retain(|p| p.extension().is_some_and(|ext| ext == "parquet"));
     paths.sort();
-    read_files(&paths, prefix)
+    Ok(paths)
 }
 
-/// Read Parquet files into rows of `T`, reading only the columns `T` declares, each
-/// with `prefix` prepended (so `prefix = "pp_"` fills field `goals` from `pp_goals`).
-pub fn read_files<T: DeserializeOwned>(paths: &[PathBuf], prefix: &str) -> Result<Vec<T>> {
+/// A Parquet file read whole into memory. Parsing from memory turns the reader's many
+/// small seeks and reads into one sequential read, which matters over the Cloud
+/// Storage mount, and lets a file be parsed several times for the cost of one read.
+struct Loaded {
+    path: PathBuf,
+    bytes: Bytes,
+}
+
+fn load(paths: &[PathBuf]) -> Result<Vec<Loaded>> {
+    paths
+        .iter()
+        .map(|path| {
+            let bytes =
+                std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
+            Ok(Loaded {
+                path: path.clone(),
+                bytes: bytes.into(),
+            })
+        })
+        .collect()
+}
+
+fn parse<T: DeserializeOwned>(files: &[Loaded], prefix: &str) -> Result<Vec<T>> {
     let fields = Vec::<FieldRef>::from_type::<T>(TracingOptions::default())?;
     let columns: Vec<String> = fields
         .iter()
@@ -400,20 +431,20 @@ pub fn read_files<T: DeserializeOwned>(paths: &[PathBuf], prefix: &str) -> Resul
         .collect();
 
     let mut rows = Vec::new();
-    for path in paths {
-        read_file(path, &columns, prefix, &mut rows)
-            .with_context(|| format!("reading {}", path.display()))?;
+    for file in files {
+        parse_file(&file.bytes, &columns, prefix, &mut rows)
+            .with_context(|| format!("reading {}", file.path.display()))?;
     }
     Ok(rows)
 }
 
-fn read_file<T: DeserializeOwned>(
-    path: &Path,
+fn parse_file<T: DeserializeOwned>(
+    bytes: &Bytes,
     columns: &[String],
     prefix: &str,
     rows: &mut Vec<T>,
 ) -> Result<()> {
-    let builder = ParquetRecordBatchReaderBuilder::try_new(File::open(path)?)?;
+    let builder = ParquetRecordBatchReaderBuilder::try_new(bytes.clone())?;
     let mask =
         ProjectionMask::columns(builder.parquet_schema(), columns.iter().map(String::as_str));
     for batch in builder.with_projection(mask).build()? {
@@ -450,6 +481,7 @@ fn strip_prefix(batch: RecordBatch, prefix: &str) -> Result<RecordBatch> {
 mod tests {
     use super::*;
     use parquet::arrow::ArrowWriter;
+    use std::fs::File;
 
     #[derive(Serialize, Deserialize)]
     struct Written {
