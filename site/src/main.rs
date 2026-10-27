@@ -4,6 +4,7 @@
 //!   DATA_DIR  serving files from infra/export_serving.py (default: data/serving)
 //!   PORT      listen port (default: 8080; Cloud Run sets it)
 //!   TRUSTED_PROXY_HOPS  proxies appending to X-Forwarded-For after the client (default: 0)
+//!   RATE_LIMIT_PER_SECOND, RATE_LIMIT_BURST  per-client limit (default: 5/s, bursts of 50)
 //!
 //! Local run, from site/ (data/ is git-ignored; the data is licensed):
 //!   gcloud storage rsync -r gs://snakepuck-data/serving/dev data/serving

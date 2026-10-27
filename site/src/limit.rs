@@ -26,16 +26,18 @@ pub struct RateLimit {
 }
 
 impl RateLimit {
-    /// 5 requests a second sustained, bursts of 50 (a Game Report page plus a few
-    /// shifts of rink playback).
+    /// Default: 5 requests a second sustained, bursts of 50 (a Game Report page plus a
+    /// few shifts of rink playback). RATE_LIMIT_PER_SECOND and RATE_LIMIT_BURST override
+    /// them, e.g. to load-test with the limiter still in the request path.
     pub fn from_env() -> Self {
-        let hops = std::env::var("TRUSTED_PROXY_HOPS")
-            .ok()
-            .and_then(|v| v.parse().ok());
+        fn env<T: std::str::FromStr>(name: &str) -> Option<T> {
+            std::env::var(name).ok().and_then(|v| v.parse().ok())
+        }
+        let per_second: u64 = env("RATE_LIMIT_PER_SECOND").unwrap_or(5).max(1);
         Self {
-            replenish: Duration::from_millis(200),
-            burst: 50,
-            trusted_hops: hops.unwrap_or(0),
+            replenish: Duration::from_nanos(1_000_000_000 / per_second),
+            burst: env("RATE_LIMIT_BURST").unwrap_or(50).max(1),
+            trusted_hops: env("TRUSTED_PROXY_HOPS").unwrap_or(0),
         }
     }
 

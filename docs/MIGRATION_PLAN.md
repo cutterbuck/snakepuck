@@ -72,6 +72,7 @@ tests/                             Python tests (Dash + golden reconciliation)
 content/blog/                      Markdown posts, shared by old and new site
 infra/                             GCP setup notes + BigQuery load script (Phase 2)
 dbt/                               dbt project (Phase 3)
+bench/                             Dash vs Rust API benchmark scripts (Phase 4)
 site/                              Rust crate: Axum API + Leptos frontend (Phases 4–5)
 docs/                              this plan
 ```
@@ -238,7 +239,13 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
       marts. Setup is recorded in `infra/README.md`. Startup loads the marts in about 1 s
       over the mount (3 s before files were read whole). Warm requests take about 1 ms on
       the server; from the East Coast, round trip dominates at 80–100 ms.
-- [ ] Benchmark latency and memory vs the Dash/Postgres path; publish the numbers
+- [x] Benchmark latency and memory vs the Dash/Postgres path; publish the numbers.
+      `docs/BENCHMARKS.md` (scripts in `bench/`), 2026-10-27. Locally, per page view, the
+      API is 36–209× faster at the median (179× for a rink shift) and gives 74–509× more
+      throughput, using 61–72 MB of memory against Dash's 502–596 MB plus Postgres. Live,
+      network round trips dominate, so it's 1.3–7× faster per page and 40× for the rink.
+      Caveats are in the doc: Dash returns rendered components, it doesn't compress, and
+      its rink query is N+1.
 
 **Done when:** the API serves every dataset the site needs, with published benchmarks.
 
