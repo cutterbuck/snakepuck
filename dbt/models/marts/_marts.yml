@@ -44,6 +44,9 @@ models:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns: [player_id, game_id, team_abbr]
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "ends_with(result, 'W') = (team_score > opp_score)"
       - matches_golden:
           config:
             enabled: "{{ var('legacy_parity') }}"
@@ -51,6 +54,12 @@ models:
           arguments:
             golden: source('golden', 'player_game_stats')
             keys: [player_id, game_id, team_abbr]
+    columns:
+      - name: result
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [W, OTW, SOW, L, OTL, SOL]
 
   - name: fct_player_season_stats
     description: One row per player per team per season.

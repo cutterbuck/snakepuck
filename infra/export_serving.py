@@ -5,8 +5,8 @@
     Dev:                       python infra/export_serving.py dbt_dev_marts gs://snakepuck-data/serving/dev
 
 Layout under <gcs_prefix>:
-    marts/<table>/*.parquet       every mart except tracking, loaded at API startup
-    tracking/<game_id>.parquet    one file per game, loaded on demand
+    marts/<table>/*.parquet               small marts, loaded at API startup
+    games/<table>/<game_id>.parquet       large per-game marts (PER_GAME), loaded on demand
 
 Uses extract jobs, which are free (EXPORT DATA would bill the query, ~2.5 GB for
 tracking). Each table's old files are deleted just before its new ones land; the
@@ -27,7 +27,14 @@ from google.cloud import bigquery, storage
 
 PROJECT = "snakepuck"
 LOCATION = "us-central1"
-TRACKING = "fct_tracking_snapshots"
+
+# Too large to hold in the API's memory; a page only ever needs one game.
+# Table -> sort order within each game's file.
+PER_GAME = {
+    "fct_game_events": ["sl_event_id"],
+    "fct_stints": ["game_stint", "player_id"],
+    "fct_tracking_snapshots": ["sl_event_id"],
+}
 
 
 def main(dataset: str, gcs_prefix: str) -> None:
@@ -45,22 +52,33 @@ def main(dataset: str, gcs_prefix: str) -> None:
             ),
         )
 
+    def tmp(table: str) -> str:
+        return f"{prefix}/_tmp/{table}"
+
     tables = [t.table_id for t in bq.list_tables(dataset) if t.table_type == "TABLE"]
-    tmp = f"{prefix}/_tmp/{TRACKING}"
-    jobs = {t: extract(t, f"{prefix}/marts/{t}") for t in tables if t != TRACKING}
-    jobs[TRACKING] = extract(TRACKING, tmp)
+    jobs = {
+        t: extract(t, tmp(t) if t in PER_GAME else f"{prefix}/marts/{t}")
+        for t in tables
+    }
     for table, job in jobs.items():
         job.result()
         print(f"Exported {dataset}.{table}")
 
+    for table, sort in PER_GAME.items():
+        split_per_game(bucket, tmp(table), f"{prefix}/games/{table}", sort)
+
+
+def split_per_game(
+    bucket: storage.Bucket, src: str, dest: str, sort: list[str]
+) -> None:
+    """Replace dest/ with one file per game from the shards under src/, then delete src/."""
     with tempfile.TemporaryDirectory() as local:
-        shards = list(bucket.list_blobs(prefix=f"{tmp}/"))
+        shards = list(bucket.list_blobs(prefix=f"{src}/"))
         paths = [Path(local) / Path(b.name).name for b in shards]
         with ThreadPoolExecutor(16) as pool:
             list(pool.map(lambda b, p: b.download_to_filename(p), shards, paths))
-        games = split_tracking(paths, Path(local) / "games")
+        games = write_games(paths, Path(local) / "games", sort)
 
-        dest = f"{prefix}/tracking"
         names = {g.name for g in games}
         stale = [
             b
@@ -75,13 +93,13 @@ def main(dataset: str, gcs_prefix: str) -> None:
                 )
             )
         bucket.delete_blobs(stale + shards)
-    print(f"Uploaded {len(games)} tracking files, removed {len(stale)} stale")
+    print(f"Wrote {dest}: {len(games)} games, removed {len(stale)} stale")
 
 
-def split_tracking(paths: list[Path], out_dir: Path) -> list[Path]:
-    """Write one Parquet file per game, rows ordered by sl_event_id."""
+def write_games(paths: list[Path], out_dir: Path, sort: list[str]) -> list[Path]:
+    """Write one Parquet file per game, rows in `sort` order."""
     table = pq.read_table(paths)
-    table = table.sort_by([("game_id", "ascending"), ("sl_event_id", "ascending")])
+    table = table.sort_by([(c, "ascending") for c in ["game_id", *sort]])
 
     # After sorting, each game is one contiguous run of rows.
     runs = pc.run_end_encode(table["game_id"].combine_chunks())
@@ -91,7 +109,6 @@ def split_tracking(paths: list[Path], out_dir: Path) -> list[Path]:
         games.append(out_dir / f"{game_id}.parquet")
         pq.write_table(table.slice(start, end - start), games[-1], compression="zstd")
         start = end
-    print(f"Split {table.num_rows:,} tracking rows into {len(games)} games")
     return games
 
 

@@ -198,17 +198,30 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 ## Phase 4 — Serving layer: marts → Parquet → Rust API
 - [x] Export marts to Parquet in GCS, run by the dbt workflow after each prod deploy
       (`infra/export_serving.py`). Uses free extract jobs rather than `EXPORT DATA`, which
-      bills the query. Writes `serving/prod/marts/<table>/*.parquet` (about 70 MB) and
-      `serving/prod/tracking/<game_id>.parquet` (479 files, about 310 MB). Game
+      bills the query. Small marts go to `serving/prod/marts/<table>/*.parquet` (about 6 MB),
+      which the API holds in memory. Events, stints and tracking are too large for that
+      (stints alone would be over 1 GB in memory), so they go to
+      `serving/prod/games/<table>/<game_id>.parquet` (about 370 MB in total). Game
       `1528a22a…` (WBS vs BEL, 2023-11-04) has no HALO tracking, so the API must handle a
       game with no tracking file.
-- [ ] Rust (Axum) API: load marts into memory at startup; JSON endpoints per page
-- [ ] Tracking for the rink: per-game files loaded on demand, not all 13.5M rows held in memory
+- [ ] Rust (Axum) API in `site/`: small marts held in memory as typed structs read from
+      Parquet (only the columns each struct declares), with HashMap indexes. Per-game files
+      are loaded on demand. Endpoints, one per page view:
+  - [x] `/api/health`, `/api/seasons`, `/api/standings?league&season`
+  - [ ] `/api/player-stats?league&season&situation&sort&dir&page` (25 rows per page)
+  - [ ] `/api/teams/{abbr}/{season}?situation`
+  - [ ] `/api/players/{player_id}?situation`
+  - [ ] `/api/games/{game_id}/players/{player_id}` (header, stat line, shifts)
+  - [ ] `/api/games/{game_id}/players/{player_id}/shifts/{shift}` (stint rows + rink frames)
+  - [ ] `/api/sample/{table}` (fixed 100-row sample per table, replacing Sample Data's random rows)
+- [ ] Player Analysis needs a dbt mart first: one row per defenseman × LPR type, covering
+      all 5 dropdown views. Dash computes it per request from most of `events` and all of
+      `stints`.
 - [ ] API exposure: endpoints return only what a page needs (one game or stint at a time,
       only the columns drawn), no bulk-download endpoints, per-client rate limiting.
       Data is never compiled into the WASM frontend; it always comes through endpoints.
 - [x] HALO license: showing raw tracking publicly is fine (confirmed by Jake, 2026-10-26)
-- [ ] `cargo test` + endpoint tests; deploy to Cloud Run
+- [ ] `cargo test` + endpoint tests (CI: `.github/workflows/site.yml`); deploy to Cloud Run
 - [ ] Benchmark latency and memory vs the Dash/Postgres path; publish the numbers
 
 **Done when:** the API serves every dataset the site needs, with published benchmarks.
@@ -247,6 +260,10 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 - **Tracking in the API (2026-10-26):** per-game Parquet in GCS, loaded on demand, not
   bundled into the container image. New data is expected, so data deploys stay
   separate from code deploys.
+- **API URLs (2026-10-26):** natural keys (`player_id`, `team_abbr` + season, game UUID),
+  not the Dash site's Postgres integer ids. Old Dash links need redirects if we want them.
+- **API data model (2026-10-26):** typed Rust structs plus indexes, not Polars DataFrames.
+  Leaner, faster and quicker to compile, and the endpoints need no ad-hoc analytics.
 
 ## Deferred
 - Smooth player animation on the rink. HALO tracking is per-event snapshots,
