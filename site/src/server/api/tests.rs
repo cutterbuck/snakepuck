@@ -348,6 +348,21 @@ async fn player_stats_default_sort_is_points_desc() {
 }
 
 #[tokio::test]
+async fn player_stats_default_to_the_newest_season_and_echo_the_query() {
+    let (status, body) = get("/api/player-stats?situation=pp&sort=goals&dir=asc").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        (&body["league"], &body["season"]),
+        (&"AHL".into(), &"2023-24".into())
+    );
+    assert_eq!(column(&body["seasons"], "season"), ["2023-24", "2022-23"]);
+    assert_eq!(
+        (&body["situation"], &body["sort"], &body["dir"]),
+        (&"pp".into(), &"goals".into(), &"asc".into())
+    );
+}
+
+#[tokio::test]
 async fn player_stats_serve_only_the_requested_situation() {
     let (_, body) =
         get("/api/player-stats?league=AHL&season=2023-24&situation=pp&sort=goals").await;
@@ -367,9 +382,11 @@ async fn player_stats_missing_values_sort_last_both_ways() {
 
 #[tokio::test]
 async fn player_stats_pages_and_rejects_unknown_sort() {
+    // Past the last page means the last page.
     let (_, body) = get("/api/player-stats?league=AHL&season=2023-24&page=2").await;
     assert_eq!(body["total"], 4);
-    assert_eq!(body["rows"], Value::Array(vec![]));
+    assert_eq!(body["page"], 1);
+    assert_eq!(body["rows"].as_array().unwrap().len(), 4);
 
     let (status, _) = get("/api/player-stats?league=AHL&season=2023-24&sort=password").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);

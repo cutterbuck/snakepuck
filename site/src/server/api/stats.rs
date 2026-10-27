@@ -9,7 +9,9 @@ use serde::{Deserialize, Serialize};
 
 use super::{ApiError, AppState, TeamRef, not_found};
 use crate::server::data::{GameStats, Player, PlayerSeason, Season, SeasonStats, Situation, Store};
-use crate::types::{Standings, StandingsRow};
+use crate::types::{
+    Dir, PlayerSeasonLine, PlayerStats, PlayerStatsQuery, SortField, Standings, StandingsRow,
+};
 
 /// Rows per page on Player Stats.
 pub const PAGE_SIZE: usize = 25;
@@ -18,8 +20,31 @@ pub async fn seasons(State(store): State<AppState>) -> Json<Vec<Season>> {
     Json(store.seasons.clone())
 }
 
-/// Both optional: the league defaults to the AHL (or the first league), the season
+/// The league, defaulting to the AHL (or the first league), and the season, defaulting
 /// to the league's newest.
+fn league_season(
+    store: &Store,
+    league: Option<String>,
+    season: Option<String>,
+    what: &str,
+) -> Result<(String, String), ApiError> {
+    let seasons = &store.seasons;
+    let league = league
+        .or_else(|| {
+            let ahl = seasons.iter().find(|s| s.league == "AHL");
+            ahl.or(seasons.first()).map(|s| s.league.clone())
+        })
+        .ok_or_else(|| not_found("seasons"))?;
+    let season = season
+        .or_else(|| {
+            let newest = seasons.iter().find(|s| s.league == league);
+            newest.map(|s| s.season.clone())
+        })
+        .ok_or_else(|| not_found(format!("{what} for {league}")))?;
+    Ok((league, season))
+}
+
+/// Both optional (see `league_season`).
 #[derive(Debug, Default, Deserialize)]
 pub struct StandingsQuery {
     pub league: Option<String>,
@@ -29,21 +54,7 @@ pub struct StandingsQuery {
 /// Standings for one league-season, ordered by points, then RW, ROW and W
 /// (the tiebreakers the Dash page uses).
 pub fn standings(store: &Store, q: StandingsQuery) -> Result<Standings, ApiError> {
-    let seasons = &store.seasons;
-    let league = q
-        .league
-        .or_else(|| {
-            let ahl = seasons.iter().find(|s| s.league == "AHL");
-            ahl.or(seasons.first()).map(|s| s.league.clone())
-        })
-        .ok_or_else(|| not_found("seasons"))?;
-    let season = q
-        .season
-        .or_else(|| {
-            let newest = seasons.iter().find(|s| s.league == league);
-            newest.map(|s| s.season.clone())
-        })
-        .ok_or_else(|| not_found(format!("standings for {league}")))?;
+    let (league, season) = league_season(store, q.league, q.season, "standings")?;
     let rows = store
         .team_seasons
         .get(&(league.clone(), season.clone()))
@@ -68,7 +79,7 @@ pub fn standings(store: &Store, q: StandingsQuery) -> Result<Standings, ApiError
     Ok(Standings {
         league,
         season,
-        seasons: seasons.clone(),
+        seasons: store.seasons.clone(),
         rows,
     })
 }
@@ -78,41 +89,6 @@ pub async fn standings_handler(
     Query(q): Query<StandingsQuery>,
 ) -> Result<Json<Standings>, ApiError> {
     Ok(Json(standings(&store, q)?))
-}
-
-/// Column to sort a player table by.
-#[derive(Debug, Clone, Copy, Default, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum SortField {
-    Name,
-    Team,
-    Position,
-    Age,
-    GamesPlayed,
-    Atoi,
-    Goals,
-    Assists,
-    #[default]
-    Points,
-    Shots,
-    ShootingPct,
-    FaceoffsWon,
-    FaceoffsLost,
-    FaceoffPct,
-    Blocks,
-    Checks,
-    IXg,
-    OiXgf,
-    OiXga,
-    XgPct,
-}
-
-#[derive(Debug, Clone, Copy, Default, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Dir {
-    Asc,
-    #[default]
-    Desc,
 }
 
 #[derive(Deserialize)]
@@ -161,6 +137,23 @@ impl<'a> PlayerSeasonOut<'a> {
             age: ps.row.age,
             games_played: ps.row.games_played,
             stats: ps.stats(situation),
+        }
+    }
+
+    fn line(&self) -> PlayerSeasonLine {
+        PlayerSeasonLine {
+            player_id: self.player_id.into(),
+            full_name: self.full_name.into(),
+            last_name: self.last_name.into(),
+            position: self.position.into(),
+            position_group: self.position_group.into(),
+            season: self.season.into(),
+            team_abbr: self.team.team_abbr.into(),
+            team_name: self.team.team_name.into(),
+            logo_url: self.team.logo_url.into(),
+            age: self.age,
+            games_played: self.games_played,
+            stats: self.stats.clone(),
         }
     }
 
@@ -226,59 +219,48 @@ fn sort_players(rows: &mut [PlayerSeasonOut], field: SortField, dir: Dir) {
     });
 }
 
-#[derive(Deserialize)]
-pub struct PlayerStatsQuery {
-    league: String,
-    season: String,
-    #[serde(flatten)]
-    table: TableQuery,
-    #[serde(default = "first_page")]
-    page: usize,
-}
-
-fn first_page() -> usize {
-    1
-}
-
-#[derive(Serialize)]
-pub struct PlayerStatsPage<'a> {
-    total: usize,
-    page: usize,
-    page_size: usize,
-    rows: Vec<PlayerSeasonOut<'a>>,
-}
-
 /// One page of every player-team row in a league-season.
-pub async fn player_stats(
-    State(store): State<AppState>,
-    Query(q): Query<PlayerStatsQuery>,
-) -> Result<Response, ApiError> {
+pub fn player_stats(store: &Store, q: PlayerStatsQuery) -> Result<PlayerStats, ApiError> {
+    let (league, season) = league_season(store, q.league, q.season, "player stats")?;
     let indexes = store
         .player_seasons_by_league_season
-        .get(&(q.league.clone(), q.season.clone()))
-        .ok_or_else(|| not_found(format!("player stats for {} {}", q.league, q.season)))?;
+        .get(&(league.clone(), season.clone()))
+        .ok_or_else(|| not_found(format!("player stats for {league} {season}")))?;
 
-    let t = &q.table;
     let mut rows: Vec<_> = indexes
         .iter()
-        .map(|&i| PlayerSeasonOut::new(&store, &store.player_seasons[i], t.situation))
+        .map(|&i| PlayerSeasonOut::new(store, &store.player_seasons[i], q.situation))
         .collect();
-    sort_players(&mut rows, t.sort, t.dir);
+    sort_players(&mut rows, q.sort, q.dir);
 
     let total = rows.len();
-    let page = q.page.max(1);
+    let last_page = total.div_ceil(PAGE_SIZE).max(1);
+    let page = q.page.unwrap_or(1).clamp(1, last_page);
     let rows = rows
-        .into_iter()
+        .iter()
         .skip((page - 1) * PAGE_SIZE)
         .take(PAGE_SIZE)
+        .map(PlayerSeasonOut::line)
         .collect();
-    let body = PlayerStatsPage {
+    Ok(PlayerStats {
+        league,
+        season,
+        seasons: store.seasons.clone(),
+        situation: q.situation,
+        sort: q.sort,
+        dir: q.dir,
         total,
         page,
         page_size: PAGE_SIZE,
         rows,
-    };
-    Ok(Json(body).into_response())
+    })
+}
+
+pub async fn player_stats_handler(
+    State(store): State<AppState>,
+    Query(q): Query<PlayerStatsQuery>,
+) -> Result<Json<PlayerStats>, ApiError> {
+    Ok(Json(player_stats(&store, q)?))
 }
 
 #[derive(Serialize)]

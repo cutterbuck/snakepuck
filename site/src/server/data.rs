@@ -23,23 +23,9 @@ use serde_arrow::schema::{SchemaLike, TracingOptions};
 
 use crate::server::blog::Blog;
 use crate::server::games::GameCache;
-pub use crate::types::{Season, TeamSeason};
-
-/// Game situation; the marts prefix each situational stat column with it (`pp_goals`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Situation {
-    #[default]
-    Tot,
-    Es,
-    Ev5,
-    Pp,
-    Pk,
-}
+pub use crate::types::{Season, SeasonStats, Situation, TeamSeason};
 
 impl Situation {
-    pub const ALL: [Situation; 5] = [Self::Tot, Self::Es, Self::Ev5, Self::Pp, Self::Pk];
-
     fn prefix(self) -> &'static str {
         match self {
             Self::Tot => "tot_",
@@ -110,26 +96,6 @@ pub struct PlayerSeasonRow {
     pub season: String,
     pub games_played: i64,
     pub age: i64,
-}
-
-/// Season stats in one situation (`fct_player_season_stats`, `<situation>_*` columns).
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct SeasonStats {
-    pub atoi: f64,
-    pub goals: i64,
-    pub assists: i64,
-    pub points: i64,
-    pub shots: i64,
-    pub shooting_pct: Option<f64>,
-    pub faceoffs_won: i64,
-    pub faceoffs_lost: i64,
-    pub faceoff_pct: Option<f64>,
-    pub blocks: i64,
-    pub checks: i64,
-    pub i_xg: f64,
-    pub oi_xgf: f64,
-    pub oi_xga: f64,
-    pub xg_pct: Option<f64>,
 }
 
 /// `fct_player_game_stats`, one player-team-game.

@@ -9,7 +9,7 @@ use leptos_meta::Title;
 use leptos_router::hooks::{use_navigate, use_query_map};
 
 use super::fetch;
-use super::layout::PageMessage;
+use super::layout::{PageMessage, row_link};
 use crate::types::{Standings, StandingsRow, TeamSeason};
 
 /// Division order on the page; any others follow, as the data has them.
@@ -264,7 +264,7 @@ fn Table(
     };
 
     view! {
-        <table class="standings-table">
+        <table class="stats-table">
             <colgroup>
                 <col style="width: 260px" />
                 {Column::ALL.iter().map(|_| view! { <col style="width: 60px" /> }).collect_view()}
@@ -344,15 +344,10 @@ fn by_division(rows: Vec<StandingsRow>) -> Vec<(String, Vec<StandingsRow>)> {
 
 fn team_row(r: &StandingsRow, i: usize, season: &str, sorted_by: Column) -> impl IntoView + use<> {
     let href = format!("/team/{}/{season}", r.stats.team_abbr);
-    let navigate = use_navigate();
-    let row_href = href.clone();
     let s = &r.stats;
+    let on_click = row_link(href.clone());
     view! {
-        <tr
-            class="game-log-row"
-            class:standings-alt=i % 2 == 1
-            on:click=move |_| navigate(&row_href, Default::default())
-        >
+        <tr class="game-log-row" class:stats-alt=i % 2 == 1 on:click=on_click>
             <td class="standings-team">
                 <a href=href class="team-link">
                     <img src=r.logo_url.clone() alt="" width="32" height="32" />

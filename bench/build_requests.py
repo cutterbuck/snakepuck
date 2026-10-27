@@ -87,7 +87,7 @@ PAGES = {
             "..ps-season.options...ps-season.value..",
             "..ps-table.children...ps-pagination.children..",
         ],
-        "api": ["/api/seasons", "/api/player-stats?league=AHL&season={season}"],
+        "api": ["/api/player-stats?league=AHL&season={season}"],
     },
     "team_detail": {
         "path": "/team/{team}/{season}",

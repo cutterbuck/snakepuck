@@ -273,7 +273,9 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
   - [x] Standings, 2026-10-27: league and season in the URL; sorting and the
         division/league view are in the browser. `/api/standings` now returns the season
         list too, with both parameters optional (AHL, newest season)
-  - [ ] Player Stats
+  - [x] Player Stats, 2026-10-27: every choice is in the URL, which the page parses
+        into the same `PlayerStatsQuery` the API reads. The server sorts and pages; a page
+        past the end now means the last page, as on Dash
   - [ ] Team Detail
   - [ ] Player Detail
   - [ ] Game Report

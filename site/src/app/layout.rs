@@ -128,6 +128,22 @@ pub fn PageMessage(error: PageError) -> impl IntoView {
     }
 }
 
+/// Click handler for a table row that opens `href`. Clicks on a link inside the row
+/// are left to the link.
+pub fn row_link(href: String) -> impl Fn(leptos::ev::MouseEvent) + 'static {
+    use leptos::wasm_bindgen::JsCast;
+    let navigate = leptos_router::hooks::use_navigate();
+    move |ev| {
+        let target = ev
+            .target()
+            .and_then(|t| t.dyn_into::<leptos::web_sys::Element>().ok());
+        let on_link = target.is_some_and(|t| t.closest("a").ok().flatten().is_some());
+        if !on_link {
+            navigate(&href, Default::default());
+        }
+    }
+}
+
 #[component]
 pub fn NotFound() -> impl IntoView {
     #[cfg(feature = "ssr")]

@@ -4,6 +4,7 @@ mod about;
 mod blog;
 mod fetch;
 mod layout;
+mod player_stats;
 mod standings;
 
 use leptos::prelude::*;
@@ -14,6 +15,7 @@ use leptos_router::{SsrMode, path};
 use about::About;
 use blog::{BlogList, BlogPost};
 use layout::{Footer, Navbar, NotFound, Unported};
+use player_stats::PlayerStatsPage;
 use standings::StandingsPage;
 
 /// The current (Dash) site, where pages not yet ported still live.
@@ -64,10 +66,6 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/") view=About />
                     <Route path=path!("/about") view=About />
                     <Route
-                        path=path!("/player-stats")
-                        view=|| view! { <Unported title="Player Stats" old_path="/player-stats" /> }
-                    />
-                    <Route
                         path=path!("/player-analysis")
                         view=|| view! { <Unported title="Player Analysis" old_path="/player-analysis" /> }
                     />
@@ -80,10 +78,15 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/blog-posts") view=BlogList ssr=SsrMode::Async />
                     <Route path=path!("/blog/:slug") view=BlogPost ssr=SsrMode::Async />
                     <Route path=path!("/team-standings") view=StandingsPage ssr=SsrMode::Async />
-                    // Standings rows link here; the Dash site's team URLs use database ids.
+                    <Route path=path!("/player-stats") view=PlayerStatsPage ssr=SsrMode::Async />
+                    // Stats tables link to these; the Dash site's URLs use database ids.
                     <Route
                         path=path!("/team/:team_abbr/:season")
                         view=|| view! { <Unported title="Team Detail" old_path="/team-standings" /> }
+                    />
+                    <Route
+                        path=path!("/player/:player_id")
+                        view=|| view! { <Unported title="Player Detail" old_path="/player-stats" /> }
                     />
                 </Routes>
             </main>

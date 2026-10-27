@@ -2,7 +2,7 @@
 //! endpoint's function directly (no HTTP); in the browser it fetches `/api/...`.
 //! Either way the page gets the same response type from `crate::types`.
 
-use crate::types::{PageError, Post, PostSummary, Standings};
+use crate::types::{PageError, PlayerStats, PlayerStatsQuery, Post, PostSummary, Standings};
 
 pub async fn blog_posts() -> Result<Vec<PostSummary>, PageError> {
     #[cfg(feature = "ssr")]
@@ -39,6 +39,25 @@ pub async fn standings(
     {
         let query = query(&[("league", league.as_deref()), ("season", season.as_deref())]);
         get(&format!("/api/standings{query}")).await
+    }
+}
+
+pub async fn player_stats(q: PlayerStatsQuery) -> Result<PlayerStats, PageError> {
+    #[cfg(feature = "ssr")]
+    {
+        Ok(crate::server::api::stats::player_stats(&store(), q)?)
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        get(&format!("/api/player-stats{}", query_string(&q))).await
+    }
+}
+
+/// `?a=1&b=2` from a query struct; empty if it has nothing to say.
+pub fn query_string(q: &impl serde::Serialize) -> String {
+    match serde_urlencoded::to_string(q).unwrap_or_default() {
+        s if s.is_empty() => s,
+        s => format!("?{s}"),
     }
 }
 

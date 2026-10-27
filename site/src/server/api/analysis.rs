@@ -7,9 +7,9 @@ use axum::extract::{Query, State};
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 
-use super::stats::Dir;
 use super::{ApiError, AppState};
 use crate::server::data::DefenseLpr;
+use crate::types::Dir;
 
 /// The page's minimums for a defenseman to be listed.
 pub const MIN_GAMES_PLAYED: i64 = 20;

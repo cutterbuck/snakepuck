@@ -488,14 +488,14 @@
     font-weight: 600;
 }
 
-/* Team Standings (inline styles on the Dash page) */
-.standings-table {
+/* Stats tables: Team Standings, Player Stats (inline styles on the Dash pages) */
+.stats-table {
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
 }
 
-.standings-table th {
+.stats-table th {
     background-color: #163d5c;
     color: #d0e8f7;
     font-weight: bold;
@@ -505,34 +505,34 @@
     border-bottom: 2px solid #4fc3f7;
 }
 
-.standings-table th.sortable {
+.stats-table th.sortable {
     cursor: pointer;
     user-select: none;
 }
 
-.standings-table th.active {
+.stats-table th.active {
     background-color: #1a6fa8;
     color: white;
 }
 
-.standings-table tbody tr {
+.stats-table tbody tr {
     background-color: #ffffff;
 }
 
-.standings-table tbody tr.standings-alt {
+.stats-table tbody tr.stats-alt {
     background-color: #e8f4fb;
 }
 
-.standings-table td {
+.stats-table td {
     text-align: center;
     padding: 5px 10px;
 }
 
-.standings-table td.active {
+.stats-table td.active {
     background-color: rgba(79, 195, 247, 0.08);
 }
 
-.standings-table td.standings-team {
+.stats-table td.standings-team {
     text-align: left;
     padding-top: 2px;
     padding-bottom: 2px;
@@ -548,7 +548,7 @@
     vertical-align: middle;
 }
 
-.standings-table td.standings-division {
+.stats-table td.standings-division {
     background-color: #0d2137;
     color: #4fc3f7;
     font-weight: bold;
@@ -556,4 +556,93 @@
     padding: 10px 12px;
     letter-spacing: 0.5px;
     text-align: left;
+}
+
+/* Player Stats: situation toggle and pagination (inline styles on the Dash page) */
+.situation-toggle {
+    display: flex;
+    align-items: center;
+}
+
+.situation-label {
+    font-weight: bold;
+    margin-right: 8px;
+    font-size: 14px;
+}
+
+.situation-buttons {
+    display: flex;
+}
+
+.situation-buttons button {
+    padding: 4px 12px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    font-weight: bold;
+    background-color: #fff;
+    color: #333;
+    border-radius: 0;
+}
+
+.situation-buttons button:first-child {
+    border-radius: 4px 0 0 4px;
+}
+
+.situation-buttons button:last-child {
+    border-radius: 0 4px 4px 0;
+}
+
+.situation-buttons button.active {
+    background-color: #1a6fa8;
+    color: #fff;
+}
+
+.ps-team img {
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+.ps-pagination {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ps-pages {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.ps-pages a,
+.ps-pages span.disabled {
+    padding: 6px 14px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    font-weight: bold;
+    background-color: #fff;
+    color: #333;
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+.ps-pages a.active {
+    background-color: #1a6fa8;
+    color: #fff;
+    border-color: #1a6fa8;
+}
+
+.ps-pages span.disabled {
+    opacity: 0.5;
+}
+
+.ps-pages span.gap {
+    padding: 6px 8px;
+    font-size: 14px;
+}
+
+.ps-showing {
+    font-size: 13px;
+    color: #6c757d;
+    margin-top: 6px;
 }
