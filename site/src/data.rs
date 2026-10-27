@@ -188,6 +188,33 @@ pub struct GameStats {
 pub type PlayerSeason = Situational<PlayerSeasonRow, SeasonStats>;
 pub type PlayerGame = Situational<PlayerGameRow, GameStats>;
 
+/// `fct_defense_lpr`: one defenseman in one view of the Player Analysis LPR table.
+/// The xG views fill the xG fields; the rate view fills the success fields.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct DefenseLpr {
+    pub player_id: String,
+    #[serde(skip_serializing)]
+    pub view: String,
+    pub games_played: i64,
+    pub lpr_count: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avg_oi_xgf: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avg_oi_xga: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_oi_xgf: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_oi_xga: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub xg_pct: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub successes: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failures: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub success_rate: Option<f64>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub struct Season {
     pub league: String,
@@ -203,6 +230,7 @@ pub struct Marts {
     pub team_seasons: Vec<TeamSeason>,
     pub player_seasons: Vec<PlayerSeason>,
     pub player_games: Vec<PlayerGame>,
+    pub defense_lpr: Vec<DefenseLpr>,
     /// Sample Data page: name -> rows as a JSON array.
     pub samples: HashMap<String, Bytes>,
 }
@@ -217,6 +245,7 @@ impl Marts {
             team_seasons: read_dir(&dir("fct_team_season_stats"), "")?,
             player_seasons: read_situational(&dir("fct_player_season_stats"))?,
             player_games: read_situational(&dir("fct_player_game_stats"))?,
+            defense_lpr: read_dir(&dir("fct_defense_lpr"), "")?,
             samples: read_samples(&data_dir.join("samples"))?,
         })
     }
@@ -264,6 +293,8 @@ pub struct Store {
     /// Indexes into `player_games`: by player (newest game first), and by (game_id, player_id).
     pub player_games_by_player: HashMap<String, Vec<usize>>,
     pub player_game: HashMap<Key, usize>,
+    /// By view.
+    pub defense_lpr: HashMap<String, Vec<DefenseLpr>>,
     pub samples: HashMap<String, Bytes>,
     pub game_files: GameCache,
 }
@@ -352,6 +383,16 @@ impl Store {
             player_games: marts.player_games,
             player_games_by_player: games_by_player,
             player_game,
+            defense_lpr: marts
+                .defense_lpr
+                .into_iter()
+                .fold(HashMap::new(), |mut by_view, row| {
+                    by_view
+                        .entry(row.view.clone())
+                        .or_insert_with(Vec::new)
+                        .push(row);
+                    by_view
+                }),
             samples: marts.samples,
             game_files: GameCache::new(data_dir),
         }

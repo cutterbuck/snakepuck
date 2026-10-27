@@ -10,8 +10,8 @@ use tower::ServiceExt;
 
 use super::router;
 use crate::data::{
-    Game, GameStats, Marts, Player, PlayerGameRow, PlayerSeasonRow, SeasonStats, Situational,
-    Store, Team, TeamSeason,
+    DefenseLpr, Game, GameStats, Marts, Player, PlayerGameRow, PlayerSeasonRow, SeasonStats,
+    Situational, Store, Team, TeamSeason,
 };
 use crate::games::{Event, GameFiles, Shift, Snapshot, Stint};
 
@@ -163,6 +163,40 @@ fn snapshot(sl_event_id: i64, name: &str) -> Snapshot {
     }
 }
 
+fn lpr_xg(
+    player_id: &str,
+    view: &str,
+    games_played: i64,
+    lpr_count: i64,
+    xg_pct: f64,
+) -> DefenseLpr {
+    DefenseLpr {
+        player_id: player_id.into(),
+        view: view.into(),
+        games_played,
+        lpr_count,
+        avg_oi_xgf: Some(0.02),
+        avg_oi_xga: Some(0.01),
+        total_oi_xgf: Some(0.4),
+        total_oi_xga: Some(0.2),
+        xg_pct: Some(xg_pct),
+        ..Default::default()
+    }
+}
+
+fn lpr_rate(player_id: &str, games_played: i64, successes: i64, failures: i64) -> DefenseLpr {
+    DefenseLpr {
+        player_id: player_id.into(),
+        view: "high_next_rate".into(),
+        games_played,
+        lpr_count: successes + failures,
+        successes: Some(successes),
+        failures: Some(failures),
+        success_rate: Some(successes as f64 / (successes + failures) as f64),
+        ..Default::default()
+    }
+}
+
 fn store() -> Store {
     let stats = |goals, points, shooting_pct| SeasonStats {
         goals,
@@ -176,6 +210,8 @@ fn store() -> Store {
             player("p1", "Ann", "Alpha", "C"),
             player("p2", "Bob", "Beta", "D"),
             player("p3", "Cat", "Gamma", "G"),
+            player("p4", "Dan", "Delta", "D"),
+            player("p5", "Eve", "Epsilon", "D"),
         ],
         games: vec![
             game("g0", "2022-10-14", "2022-23", "CGY", "ABB"),
@@ -196,6 +232,14 @@ fn store() -> Store {
         player_games: vec![
             player_game("g1", true, "W"),
             player_game("g2", false, "OTL"),
+        ],
+        defense_lpr: vec![
+            lpr_xg("p2", "high", 25, 20, 0.6),
+            lpr_xg("p4", "high", 30, 16, 0.4),
+            lpr_xg("p5", "high", 30, 10, 0.9), // too few LPRs
+            lpr_xg("p1", "high", 10, 40, 0.9), // too few games
+            lpr_rate("p2", 25, 14, 6),
+            lpr_rate("p4", 30, 9, 7),
         ],
         samples: [(
             "players".to_string(),
@@ -410,4 +454,45 @@ async fn samples_are_served_as_stored() {
     assert_eq!(body[0]["player_id"], "p1");
     let (status, _) = get("/api/sample/passwords").await;
     assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn defense_lpr_lists_qualifying_defensemen_by_xg_pct() {
+    let (status, body) = get("/api/player-analysis/defense-lpr").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["view"], "high");
+    assert_eq!(
+        column(&body["rows"], "full_name"),
+        ["Bob Beta", "Dan Delta"]
+    );
+    assert_eq!(body["totals"]["lpr_count"], 36);
+    assert!(
+        (body["totals"]["xg_pct"].as_f64().unwrap() - 0.5).abs() < 1e-9,
+        "mean of rows"
+    );
+    assert!(
+        body["rows"][0].get("success_rate").is_none(),
+        "rate fields left out"
+    );
+
+    let (_, body) = get("/api/player-analysis/defense-lpr?sort=xg_pct&dir=asc").await;
+    assert_eq!(
+        column(&body["rows"], "full_name"),
+        ["Dan Delta", "Bob Beta"]
+    );
+}
+
+#[tokio::test]
+async fn defense_lpr_rate_view_sorts_by_success_rate() {
+    let (_, body) = get("/api/player-analysis/defense-lpr?view=high_next_rate").await;
+    assert_eq!(column(&body["rows"], "successes"), [14, 9]);
+    assert_eq!(body["totals"]["successes"], 23);
+    assert_eq!(body["totals"]["failures"], 13);
+    assert!(
+        body["rows"][0].get("xg_pct").is_none(),
+        "xG fields left out"
+    );
+
+    let (status, _) = get("/api/player-analysis/defense-lpr?view=everything").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
 }

@@ -1,6 +1,7 @@
 //! JSON endpoints, one per page view. Each returns only what its page draws:
 //! one situation's stats, one page of a table, one shift of a game.
 
+mod analysis;
 mod game;
 mod sample;
 mod stats;
@@ -34,6 +35,10 @@ pub fn router(store: Store) -> Router {
         .route(
             "/api/games/{game_id}/players/{player_id}/shifts/{shift}",
             get(game::shift),
+        )
+        .route(
+            "/api/player-analysis/defense-lpr",
+            get(analysis::defense_lpr),
         )
         .route("/api/sample/{name}", get(sample::sample))
         .with_state(Arc::new(store))
