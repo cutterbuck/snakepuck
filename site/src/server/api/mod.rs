@@ -16,11 +16,11 @@ use axum::routing::get;
 use axum::{Json, Router};
 use serde::Serialize;
 
-use crate::data::{Store, Team};
+use crate::server::data::{Store, Team};
 
-type AppState = Arc<Store>;
+pub type AppState = Arc<Store>;
 
-pub fn router(store: Store) -> Router {
+pub fn router(store: AppState) -> Router {
     Router::new()
         .route("/api/health", get(|| async { "ok" }))
         .route("/api/seasons", get(stats::seasons))
@@ -41,7 +41,7 @@ pub fn router(store: Store) -> Router {
             get(analysis::defense_lpr),
         )
         .route("/api/sample/{name}", get(sample::sample))
-        .with_state(Arc::new(store))
+        .with_state(store)
 }
 
 pub enum ApiError {

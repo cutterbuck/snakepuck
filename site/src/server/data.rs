@@ -3,7 +3,7 @@
 //!
 //! Small marts (`<data_dir>/marts/<table>/*.parquet`) are loaded once at startup into
 //! typed rows plus indexes. Each row type declares only the columns the API serves,
-//! and only those are read. Per-game marts are in [`crate::games`].
+//! and only those are read. Per-game marts are in [`crate::server::games`].
 
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
@@ -21,7 +21,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_arrow::schema::{SchemaLike, TracingOptions};
 
-use crate::games::GameCache;
+use crate::server::games::GameCache;
 
 /// Game situation; the marts prefix each situational stat column with it (`pp_goals`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]

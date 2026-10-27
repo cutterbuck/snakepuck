@@ -8,7 +8,7 @@ use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 
 use super::{ApiError, AppState, TeamRef, not_found};
-use crate::data::{
+use crate::server::data::{
     GameStats, Player, PlayerSeason, Season, SeasonStats, Situation, Store, TeamSeason,
 };
 

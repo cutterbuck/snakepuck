@@ -260,11 +260,29 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 **Phase 4 complete (2026-10-27).** Every Dash page's data is served by the live API.
 
 ## Phase 5 — Leptos frontend, page by page
-- [ ] Leptos app shell (navbar, footer, routing, SnakePuck styling)
+- [x] Leptos app shell (navbar, footer, routing, SnakePuck styling), 2026-10-27. Leptos
+      0.8 (latest stable), server-rendered and hydrated, in the same `site/` crate and
+      process as the API. `ssr` and `hydrate` features: the data layer (`src/server/`) is
+      ssr-only, so HALO data can't be compiled into the WASM bundle (346 KB, 135 KB
+      gzipped). Styling is the Dash site's Bootstrap 5.3.6 plus `assets/custom.css`, carried
+      over as-is. `cargo leptos watch` serves it locally at http://localhost:3000.
 - [ ] Port pages roughly in order of simplicity: About → Blog → Standings →
       Player Stats → Team Detail → Player Detail → Game Report (rink last)
-- [ ] Pages not yet ported link back to the Dash site during the transition
-- [ ] Playwright smoke tests per page
+  - [x] About
+  - [ ] Blog
+  - [ ] Standings
+  - [ ] Player Stats
+  - [ ] Team Detail
+  - [ ] Player Detail
+  - [ ] Game Report
+  - [ ] Player Analysis, Sample Data
+- [x] Pages not yet ported link back to the Dash site during the transition
+- [ ] Playwright smoke tests per page (for now, a headless-Chrome check that hydration,
+      the menu and client-side navigation work, with no console errors)
+
+Data for pages: each endpoint's response type is shared by both builds. Server rendering
+calls the endpoint's function directly; navigation in the browser fetches the same
+`/api/...` endpoint. The REST API stays the one interface.
 
 **Done when:** every page is served by Leptos.
 
@@ -283,13 +301,17 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 ## Open decisions
 - **Infrastructure as code:** Terraform now, or click-ops first and codify later?
 - **Domain/hosting cutover:** when to point the live domain at Firebase Hosting / Cloud Run
-- **Cold starts:** scale to zero ($0) vs one always-warm instance (~$10–15) during job applications
 
 ## Reminders
 - BigQuery daily query cap is temporarily 200 GiB (raised 2026-10-26 for build-out).
   Lower it to 50 GiB once Phases 3–5 settle (command in `infra/README.md`).
 
 ## Decided
+- **Cold starts (2026-10-27):** scale to zero, to keep costs low for now. The first
+  request after an idle period takes about 2.6 s. One warm instance (about $10–15 a
+  month) is a one-line change in `site/service.yaml` if that's needed later.
+- **Season lists (2026-10-27):** Standings and Player Stats include the season list and
+  default to the newest season, so each page is one request.
 - **Tracking in the API (2026-10-26):** per-game Parquet in GCS, loaded on demand, not
   bundled into the container image. New data is expected, so data deploys stay
   separate from code deploys.

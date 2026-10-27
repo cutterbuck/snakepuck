@@ -9,8 +9,8 @@ use serde::Serialize;
 
 use super::stats::SituationQuery;
 use super::{ApiError, AppState, TeamRef, not_found};
-use crate::data::{Game, GameStats, PlayerGame};
-use crate::games::{Event, GameFiles, Shift, Snapshot, Stint};
+use crate::server::data::{Game, GameStats, PlayerGame};
+use crate::server::games::{Event, GameFiles, Shift, Snapshot, Stint};
 
 /// Check the game and player-game exist, then load the game's files (blocking I/O,
 /// so off the async threads). The game_id check also keeps it from being used as an
@@ -47,7 +47,7 @@ struct GameHeader<'a> {
 }
 
 impl<'a> GameHeader<'a> {
-    fn new(store: &'a crate::data::Store, game: &'a Game) -> Self {
+    fn new(store: &'a crate::server::data::Store, game: &'a Game) -> Self {
         Self {
             game_id: &game.game_id,
             game_date: &game.game_date,

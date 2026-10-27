@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::stats::Dir;
 use super::{ApiError, AppState};
-use crate::data::DefenseLpr;
+use crate::server::data::DefenseLpr;
 
 /// The page's minimums for a defenseman to be listed.
 pub const MIN_GAMES_PLAYED: i64 = 20;

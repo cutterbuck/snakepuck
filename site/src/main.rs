@@ -1,25 +1,28 @@
-//! SnakePuck API: serves the dbt marts as JSON.
+//! SnakePuck server: the JSON API and the server-rendered site, in one process.
 //!
 //! Environment:
 //!   DATA_DIR  serving files from infra/export_serving.py (default: data/serving)
-//!   PORT      listen port (default: 8080; Cloud Run sets it)
+//!   PORT      listen port (Cloud Run sets it); otherwise the Leptos site address
 //!   TRUSTED_PROXY_HOPS  proxies appending to X-Forwarded-For after the client (default: 0)
 //!   RATE_LIMIT_PER_SECOND, RATE_LIMIT_BURST  per-client limit (default: 5/s, bursts of 50)
+//!   LEPTOS_*  site settings; cargo-leptos sets them in development, the Dockerfile in
+//!             production (defaults are in Cargo.toml under [package.metadata.leptos])
 //!
 //! Local run, from site/ (data/ is git-ignored; the data is licensed):
 //!   gcloud storage rsync -r gs://snakepuck-data/serving/dev data/serving
-//!   cargo run
-
-mod api;
-mod data;
-mod games;
-mod limit;
+//!   cargo leptos watch   # http://localhost:3000, rebuilds and reloads on save
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Result;
+use axum::Router;
+use leptos::prelude::*;
+use leptos_axum::{LeptosRoutes, generate_route_list};
+use snakepuck::app::{App, shell};
+use snakepuck::server::{api, data, limit};
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
@@ -35,7 +38,7 @@ async fn main() -> Result<()> {
     let data_dir =
         PathBuf::from(std::env::var("DATA_DIR").unwrap_or_else(|_| "data/serving".into()));
     let started = Instant::now();
-    let store = data::Store::load(&data_dir)?;
+    let store = Arc::new(data::Store::load(&data_dir)?);
     tracing::info!(
         players = store.players.len(),
         games = store.games.len(),
@@ -46,13 +49,35 @@ async fn main() -> Result<()> {
         data_dir.display()
     );
 
+    let mut options = get_configuration(None)?.leptos_options;
+    if let Ok(port) = std::env::var("PORT") {
+        options.site_addr = SocketAddr::from(([0, 0, 0, 0], port.parse()?));
+    }
+    let addr = options.site_addr;
+
+    // Pages render with the same in-memory store the API uses.
+    let pages = Router::new()
+        .leptos_routes_with_context(
+            &options,
+            generate_route_list(App),
+            {
+                let store = store.clone();
+                move || provide_context(store.clone())
+            },
+            {
+                let options = options.clone();
+                move || shell(options.clone())
+            },
+        )
+        .fallback(leptos_axum::file_and_error_handler(shell))
+        .with_state(options);
+
     let app = limit::RateLimit::from_env()
-        .apply(api::router(store))
+        .apply(api::router(store).merge(pages))
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http());
 
-    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".into());
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
+    let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("listening on {}", listener.local_addr()?);
     axum::serve(
         listener,

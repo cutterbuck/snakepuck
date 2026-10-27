@@ -1,15 +1,16 @@
 name: site
 
-# Checks the Rust API (site/) when it changes: formatting, lints, and tests.
-# On main, then builds the image and deploys it to Cloud Run (site/service.yaml).
+# Checks the site (site/: Leptos pages + the JSON API) when it changes: formatting,
+# lints for both the server and the browser (WASM) builds, and tests. On main, then
+# builds the image and deploys it to Cloud Run (site/service.yaml).
 # Tests build their data in memory; licensed HALO data never enters CI or the image.
 
 on:
   push:
     branches: [main]
-    paths: ["site/**", ".github/workflows/site.yml"]
+    paths: ["site/**", "content/blog/**", ".dockerignore", ".github/workflows/site.yml"]
   pull_request:
-    paths: ["site/**", ".github/workflows/site.yml"]
+    paths: ["site/**", "content/blog/**", ".dockerignore", ".github/workflows/site.yml"]
 
 permissions:
   contents: read
@@ -26,6 +27,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -34,11 +36,14 @@ jobs:
       - name: Format
         run: cargo fmt --check
 
-      - name: Lint
-        run: cargo clippy --all-targets -- -D warnings
+      - name: Lint (server)
+        run: cargo clippy --features ssr --all-targets -- -D warnings
+
+      - name: Lint (browser)
+        run: cargo clippy --lib --features hydrate --target wasm32-unknown-unknown -- -D warnings
 
       - name: Test
-        run: cargo test
+        run: cargo test --features ssr
 
   deploy:
     needs: test
@@ -70,7 +75,8 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: site
+          context: .
+          file: site/Dockerfile
           push: true
           tags: ${{ env.IMAGE }}
           cache-from: type=gha

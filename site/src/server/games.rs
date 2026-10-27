@@ -9,7 +9,7 @@ use anyhow::Result;
 use quick_cache::sync::Cache;
 use serde::{Deserialize, Serialize};
 
-use crate::data::read_files;
+use crate::server::data::read_files;
 
 /// Games held in memory at once. A game's files take roughly 10 MB as rows.
 const CACHED_GAMES: usize = 16;

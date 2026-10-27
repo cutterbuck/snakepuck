@@ -1,0 +1,7 @@
+# Docker builds run from the repo root so the site image can include blog posts.
+# Send only what the image needs, and never the licensed HALO data.
+*
+!site
+!content/blog
+site/target
+site/data

@@ -9,11 +9,11 @@ use serde_json::Value;
 use tower::ServiceExt;
 
 use super::router;
-use crate::data::{
+use crate::server::data::{
     DefenseLpr, Game, GameStats, Marts, Player, PlayerGameRow, PlayerSeasonRow, SeasonStats,
     Situational, Store, Team, TeamSeason,
 };
-use crate::games::{Event, GameFiles, Shift, Snapshot, Stint};
+use crate::server::games::{Event, GameFiles, Shift, Snapshot, Stint};
 
 fn team(abbr: &str) -> Team {
     Team {
@@ -287,7 +287,7 @@ fn store() -> Store {
 }
 
 async fn get(uri: &str) -> (StatusCode, Value) {
-    let response = router(store())
+    let response = router(std::sync::Arc::new(store()))
         .oneshot(Request::get(uri).body(Body::empty()).unwrap())
         .await
         .unwrap();
