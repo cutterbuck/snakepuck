@@ -266,7 +266,7 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
       ssr-only, so HALO data can't be compiled into the WASM bundle (346 KB, 135 KB
       gzipped). Styling is the Dash site's Bootstrap 5.3.6 plus `assets/custom.css`, carried
       over as-is. `cargo leptos watch` serves it locally at http://localhost:3000.
-- [ ] Port pages roughly in order of simplicity: About → Blog → Standings →
+- [x] Port pages roughly in order of simplicity: About → Blog → Standings →
       Player Stats → Team Detail → Player Detail → Game Report (rink last)
   - [x] About
   - [x] Blog, 2026-10-27: posts from `content/blog` baked into the image
@@ -285,7 +285,9 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
         The rink is SVG drawn by Leptos (ported from `app/utils/rink.py`), not Plotly: it
         renders on the server and playback redraws only the frame's markers. Playback
         timing and the slider's stint marks follow Dash
-  - [ ] Player Analysis, Sample Data
+  - [x] Player Analysis, Sample Data, 2026-10-27: `/player-analysis?view&sort&dir` (the API
+        now echoes the sort it used) and `/sample-data?table`. Every page is now on Leptos,
+        so the placeholder that linked back to the Dash site is gone
 - [x] Pages not yet ported link back to the Dash site during the transition
 - [ ] Playwright smoke tests per page (for now, a headless-Chrome check that hydration,
       the menu and client-side navigation work, with no console errors)

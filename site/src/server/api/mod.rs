@@ -1,10 +1,10 @@
 //! JSON endpoints, one per page view. Each returns only what its page draws:
 //! one situation's stats, one page of a table, one shift of a game.
 
-mod analysis;
+pub mod analysis;
 pub mod blog;
 pub mod game;
-mod sample;
+pub mod sample;
 pub mod stats;
 #[cfg(test)]
 mod tests;
@@ -39,11 +39,11 @@ pub fn router(store: AppState) -> Router {
         )
         .route(
             "/api/player-analysis/defense-lpr",
-            get(analysis::defense_lpr),
+            get(analysis::defense_lpr_handler),
         )
         .route("/api/blog", get(blog::list_handler))
         .route("/api/blog/{slug}", get(blog::post_handler))
-        .route("/api/sample/{name}", get(sample::sample))
+        .route("/api/sample/{name}", get(sample::sample_handler))
         .with_state(store)
 }
 

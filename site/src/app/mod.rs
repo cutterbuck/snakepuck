@@ -5,9 +5,11 @@ mod blog;
 mod fetch;
 mod game_report;
 mod layout;
+mod player_analysis;
 mod player_detail;
 mod player_stats;
 mod rink;
+mod sample_data;
 mod standings;
 mod stats_table;
 mod team_detail;
@@ -20,14 +22,13 @@ use leptos_router::{SsrMode, path};
 use about::About;
 use blog::{BlogList, BlogPost};
 use game_report::GameReportPage;
-use layout::{Footer, Navbar, NotFound, Unported};
+use layout::{Footer, Navbar, NotFound};
+use player_analysis::PlayerAnalysisPage;
 use player_detail::PlayerDetailPage;
 use player_stats::PlayerStatsPage;
+use sample_data::SampleDataPage;
 use standings::StandingsPage;
 use team_detail::TeamDetailPage;
-
-/// The current (Dash) site, where pages not yet ported still live.
-pub const OLD_SITE: &str = "https://snakepuck.com";
 
 const DESCRIPTION: &str = "Exploring AHL player tracking data — shift-level visualizations, \
                            expected goal models, and deep-dive analytics.";
@@ -73,19 +74,17 @@ pub fn App() -> impl IntoView {
                 <Routes fallback=NotFound>
                     <Route path=path!("/") view=About />
                     <Route path=path!("/about") view=About />
-                    <Route
-                        path=path!("/player-analysis")
-                        view=|| view! { <Unported title="Player Analysis" old_path="/player-analysis" /> }
-                    />
-                    <Route
-                        path=path!("/sample-data")
-                        view=|| view! { <Unported title="Sample Raw Data" old_path="/sample-data" /> }
-                    />
                     // Pages with data render once it's loaded (SsrMode::Async), so the
                     // HTML is complete and a missing item gets a real 404.
                     <Route path=path!("/blog-posts") view=BlogList ssr=SsrMode::Async />
                     <Route path=path!("/blog/:slug") view=BlogPost ssr=SsrMode::Async />
                     <Route path=path!("/team-standings") view=StandingsPage ssr=SsrMode::Async />
+                    <Route
+                        path=path!("/player-analysis")
+                        view=PlayerAnalysisPage
+                        ssr=SsrMode::Async
+                    />
+                    <Route path=path!("/sample-data") view=SampleDataPage ssr=SsrMode::Async />
                     <Route path=path!("/player-stats") view=PlayerStatsPage ssr=SsrMode::Async />
                     // Stats tables link here; the Dash site's URLs use database ids.
                     <Route path=path!("/team/:team_abbr/:season") view=TeamDetailPage ssr=SsrMode::Async />

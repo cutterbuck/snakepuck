@@ -17,13 +17,13 @@ use arrow::json::writer::JsonArray;
 use axum::body::Bytes;
 use parquet::arrow::ProjectionMask;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
+use serde::Deserialize;
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
 use serde_arrow::schema::{SchemaLike, TracingOptions};
 
 use crate::server::blog::Blog;
 use crate::server::games::GameCache;
-pub use crate::types::{GameStats, Season, SeasonStats, Situation, TeamSeason};
+pub use crate::types::{DefenseLpr, GameStats, Season, SeasonStats, Situation, TeamSeason};
 
 impl Situation {
     fn prefix(self) -> &'static str {
@@ -116,33 +116,6 @@ pub struct PlayerGameRow {
 
 pub type PlayerSeason = Situational<PlayerSeasonRow, SeasonStats>;
 pub type PlayerGame = Situational<PlayerGameRow, GameStats>;
-
-/// `fct_defense_lpr`: one defenseman in one view of the Player Analysis LPR table.
-/// The xG views fill the xG fields; the rate view fills the success fields.
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct DefenseLpr {
-    pub player_id: String,
-    #[serde(skip_serializing)]
-    pub view: String,
-    pub games_played: i64,
-    pub lpr_count: i64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub avg_oi_xgf: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub avg_oi_xga: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_oi_xgf: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_oi_xga: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub xg_pct: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub successes: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub failures: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub success_rate: Option<f64>,
-}
 
 /// The small marts as read from disk, before indexing.
 #[derive(Default)]
@@ -448,6 +421,7 @@ fn strip_prefix(batch: RecordBatch, prefix: &str) -> Result<RecordBatch> {
 mod tests {
     use super::*;
     use parquet::arrow::ArrowWriter;
+    use serde::Serialize;
     use std::fs::File;
 
     #[derive(Serialize, Deserialize)]

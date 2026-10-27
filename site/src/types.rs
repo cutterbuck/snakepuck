@@ -448,6 +448,122 @@ pub struct ShiftDetail {
     pub frames: Vec<Frame>,
 }
 
+/// `fct_defense_lpr`: one defenseman in one view of the Player Analysis LPR table.
+/// The xG views fill the xG fields; the rate view fills the success fields.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct DefenseLpr {
+    pub player_id: String,
+    #[serde(default, skip_serializing)]
+    pub view: String,
+    pub games_played: i64,
+    pub lpr_count: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub avg_oi_xgf: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub avg_oi_xga: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_oi_xgf: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_oi_xga: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub xg_pct: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub successes: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failures: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub success_rate: Option<f64>,
+}
+
+/// A Player Analysis LPR table (see `fct_defense_lpr`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LprView {
+    Low,
+    #[default]
+    High,
+    HighNextSuccess,
+    HighNextFailure,
+    HighNextRate,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LprSortField {
+    AvgOiXgf,
+    AvgOiXga,
+    TotalOiXgf,
+    TotalOiXga,
+    XgPct,
+    Successes,
+    Failures,
+    SuccessRate,
+}
+
+/// `/api/player-analysis/defense-lpr` parameters, and the Player Analysis page's URL.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct LprQuery {
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub view: LprView,
+    /// Default: xG% for the xG views, success rate for the rate view (as on Dash).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sort: Option<LprSortField>,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub dir: Dir,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LprRow {
+    pub full_name: String,
+    #[serde(flatten)]
+    pub stats: DefenseLpr,
+}
+
+/// The Total row: counts and xG summed, averages and percentages averaged over the
+/// listed defensemen. A view's fields only.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct LprTotals {
+    pub lpr_count: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub avg_oi_xgf: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub avg_oi_xga: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_oi_xgf: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_oi_xga: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub xg_pct: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub successes: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failures: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub success_rate: Option<f64>,
+}
+
+/// One LPR view: defensemen meeting the minimums, sorted, with totals.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LprTable {
+    pub view: LprView,
+    pub sort: LprSortField,
+    pub dir: Dir,
+    pub min_games_played: i64,
+    pub min_lprs: i64,
+    pub totals: LprTotals,
+    pub rows: Vec<LprRow>,
+}
+
+/// The Sample Data page's URL: `?table=games`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct SampleQuery {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub table: Option<String>,
+}
+
+/// A sample's rows as stored: each a JSON object of column to value.
+pub type SampleRows = Vec<serde_json::Map<String, serde_json::Value>>;
+
 /// A blog post as the listing shows it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PostSummary {

@@ -1,10 +1,9 @@
-//! What every page shares: the navbar and footer, plus placeholder pages.
+//! What every page shares: the navbar and footer, and error and not-found pages.
 
 use leptos::prelude::*;
 use leptos_meta::Title;
 use leptos_router::hooks::use_location;
 
-use super::OLD_SITE;
 use crate::types::PageError;
 
 const NAV: [(&str, &str); 5] = [
@@ -86,22 +85,6 @@ pub fn Footer() -> impl IntoView {
                 </a>
             </div>
         </footer>
-    }
-}
-
-/// A page that hasn't moved to the new site yet: point to it on the current site.
-#[component]
-pub fn Unported(title: &'static str, old_path: &'static str) -> impl IntoView {
-    view! {
-        <Title text=format!("HALO Project - {title}") />
-        <div class="about-container">
-            <h2>{title}</h2>
-            <p class="text-muted">
-                "This page hasn't moved to the new site yet. "
-                <a href=format!("{OLD_SITE}{old_path}")>"View it on the current site"</a>
-                "."
-            </p>
-        </div>
     }
 }
 

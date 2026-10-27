@@ -498,6 +498,10 @@ async fn defense_lpr_lists_qualifying_defensemen_by_xg_pct() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["view"], "high");
     assert_eq!(
+        (&body["sort"], &body["dir"]),
+        (&"xg_pct".into(), &"desc".into())
+    );
+    assert_eq!(
         column(&body["rows"], "full_name"),
         ["Bob Beta", "Dan Delta"]
     );
@@ -521,6 +525,7 @@ async fn defense_lpr_lists_qualifying_defensemen_by_xg_pct() {
 #[tokio::test]
 async fn defense_lpr_rate_view_sorts_by_success_rate() {
     let (_, body) = get("/api/player-analysis/defense-lpr?view=high_next_rate").await;
+    assert_eq!(body["sort"], "success_rate", "the rate view's default sort");
     assert_eq!(column(&body["rows"], "successes"), [14, 9]);
     assert_eq!(body["totals"]["successes"], 23);
     assert_eq!(body["totals"]["failures"], 13);

@@ -3,8 +3,8 @@
 //! Either way the page gets the same response type from `crate::types`.
 
 use crate::types::{
-    GameReport, PageError, PlayerDetail, PlayerStats, PlayerStatsQuery, Post, PostSummary,
-    ShiftDetail, SituationQuery, Standings, TableQuery, TeamDetail,
+    GameReport, LprQuery, LprTable, PageError, PlayerDetail, PlayerStats, PlayerStatsQuery, Post,
+    PostSummary, SampleRows, ShiftDetail, SituationQuery, Standings, TableQuery, TeamDetail,
 };
 
 pub async fn blog_posts() -> Result<Vec<PostSummary>, PageError> {
@@ -133,6 +133,32 @@ pub async fn shift(
             "/api/games/{game_id}/players/{player_id}/shifts/{shift}"
         ))
         .await
+    }
+}
+
+pub async fn defense_lpr(q: LprQuery) -> Result<LprTable, PageError> {
+    #[cfg(feature = "ssr")]
+    {
+        Ok(crate::server::api::analysis::defense_lpr(&store(), q))
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        get(&format!(
+            "/api/player-analysis/defense-lpr{}",
+            query_string(&q)
+        ))
+        .await
+    }
+}
+
+pub async fn sample(name: String) -> Result<SampleRows, PageError> {
+    #[cfg(feature = "ssr")]
+    {
+        Ok(crate::server::api::sample::sample(&store(), &name)?)
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        get(&format!("/api/sample/{}", encode(&name))).await
     }
 }
 

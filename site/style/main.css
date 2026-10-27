@@ -810,3 +810,93 @@
     border: 2px solid white;
     box-shadow: 0 0 0 1px #ccc;
 }
+
+/* Player Analysis LPR table (inline styles on the Dash page) */
+.lpr-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.lpr-table th {
+    background-color: #343a40;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    padding: 4px 8px;
+    white-space: nowrap;
+}
+
+.lpr-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.lpr-table th.active {
+    background-color: #4a6fa5;
+}
+
+.lpr-table td {
+    text-align: center;
+    padding: 4px 8px;
+}
+
+.lpr-table td.lpr-name {
+    text-align: left;
+    white-space: nowrap;
+}
+
+.lpr-table td.active {
+    background-color: rgba(74, 111, 165, 0.1);
+}
+
+.lpr-table tr.lpr-alt,
+.sample-table tr.lpr-alt {
+    background-color: #f8f9fa;
+}
+
+.lpr-table tr.lpr-total td {
+    font-weight: bold;
+    border-bottom: 2px solid #343a40;
+}
+
+/* Sample Data (DataTable styles on the Dash page) */
+.sample-scroll {
+    overflow-x: auto;
+}
+
+.sample-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.sample-table th {
+    background-color: #343a40;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    padding: 4px 6px;
+}
+
+.sample-table td {
+    text-align: center;
+    padding: 2px 6px;
+    border-bottom: 1px solid #dee2e6;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sample-table .sample-id {
+    max-width: 80px;
+}
+
+.sample-pager {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 8px 0 24px;
+    font-size: 13px;
+}
