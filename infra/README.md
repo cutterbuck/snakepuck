@@ -43,7 +43,7 @@ For scale, a full scan of `raw.tracking` is about 2 GB.
 gcloud storage buckets create gs://snakepuck-data --location=us-central1 \
   --uniform-bucket-level-access --public-access-prevention
 
-# Keyless service account for the pipeline, Cloud Run, and CI
+# Keyless service account for the pipeline and CI (Cloud Run runs as snakepuck-api, below)
 gcloud iam service-accounts create snakepuck-pipeline --display-name="SnakePuck data pipeline"
 SA=serviceAccount:snakepuck-pipeline@snakepuck.iam.gserviceaccount.com
 gcloud projects add-iam-policy-binding snakepuck --member=$SA --role=roles/bigquery.jobUser
@@ -53,6 +53,53 @@ gcloud storage buckets add-iam-policy-binding gs://snakepuck-data --member=$SA -
 
 The bucket holds licensed HALO data and must stay private. Never commit
 anything from it to this public repo.
+
+## GitHub Actions auth (Phase 3)
+
+Workflows authenticate as `snakepuck-pipeline` with no stored key, through Workload
+Identity Federation. Only this repository's `main` branch is accepted. This was set up
+in Phase 3 and is recorded here from the live configuration:
+
+```bash
+gcloud iam workload-identity-pools create github --location=global
+gcloud iam workload-identity-pools providers create-oidc snakepuck-repo \
+  --location=global --workload-identity-pool=github \
+  --issuer-uri=https://token.actions.githubusercontent.com \
+  --attribute-mapping=google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.ref=assertion.ref \
+  --attribute-condition="assertion.repository_id == '1150873071' && assertion.ref == 'refs/heads/main'"
+gcloud iam service-accounts add-iam-policy-binding snakepuck-pipeline@snakepuck.iam.gserviceaccount.com \
+  --role=roles/iam.workloadIdentityUser \
+  --member=principalSet://iam.googleapis.com/projects/65985276875/locations/global/workloadIdentityPools/github/attribute.repository_id/1150873071
+```
+
+## Cloud Run API (Phase 4)
+
+The API (`site/`) runs as its own service account, which can only read the bucket.
+The service itself is defined in `site/service.yaml`. It mounts the bucket read-only
+with only `serving/prod` visible. `.github/workflows/site.yml` builds the image and
+applies that file on every push to `main`.
+
+```bash
+gcloud services enable run.googleapis.com artifactregistry.googleapis.com
+gcloud artifacts repositories create snakepuck --repository-format=docker --location=us-central1
+# Keep the 5 newest images; delete the rest after a day
+gcloud artifacts repositories set-cleanup-policies snakepuck --location=us-central1 --no-dry-run \
+  --policy=<(echo '[{"name":"keep-recent","action":{"type":"Keep"},"mostRecentVersions":{"keepCount":5}},
+                    {"name":"delete-old","action":{"type":"Delete"},"condition":{"tagState":"any","olderThan":"1d"}}]')
+
+gcloud iam service-accounts create snakepuck-api --display-name="SnakePuck API (Cloud Run runtime)"
+API=serviceAccount:snakepuck-api@snakepuck.iam.gserviceaccount.com
+gcloud storage buckets add-iam-policy-binding gs://snakepuck-data --member=$API --role=roles/storage.objectViewer
+
+# CI pushes images, deploys revisions, and runs them as snakepuck-api
+CI=serviceAccount:snakepuck-pipeline@snakepuck.iam.gserviceaccount.com
+gcloud artifacts repositories add-iam-policy-binding snakepuck --location=us-central1 --member=$CI --role=roles/artifactregistry.writer
+gcloud projects add-iam-policy-binding snakepuck --member=$CI --role=roles/run.developer
+gcloud iam service-accounts add-iam-policy-binding snakepuck-api@snakepuck.iam.gserviceaccount.com --member=$CI --role=roles/iam.serviceAccountUser
+
+# Once, after the first deploy: make the API public. CI can't change IAM (run.developer).
+gcloud run services add-iam-policy-binding snakepuck-api --region=us-central1 --member=allUsers --role=roles/run.invoker
+```
 
 ## Loading data
 

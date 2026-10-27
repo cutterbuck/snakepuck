@@ -3,6 +3,7 @@
 //! Environment:
 //!   DATA_DIR  serving files from infra/export_serving.py (default: data/serving)
 //!   PORT      listen port (default: 8080; Cloud Run sets it)
+//!   TRUSTED_PROXY_HOPS  proxies appending to X-Forwarded-For after the client (default: 0)
 //!
 //! Local run, from site/ (data/ is git-ignored; the data is licensed):
 //!   gcloud storage rsync -r gs://snakepuck-data/serving/dev data/serving
@@ -11,7 +12,9 @@
 mod api;
 mod data;
 mod games;
+mod limit;
 
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -42,13 +45,18 @@ async fn main() -> Result<()> {
         data_dir.display()
     );
 
-    let app = api::router(store)
+    let app = limit::RateLimit::from_env()
+        .apply(api::router(store))
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http());
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "8080".into());
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
     tracing::info!("listening on {}", listener.local_addr()?);
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
     Ok(())
 }
