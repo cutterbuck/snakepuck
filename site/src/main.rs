@@ -10,6 +10,7 @@
 
 mod api;
 mod data;
+mod games;
 
 use std::path::PathBuf;
 use std::time::Instant;
@@ -32,8 +33,10 @@ async fn main() -> Result<()> {
     let started = Instant::now();
     let store = data::Store::load(&data_dir)?;
     tracing::info!(
-        teams = store.teams.len(),
-        seasons = store.seasons.len(),
+        players = store.players.len(),
+        games = store.games.len(),
+        player_seasons = store.player_seasons.len(),
+        player_games = store.player_games.len(),
         elapsed_ms = started.elapsed().as_millis() as u64,
         "loaded marts from {}",
         data_dir.display()
