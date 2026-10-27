@@ -2,7 +2,7 @@
 //! endpoint's function directly (no HTTP); in the browser it fetches `/api/...`.
 //! Either way the page gets the same response type from `crate::types`.
 
-use crate::types::{PageError, Post, PostSummary};
+use crate::types::{PageError, Post, PostSummary, Standings};
 
 pub async fn blog_posts() -> Result<Vec<PostSummary>, PageError> {
     #[cfg(feature = "ssr")]
@@ -23,6 +23,34 @@ pub async fn blog_post(slug: String) -> Result<Post, PageError> {
     #[cfg(not(feature = "ssr"))]
     {
         get(&format!("/api/blog/{}", encode(&slug))).await
+    }
+}
+
+pub async fn standings(
+    league: Option<String>,
+    season: Option<String>,
+) -> Result<Standings, PageError> {
+    #[cfg(feature = "ssr")]
+    {
+        let q = crate::server::api::stats::StandingsQuery { league, season };
+        Ok(crate::server::api::stats::standings(&store(), q)?)
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        let query = query(&[("league", league.as_deref()), ("season", season.as_deref())]);
+        get(&format!("/api/standings{query}")).await
+    }
+}
+
+/// `?a=1&b=2` from the pairs that have a value; empty if none do.
+pub fn query(pairs: &[(&str, Option<&str>)]) -> String {
+    let pairs: Vec<_> = pairs
+        .iter()
+        .filter_map(|&(k, v)| v.map(|v| (k, v)))
+        .collect();
+    match serde_urlencoded::to_string(pairs).unwrap_or_default() {
+        q if q.is_empty() => q,
+        q => format!("?{q}"),
     }
 }
 

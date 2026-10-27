@@ -8,9 +8,8 @@ use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 
 use super::{ApiError, AppState, TeamRef, not_found};
-use crate::server::data::{
-    GameStats, Player, PlayerSeason, Season, SeasonStats, Situation, Store, TeamSeason,
-};
+use crate::server::data::{GameStats, Player, PlayerSeason, Season, SeasonStats, Situation, Store};
+use crate::types::{Standings, StandingsRow};
 
 /// Rows per page on Player Stats.
 pub const PAGE_SIZE: usize = 25;
@@ -19,49 +18,66 @@ pub async fn seasons(State(store): State<AppState>) -> Json<Vec<Season>> {
     Json(store.seasons.clone())
 }
 
-#[derive(Deserialize)]
-pub struct LeagueSeason {
-    league: String,
-    season: String,
-}
-
-#[derive(Serialize)]
-pub struct StandingsRow<'a> {
-    team_name: &'a str,
-    logo_url: &'a str,
-    division: &'a str,
-    #[serde(flatten)]
-    stats: &'a TeamSeason,
+/// Both optional: the league defaults to the AHL (or the first league), the season
+/// to the league's newest.
+#[derive(Debug, Default, Deserialize)]
+pub struct StandingsQuery {
+    pub league: Option<String>,
+    pub season: Option<String>,
 }
 
 /// Standings for one league-season, ordered by points, then RW, ROW and W
 /// (the tiebreakers the Dash page uses).
-pub async fn standings(
-    State(store): State<AppState>,
-    Query(q): Query<LeagueSeason>,
-) -> Result<Response, ApiError> {
+pub fn standings(store: &Store, q: StandingsQuery) -> Result<Standings, ApiError> {
+    let seasons = &store.seasons;
+    let league = q
+        .league
+        .or_else(|| {
+            let ahl = seasons.iter().find(|s| s.league == "AHL");
+            ahl.or(seasons.first()).map(|s| s.league.clone())
+        })
+        .ok_or_else(|| not_found("seasons"))?;
+    let season = q
+        .season
+        .or_else(|| {
+            let newest = seasons.iter().find(|s| s.league == league);
+            newest.map(|s| s.season.clone())
+        })
+        .ok_or_else(|| not_found(format!("standings for {league}")))?;
     let rows = store
         .team_seasons
-        .get(&(q.league.clone(), q.season.clone()))
-        .ok_or_else(|| not_found(format!("standings for {} {}", q.league, q.season)))?;
+        .get(&(league.clone(), season.clone()))
+        .ok_or_else(|| not_found(format!("standings for {league} {season}")))?;
 
     let mut rows: Vec<_> = rows
         .iter()
         .map(|ts| {
             let team = &store.teams[&ts.team_abbr];
             StandingsRow {
-                team_name: &team.team_name,
-                logo_url: &team.logo_url,
-                division: &team.division,
-                stats: ts,
+                team_name: team.team_name.clone(),
+                logo_url: team.logo_url.clone(),
+                division: team.division.clone(),
+                stats: ts.clone(),
             }
         })
         .collect();
     rows.sort_by_key(|r| {
-        let s = r.stats;
+        let s = &r.stats;
         std::cmp::Reverse((s.points, s.regulation_wins, s.regulation_or_ot_wins, s.wins))
     });
-    Ok(Json(rows).into_response())
+    Ok(Standings {
+        league,
+        season,
+        seasons: seasons.clone(),
+        rows,
+    })
+}
+
+pub async fn standings_handler(
+    State(store): State<AppState>,
+    Query(q): Query<StandingsQuery>,
+) -> Result<Json<Standings>, ApiError> {
+    Ok(Json(standings(&store, q)?))
 }
 
 /// Column to sort a player table by.

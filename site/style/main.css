@@ -487,3 +487,73 @@
     color: #666;
     font-weight: 600;
 }
+
+/* Team Standings (inline styles on the Dash page) */
+.standings-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.standings-table th {
+    background-color: #163d5c;
+    color: #d0e8f7;
+    font-weight: bold;
+    text-align: center;
+    padding: 6px 10px;
+    white-space: nowrap;
+    border-bottom: 2px solid #4fc3f7;
+}
+
+.standings-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.standings-table th.active {
+    background-color: #1a6fa8;
+    color: white;
+}
+
+.standings-table tbody tr {
+    background-color: #ffffff;
+}
+
+.standings-table tbody tr.standings-alt {
+    background-color: #e8f4fb;
+}
+
+.standings-table td {
+    text-align: center;
+    padding: 5px 10px;
+}
+
+.standings-table td.active {
+    background-color: rgba(79, 195, 247, 0.08);
+}
+
+.standings-table td.standings-team {
+    text-align: left;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    white-space: nowrap;
+}
+
+.standings-team span {
+    display: inline-block;
+    padding-left: 8px;
+}
+
+.standings-team img {
+    vertical-align: middle;
+}
+
+.standings-table td.standings-division {
+    background-color: #0d2137;
+    color: #4fc3f7;
+    font-weight: bold;
+    font-size: 16px;
+    padding: 10px 12px;
+    letter-spacing: 0.5px;
+    text-align: left;
+}

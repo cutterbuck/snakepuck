@@ -23,6 +23,7 @@ use serde_arrow::schema::{SchemaLike, TracingOptions};
 
 use crate::server::blog::Blog;
 use crate::server::games::GameCache;
+pub use crate::types::{Season, TeamSeason};
 
 /// Game situation; the marts prefix each situational stat column with it (`pp_goals`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]
@@ -99,25 +100,6 @@ pub struct Game {
     pub away_team_abbr: String,
     pub home_score: i64,
     pub away_score: i64,
-}
-
-/// `fct_team_season_stats`
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct TeamSeason {
-    pub team_abbr: String,
-    pub season: String,
-    pub games_played: i64,
-    pub wins: i64,
-    pub losses: i64,
-    pub ot_losses: i64,
-    pub points: i64,
-    pub points_percentage: f64,
-    pub regulation_wins: i64,
-    pub regulation_or_ot_wins: i64,
-    pub goals_forward: i64,
-    pub goals_against: i64,
-    pub goal_diff: i64,
-    pub so_record: String,
 }
 
 /// `fct_player_season_stats`, one player-team-season.
@@ -214,12 +196,6 @@ pub struct DefenseLpr {
     pub failures: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub success_rate: Option<f64>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
-pub struct Season {
-    pub league: String,
-    pub season: String,
 }
 
 /// The small marts as read from disk, before indexing.

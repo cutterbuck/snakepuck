@@ -18,6 +18,52 @@ impl std::fmt::Display for PageError {
     }
 }
 
+/// A league-season with data.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct Season {
+    pub league: String,
+    pub season: String,
+}
+
+/// `fct_team_season_stats`: one team's record in a season.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct TeamSeason {
+    pub team_abbr: String,
+    pub season: String,
+    pub games_played: i64,
+    pub wins: i64,
+    pub losses: i64,
+    pub ot_losses: i64,
+    pub points: i64,
+    pub points_percentage: f64,
+    pub regulation_wins: i64,
+    pub regulation_or_ot_wins: i64,
+    pub goals_forward: i64,
+    pub goals_against: i64,
+    pub goal_diff: i64,
+    pub so_record: String,
+}
+
+/// The Standings page: one league-season, plus every league-season for the dropdowns.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Standings {
+    pub league: String,
+    pub season: String,
+    /// Newest first.
+    pub seasons: Vec<Season>,
+    /// Ordered by points, then RW, ROW and W (the Dash page's tiebreakers).
+    pub rows: Vec<StandingsRow>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StandingsRow {
+    pub team_name: String,
+    pub logo_url: String,
+    pub division: String,
+    #[serde(flatten)]
+    pub stats: TeamSeason,
+}
+
 /// A blog post as the listing shows it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PostSummary {

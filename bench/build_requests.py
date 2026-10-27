@@ -73,7 +73,7 @@ PAGES = {
             "..standings-season.options...standings-season.value..",
             "standings-table.children",
         ],
-        "api": ["/api/seasons", "/api/standings?league=AHL&season={season}"],
+        "api": ["/api/standings?league=AHL&season={season}"],
     },
     "player_stats": {
         "path": "/player-stats",

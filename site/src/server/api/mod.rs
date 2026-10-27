@@ -5,7 +5,7 @@ mod analysis;
 pub mod blog;
 mod game;
 mod sample;
-mod stats;
+pub mod stats;
 #[cfg(test)]
 mod tests;
 
@@ -25,7 +25,7 @@ pub fn router(store: AppState) -> Router {
     Router::new()
         .route("/api/health", get(|| async { "ok" }))
         .route("/api/seasons", get(stats::seasons))
-        .route("/api/standings", get(stats::standings))
+        .route("/api/standings", get(stats::standings_handler))
         .route("/api/player-stats", get(stats::player_stats))
         .route("/api/teams/{team_abbr}/{season}", get(stats::team))
         .route("/api/players/{player_id}", get(stats::player))

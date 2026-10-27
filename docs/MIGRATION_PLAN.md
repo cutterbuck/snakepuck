@@ -269,8 +269,10 @@ situation (PP/PK/EV), under both HALO's assignment and the old time window.
 - [ ] Port pages roughly in order of simplicity: About → Blog → Standings →
       Player Stats → Team Detail → Player Detail → Game Report (rink last)
   - [x] About
-  - [ ] Blog
-  - [ ] Standings
+  - [x] Blog, 2026-10-27: posts from `content/blog` baked into the image
+  - [x] Standings, 2026-10-27: league and season in the URL; sorting and the
+        division/league view are in the browser. `/api/standings` now returns the season
+        list too, with both parameters optional (AHL, newest season)
   - [ ] Player Stats
   - [ ] Team Detail
   - [ ] Player Detail

@@ -311,9 +311,22 @@ async fn seasons_newest_first() {
 async fn standings_sorted_by_points_then_regulation_wins() {
     let (status, body) = get("/api/standings?league=AHL&season=2023-24").await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(column(&body, "team_abbr"), ["BAK", "CGY", "ABB"]);
-    assert_eq!(body[0]["team_name"], "BAK Team");
-    assert_eq!(body[0]["points"], 95);
+    let rows = &body["rows"];
+    assert_eq!(column(rows, "team_abbr"), ["BAK", "CGY", "ABB"]);
+    assert_eq!(rows[0]["team_name"], "BAK Team");
+    assert_eq!(rows[0]["points"], 95);
+}
+
+#[tokio::test]
+async fn standings_default_to_the_newest_season_and_list_every_season() {
+    let (status, body) = get("/api/standings").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        (&body["league"], &body["season"]),
+        (&"AHL".into(), &"2023-24".into())
+    );
+    assert_eq!(column(&body["seasons"], "season"), ["2023-24", "2022-23"]);
+    assert_eq!(body["rows"].as_array().unwrap().len(), 3);
 }
 
 #[tokio::test]
