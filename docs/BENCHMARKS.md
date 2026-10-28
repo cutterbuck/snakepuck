@@ -65,6 +65,10 @@ is counted once per process.
 
 ## Live: as a visitor sees it
 
+These numbers were taken with Cloud Run in us-central1. On 2026-10-28 it moved to
+us-east4, closer to the client, and through Firebase whole requests got another 23–24%
+faster (about 140–161 ms → 106–123 ms; see `infra/README.md`).
+
 The live comparison is Dash at snakepuck.com (DigitalOcean, behind Cloudflare, managed
 Postgres) against the API on Cloud Run (us-central1), measured from a home connection
 in the US Eastern time zone. It's

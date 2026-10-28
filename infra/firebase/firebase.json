@@ -5,7 +5,7 @@
     "rewrites": [
       {
         "source": "**",
-        "run": { "serviceId": "snakepuck-api", "region": "us-central1" }
+        "run": { "serviceId": "snakepuck-api", "region": "us-east4" }
       }
     ]
   }

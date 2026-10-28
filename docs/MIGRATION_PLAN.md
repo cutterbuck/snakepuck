@@ -335,6 +335,11 @@ are already on.
 - **Infrastructure as code:** Terraform now, or click-ops first and codify later?
 
 ## Decided
+- **Cloud Run region (2026-10-28):** `us-east4` (N. Virginia), near the East Coast visitors;
+  BigQuery, the bucket and the image registry stay in `us-central1`. This was suggested
+  in Phase 2 but never recorded, so Phase 4 deployed to `us-central1`. Measured before
+  moving: a copy in `us-east4` behind a Firebase preview channel saved 15–33 ms per
+  request. Live afterwards: 23–24% faster whole requests.
 - **Domain cutover (2026-10-28):** snakepuck.com serves the Leptos site through Firebase
   Hosting → Cloud Run. Steps and rollback are in `infra/README.md`. The Dash app stays up
   on DigitalOcean, without the domain, until Phase 7.

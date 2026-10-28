@@ -1,7 +1,11 @@
 # GCP setup (Phase 2)
 
 One-time setup for project `snakepuck`, recorded so it can be codified in
-Terraform later. Everything lives in `us-central1`.
+Terraform later. Everything lives in `us-central1` (Iowa: the cheapest region, with every
+service) except the Cloud Run service, which runs in `us-east4` (N. Virginia), near the
+East Coast visitors. It moved there on 2026-10-28: through Firebase from NYC, each
+request's wait after TLS dropped from 104–109 ms to 75–78 ms, and whole requests got
+23–24% faster. It loads the marts from the Iowa bucket at startup and keeps them in memory.
 
 ## Cost guardrails
 
@@ -100,7 +104,7 @@ gcloud projects add-iam-policy-binding snakepuck --member=$CI --role=roles/run.d
 gcloud iam service-accounts add-iam-policy-binding snakepuck-api@snakepuck.iam.gserviceaccount.com --member=$CI --role=roles/iam.serviceAccountUser
 
 # Once, after the first deploy: make the API public. CI can't change IAM (run.developer).
-gcloud run services add-iam-policy-binding snakepuck-api --region=us-central1 --member=allUsers --role=roles/run.invoker
+gcloud run services add-iam-policy-binding snakepuck-api --region=us-east4 --member=allUsers --role=roles/run.invoker
 ```
 
 ## Firebase Hosting and snakepuck.com (Phase 5)
