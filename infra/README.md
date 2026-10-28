@@ -125,9 +125,15 @@ the app sees `"<client>, <Firebase edge>"`, so `TRUSTED_PROXY_HOPS` is 1 in
 `"<anything the client sent>, <client>"`, so callers there can choose their rate-limit
 key. Cloud Run's 2-instance cap bounds the cost.
 
-**The domain** (cut over 2026-10-28). DNS for snakepuck.com is at DigitalOcean (registrar
-GoDaddy), in the *personal* team (`doctl --context personal`). The custom domain was
-added through the Firebase Hosting API, which returns the records it needs:
+**The domain** (cut over 2026-10-28). The registrar is GoDaddy. DNS is in **Cloud DNS**,
+zone `snakepuck-com` in this project (about $0.20 a month), with nameservers
+`ns-cloud-a{1..4}.googledomains.com` set at GoDaddy; DNSSEC is off. Until 2026-10-28 the
+DNS was at DigitalOcean, and that zone was kept identical for 48 hours after the
+nameserver change (the `.com` NS TTL), then deleted. To list the records:
+`gcloud dns record-sets list --zone=snakepuck-com --project=snakepuck`.
+
+The custom domain was added through the Firebase Hosting API, which returns the records
+it needs:
 
 ```bash
 T=$(gcloud auth print-access-token)
@@ -140,7 +146,19 @@ The records are: TXT `@` `hosting-site=snakepuck` (ownership), TXT `_acme-challe
 in first, so the certificate was issued before any traffic moved. The old A/AAAA records
 belonged to the Dash app on DigitalOcean App Platform (`hockey-blog-app`), which manages
 its domain's records and won't let them be deleted. Removing the `domains:` block from
-the app's spec deleted them.
+the app's spec deleted them. The zone moved to Cloud DNS the same day:
+
+```bash
+gcloud services enable dns.googleapis.com --project=snakepuck
+gcloud dns managed-zones create snakepuck-com --project=snakepuck --dns-name=snakepuck.com. \
+  --description="snakepuck.com" --visibility=public
+gcloud dns record-sets create snakepuck.com. --zone=snakepuck-com --project=snakepuck \
+  --type=A --ttl=300 --rrdatas=199.36.158.100
+gcloud dns record-sets create snakepuck.com. --zone=snakepuck-com --project=snakepuck \
+  --type=TXT --ttl=300 --rrdatas='"hosting-site=snakepuck"'
+gcloud dns record-sets create _acme-challenge.snakepuck.com. --zone=snakepuck-com \
+  --project=snakepuck --type=TXT --ttl=300 --rrdatas='"<value from the Firebase API>"'
+```
 
 The Dash app and its database were deleted in Phase 7 (2026-10-28), so there's no
 rollback to Dash. A final database dump and the app's spec are kept outside the repo.
