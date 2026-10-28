@@ -92,6 +92,12 @@ jobs:
           pip install -r ../infra/requirements.txt
           python ../infra/export_serving.py marts gs://snakepuck-data/serving/prod
 
+      # The API runs in us-east4 and reads a copy of the export in that region.
+      - name: Copy the export to the API's region
+        run: |
+          gcloud storage rsync -r gs://snakepuck-data/serving/prod \
+            gs://snakepuck-serving-use4/serving/prod --delete-unmatched-destination-objects
+
       - name: Save prod state
         run: gcloud storage cp target/manifest.json "$STATE_URI/manifest.json"
 

@@ -1,8 +1,10 @@
 # Cloud Run service for the API, applied by .github/workflows/site.yml with
 # `gcloud run services replace` (${IMAGE} is filled in at deploy time).
 #
-# The bucket is mounted read-only with only serving/prod visible, so the container
-# can't reach the raw or golden data even though they share the bucket.
+# The data is mounted read-only from snakepuck-serving-use4, a copy of the serving export
+# in this service's region (dbt.yml syncs it after each export). Reading the us-central1
+# original from here doubled the startup load of the marts (about 1.5 s -> 3.5 s) and
+# slowed each game's first open. Only serving/prod is visible.
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
@@ -51,5 +53,5 @@ spec:
             driver: gcsfuse.run.googleapis.com
             readOnly: true
             volumeAttributes:
-              bucketName: snakepuck-data
+              bucketName: snakepuck-serving-use4
               mountOptions: only-dir=serving/prod
