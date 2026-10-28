@@ -8,7 +8,10 @@ kind: Service
 metadata:
   name: snakepuck-api
   labels:
-    cloud.googleapis.com/location: us-central1
+    # N. Virginia, near the East Coast visitors; 15-33 ms faster per request from NYC than
+    # us-central1, through Firebase (measured 2026-10-28). The data bucket and images stay
+    # in us-central1; the marts load across regions only at startup.
+    cloud.googleapis.com/location: us-east4
   annotations:
     run.googleapis.com/ingress: all
 spec:

@@ -98,8 +98,8 @@ jobs:
       # Running API instances hold the marts in memory; a new revision loads the new ones.
       - name: Restart the API on the new data
         run: |
-          if gcloud run services describe snakepuck-api --region=us-central1 --project=snakepuck >/dev/null 2>&1; then
-            gcloud run services update snakepuck-api --region=us-central1 --project=snakepuck \
+          if gcloud run services describe snakepuck-api --region=us-east4 --project=snakepuck >/dev/null 2>&1; then
+            gcloud run services update snakepuck-api --region=us-east4 --project=snakepuck \
               --update-env-vars=DATA_VERSION=${{ github.run_id }} --quiet
           fi
 

@@ -85,4 +85,4 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           envsubst '${IMAGE}' < site/service.yaml > service.yaml
-          gcloud run services replace service.yaml --region=us-central1 --project=snakepuck --quiet
+          gcloud run services replace service.yaml --region=us-east4 --project=snakepuck --quiet
