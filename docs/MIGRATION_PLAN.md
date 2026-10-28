@@ -302,6 +302,18 @@ calls the endpoint's function directly; navigation in the browser fetches the sa
 
 **Done when:** every page is served by Leptos.
 
+Follow-up, after the domain cutover: **shrink the browser bundle.** It grew from 346 KB
+(135 KB gzipped) with the app shell to 1.39 MB (533 KB gzipped) with every page
+(2026-10-28). Pages are server-rendered, so this only delays interactivity, not content.
+The size settings (`opt-level = "z"`, LTO, one codegen unit, `panic = "abort"`) and brotli
+are already on.
+- [ ] Measure first: Lighthouse on the live site, and `twiggy` for what's large in the WASM
+- [ ] Cheap tweaks: confirm `wasm-opt` runs on release builds, strip names, try Leptos's
+      `erase_components`
+- [ ] Split the bundle by page (Leptos 0.8 `#[lazy]` routes + `cargo leptos --split`), so
+      visitors download only the pages they open
+- [ ] Before the migration write-up or any published page-load numbers
+
 ## Phase 6 — Rust tracking processing *(as needed)*
 - [ ] Identify logic that SQL handles poorly (possession chains, pressure/LPR metrics)
 - [ ] Implement in Rust over Arrow/Polars; write results to BigQuery for dbt
