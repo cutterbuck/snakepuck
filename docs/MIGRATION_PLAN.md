@@ -328,13 +328,11 @@ are already on.
 
 ## Open decisions
 - **Infrastructure as code:** Terraform now, or click-ops first and codify later?
-- **Domain/hosting cutover:** when to point the live domain at Firebase Hosting / Cloud Run
-
-## Reminders
-- BigQuery daily query cap is temporarily 200 GiB (raised 2026-10-26 for build-out).
-  Lower it to 50 GiB once Phases 3–5 settle (command in `infra/README.md`).
 
 ## Decided
+- **Domain cutover (2026-10-28):** snakepuck.com serves the Leptos site through Firebase
+  Hosting → Cloud Run. Steps and rollback are in `infra/README.md`. The Dash app stays up
+  on DigitalOcean, without the domain, until Phase 7.
 - **Cold starts (2026-10-27):** scale to zero, to keep costs low for now. The first
   request after an idle period takes about 2.6 s. One warm instance (about $10–15 a
   month) is a one-line change in `site/service.yaml` if that's needed later.

@@ -125,6 +125,28 @@ the app sees `"<client>, <Firebase edge>"`, so `TRUSTED_PROXY_HOPS` is 1 in
 `"<anything the client sent>, <client>"`, so callers there can choose their rate-limit
 key. Cloud Run's 2-instance cap bounds the cost.
 
+**The domain** (cut over 2026-10-28). DNS for snakepuck.com is at DigitalOcean (registrar
+GoDaddy), in the *personal* team (`doctl --context personal`). The custom domain was
+added through the Firebase Hosting API, which returns the records it needs:
+
+```bash
+T=$(gcloud auth print-access-token)
+curl -X POST -H "Authorization: Bearer $T" -H "x-goog-user-project: snakepuck" -d '{}' \
+  "https://firebasehosting.googleapis.com/v1beta1/projects/snakepuck/sites/snakepuck/customDomains?customDomainId=snakepuck.com"
+```
+
+The records are: TXT `@` `hosting-site=snakepuck` (ownership), TXT `_acme-challenge`
+(the certificate; keep it for renewals), and A `@` `199.36.158.100`. The TXT records went
+in first, so the certificate was issued before any traffic moved. The old A/AAAA records
+belonged to the Dash app on DigitalOcean App Platform (`hockey-blog-app`), which manages
+its domain's records and won't let them be deleted. Removing the `domains:` block from
+the app's spec deleted them.
+
+**Rollback to Dash** (until Phase 7 retires it): delete the A record `199.36.158.100`, and
+put the `domains:` block back in `hockey-blog-app`'s spec (a backup of the spec is outside
+the repo, in `~/snakepuck-backups/`). DigitalOcean then recreates its records and
+certificate. Dash also stays up at https://hockey-blog-app-yw79z.ondigitalocean.app.
+
 ## Loading data
 
 ```bash
