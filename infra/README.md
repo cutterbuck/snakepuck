@@ -21,15 +21,17 @@ for q in QueryUsagePerDay QueryUsagePerUserPerDay; do
 done
 ```
 
-**Temporarily raised to 200 GiB/day (2026-10-26) while building out Phases 3–5.**
-Lower it back to 50 GiB when done (no override flag needed when going up; going down
-from 200 GiB to 50 GiB needs `--allow-high-percentage-quota-decrease`):
+Temporarily raised to 200 GiB/day (2026-10-26) for the Phases 3–5 build-out, and
+lowered back to 50 GiB on 2026-10-28 with the command below. No override flag is needed
+going up. Going down from 200 GiB to 50 GiB needs `--allow-high-percentage-quota-decrease`,
+and the per-project cap also needed `--allow-quota-decrease-below-usage`, since recent
+usage was above 50 GiB:
 
 ```bash
 for p in query-usage-per-day-50gib:QueryUsagePerDay query-usage-per-user-per-day-50gib:QueryUsagePerUserPerDay; do
   gcloud beta quotas preferences update ${p%%:*} --service=bigquery.googleapis.com \
     --project=snakepuck --quota-id=${p##*:} --preferred-value=51200 \
-    --allow-high-percentage-quota-decrease
+    --allow-high-percentage-quota-decrease --allow-quota-decrease-below-usage
 done
 ```
 
@@ -100,6 +102,28 @@ gcloud iam service-accounts add-iam-policy-binding snakepuck-api@snakepuck.iam.g
 # Once, after the first deploy: make the API public. CI can't change IAM (run.developer).
 gcloud run services add-iam-policy-binding snakepuck-api --region=us-central1 --member=allUsers --role=roles/run.invoker
 ```
+
+## Firebase Hosting and snakepuck.com (Phase 5)
+
+Firebase Hosting serves the domain with free HTTPS and forwards every request to the
+Cloud Run service. Its config is in `infra/firebase/`: `firebase.json` rewrites `**` to
+`snakepuck-api`, and `public/` is deliberately empty. The Firebase CLI works with the
+gcloud application-default login, so no `firebase login` is needed.
+
+```bash
+npx -y firebase-tools@latest projects:addfirebase snakepuck   # once (2026-10-28)
+cd infra/firebase && npx -y firebase-tools@latest deploy --only hosting --project snakepuck
+```
+
+The deploy only needs repeating if `infra/firebase/` changes; site deploys go to Cloud Run
+(`site.yml`). Without the custom domain the site is at https://snakepuck.web.app.
+
+**X-Forwarded-For through Firebase** (measured 2026-10-28 with
+`RUST_LOG=snakepuck::server::limit=debug`): Firebase drops whatever the client sent and
+the app sees `"<client>, <Firebase edge>"`, so `TRUSTED_PROXY_HOPS` is 1 in
+`site/service.yaml`. Requests straight to the run.app URL arrive as
+`"<anything the client sent>, <client>"`, so callers there can choose their rate-limit
+key. Cloud Run's 2-instance cap bounds the cost.
 
 ## Loading data
 

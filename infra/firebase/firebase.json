@@ -1,0 +1,12 @@
+{
+  "hosting": {
+    "public": "public",
+    "ignore": ["README.md"],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": { "serviceId": "snakepuck-api", "region": "us-central1" }
+      }
+    ]
+  }
+}

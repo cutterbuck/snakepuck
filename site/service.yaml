@@ -30,8 +30,11 @@ spec:
           env:
             - name: DATA_DIR
               value: /data
+            # Firebase Hosting (snakepuck.com) sends X-Forwarded-For as "<client>, <Firebase
+            # edge>", so the client is one entry from the end. Measured 2026-10-28; see
+            # infra/README.md. Direct requests to the run.app URL can pick their own key.
             - name: TRUSTED_PROXY_HOPS
-              value: "0"
+              value: "1"
           resources:
             limits:
               cpu: "1"
