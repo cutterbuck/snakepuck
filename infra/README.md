@@ -5,8 +5,22 @@ Terraform later. Everything lives in `us-central1` (Iowa: the cheapest region, w
 service) except the Cloud Run service, which runs in `us-east4` (N. Virginia), near the
 East Coast visitors. It moved there on 2026-10-28: through Firebase from NYC, each
 request's wait after TLS dropped from 104–109 ms to 75–78 ms, and whole requests got
-23–24% faster. It reads the marts from the Iowa bucket at startup, and a game's files the
-first time that game is opened (then caches them).
+23–24% faster. It reads a copy of the serving export in its own region, in the bucket
+`snakepuck-serving-use4` (382 MB, synced by `dbt.yml` after each export). Reading the Iowa
+original from Virginia had doubled the startup load of the marts (about 1.5 s to 3.5 s)
+and slowed each game's first open (0.37–0.43 s). With the regional copy, those are
+0.9–1.4 s and 0.20–0.24 s:
+
+```bash
+gcloud storage buckets create gs://snakepuck-serving-use4 --location=us-east4 \
+  --uniform-bucket-level-access --public-access-prevention
+gcloud storage buckets add-iam-policy-binding gs://snakepuck-serving-use4 \
+  --member=serviceAccount:snakepuck-api@snakepuck.iam.gserviceaccount.com --role=roles/storage.objectViewer
+gcloud storage buckets add-iam-policy-binding gs://snakepuck-serving-use4 \
+  --member=serviceAccount:snakepuck-pipeline@snakepuck.iam.gserviceaccount.com --role=roles/storage.objectAdmin
+gcloud storage rsync -r gs://snakepuck-data/serving/prod gs://snakepuck-serving-use4/serving/prod \
+  --delete-unmatched-destination-objects
+```
 
 ## Cost guardrails
 

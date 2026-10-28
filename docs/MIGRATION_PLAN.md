@@ -339,7 +339,10 @@ are already on.
   BigQuery, the bucket and the image registry stay in `us-central1`. This was suggested
   in Phase 2 but never recorded, so Phase 4 deployed to `us-central1`. Measured before
   moving: a copy in `us-east4` behind a Firebase preview channel saved 15–33 ms per
-  request. Live afterwards: 23–24% faster whole requests.
+  request. Live afterwards: 23–24% faster whole requests. Reading the Iowa bucket from
+  Virginia then doubled the startup load of the marts, so the app reads a copy in
+  `us-east4` (`snakepuck-serving-use4`, synced by `dbt.yml`): startup is about 1.1 s
+  (Iowa was about 1.5 s), and a game's first open is 0.20–0.24 s.
 - **Domain cutover (2026-10-28):** snakepuck.com serves the Leptos site through Firebase
   Hosting → Cloud Run. Steps and rollback are in `infra/README.md`. The Dash app stays up
   on DigitalOcean, without the domain, until Phase 7.
