@@ -35,8 +35,8 @@ flowchart TD
   structs on both sides. The rink is SVG drawn by Leptos.
 - **Hosting:** a single Cloud Run service that scales to zero, behind Firebase Hosting.
   It runs in N. Virginia, near the East Coast visitors, while the warehouse and data stay
-  in Iowa; the app reads the data only at startup.
-  It costs about $0–2 a month at blog traffic; the old site cost about $42.
+  in Iowa: the app reads the marts at startup, and each game's files the first time it's
+  opened. It costs about $0–2 a month at blog traffic; the old site cost about $42.
 
 ## Performance
 

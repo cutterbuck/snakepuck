@@ -5,7 +5,8 @@ Terraform later. Everything lives in `us-central1` (Iowa: the cheapest region, w
 service) except the Cloud Run service, which runs in `us-east4` (N. Virginia), near the
 East Coast visitors. It moved there on 2026-10-28: through Firebase from NYC, each
 request's wait after TLS dropped from 104–109 ms to 75–78 ms, and whole requests got
-23–24% faster. It loads the marts from the Iowa bucket at startup and keeps them in memory.
+23–24% faster. It reads the marts from the Iowa bucket at startup, and a game's files the
+first time that game is opened (then caches them).
 
 ## Cost guardrails
 
