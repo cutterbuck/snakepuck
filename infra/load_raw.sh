@@ -3,7 +3,8 @@
 # Re-runnable: each load replaces its table. Upload first with:
 #   gcloud storage cp data/*.parquet gs://snakepuck-data/raw/
 #   gcloud storage cp golden/* gs://snakepuck-data/golden/
-# golden/defense_lpr.parquet comes from scripts/export_golden_defense_lpr.py (Phase 4).
+# golden/defense_lpr.parquet came from scripts/export_golden_defense_lpr.py (Phase 4),
+# which Phase 7 removed along with Dash; it is at the git tag dash-final.
 set -euo pipefail
 
 PROJECT=snakepuck

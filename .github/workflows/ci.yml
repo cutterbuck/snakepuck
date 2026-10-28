@@ -1,12 +1,17 @@
 name: CI
 
+# Lints and format-checks the repo's Python: the serving export (infra/), the
+# benchmark (bench/) and the browser smoke tests (site/e2e). The smoke tests
+# themselves don't run here: they need the licensed HALO data, which never enters CI.
+# Run them locally with `pytest`.
+
 on:
   push:
     branches: [main]
   pull_request:
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,18 +20,13 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements*.txt
+          cache-dependency-path: requirements-dev.txt
 
-      - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+      - name: Install ruff
+        run: pip install "$(grep '^ruff==' requirements-dev.txt)"
 
       - name: Lint
         run: ruff check .
 
       - name: Format
         run: ruff format --check .
-
-      # Tests marked `db` skip here: CI has no copy of the 13M-row database.
-      # Run the full suite locally with `pytest`.
-      - name: Test
-        run: pytest -q

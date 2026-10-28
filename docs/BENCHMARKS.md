@@ -96,8 +96,13 @@ removes this wait (see Open decisions in `MIGRATION_PLAN.md`).
 
 ## Reproduce
 
+Phase 7 removed Dash (2026-10-28), so its side runs from the git tag `dash-final`
+(`git worktree add ../snakepuck-dash dash-final`, with that checkout's
+`requirements.txt` and the local Postgres copy). The live comparison can't be rerun:
+snakepuck.com now serves the Rust site, and the Dash app is retired.
+
 ```bash
-# Dash as deployed, against local Postgres
+# Dash as deployed, against local Postgres (from the dash-final checkout)
 gunicorn run:app --bind 127.0.0.1:8060 --workers 4
 # The API, release build, limiter raised for load testing
 (cd site && DATA_DIR=data/serving PORT=8091 RATE_LIMIT_PER_SECOND=1000000 \

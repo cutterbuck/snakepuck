@@ -67,17 +67,18 @@ New pieces are added beside the Dash app, and Phase 7 deletes the old ones.
 CI workflows filter by path, so each stack only builds when its folder changes.
 
 ```
-app/ run.py migrations/ scripts/   current Dash site (removed in Phase 7)
-tests/                             Python tests (Dash + golden reconciliation)
-content/blog/                      Markdown posts, shared by old and new site
+content/blog/                      Markdown posts, built into the site's image
 infra/                             GCP setup notes + BigQuery load script (Phase 2)
 dbt/                               dbt project (Phase 3)
 bench/                             Dash vs Rust API benchmark scripts (Phase 4)
 site/                              Rust crate: Axum API + Leptos frontend (Phases 4–5)
-docs/                              this plan
+docs/                              this plan and the benchmark results
 ```
 
-## Where things live today
+Phase 7 removed the Dash site (`app/ run.py migrations/ scripts/ tests/ assets/`); the
+last commit with it is tagged `dash-final`.
+
+## Where things lived before the migration
 
 | Piece | Today | Size |
 |---|---|---|
@@ -320,9 +321,13 @@ are already on.
 - [ ] Benchmark vs the Python equivalent
 
 ## Phase 7 — Decommission
-- [ ] Retire Dash, Postgres, DigitalOcean
-- [ ] Delete superseded scripts
-- [ ] README with architecture diagram, benchmarks, and live link
+- [x] Retire Dash, Postgres, DigitalOcean, 2026-10-28: the app and the managed Postgres
+      cluster are deleted (about $42 a month). A final dump is kept outside the repo. The
+      snakepuck.com DNS zone stays at DigitalOcean (free); it serves the site's records
+- [x] Delete superseded scripts, 2026-10-28: the Dash app, its Postgres migrations and
+      backfill scripts, its tests and assets (96 files; the last commit with them is tagged
+      `dash-final`). The `CI` workflow now only lints the remaining Python
+- [x] README with architecture diagram, benchmarks, and live link, 2026-10-28
 
 ---
 

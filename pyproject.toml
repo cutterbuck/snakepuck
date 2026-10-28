@@ -1,10 +1,6 @@
 [tool.ruff]
 target-version = "py312"
-extend-exclude = ["migrations"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
-markers = [
-    "db: needs the local Postgres database (skipped when unreachable)",
-]
+# Browser smoke tests; they skip without the local HALO data (see site/e2e/conftest.py).
+testpaths = ["site/e2e"]

@@ -142,10 +142,8 @@ belonged to the Dash app on DigitalOcean App Platform (`hockey-blog-app`), which
 its domain's records and won't let them be deleted. Removing the `domains:` block from
 the app's spec deleted them.
 
-**Rollback to Dash** (until Phase 7 retires it): delete the A record `199.36.158.100`, and
-put the `domains:` block back in `hockey-blog-app`'s spec (a backup of the spec is outside
-the repo, in `~/snakepuck-backups/`). DigitalOcean then recreates its records and
-certificate. Dash also stays up at https://hockey-blog-app-yw79z.ondigitalocean.app.
+The Dash app and its database were deleted in Phase 7 (2026-10-28), so there's no
+rollback to Dash. A final database dump and the app's spec are kept outside the repo.
 
 ## Loading data
 
