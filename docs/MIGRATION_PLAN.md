@@ -317,8 +317,9 @@ when content appears.
       CDN and browsers keep the bundle
 - Result, live: time until clickable on slow mobile 4.9 → 3.9 s, desktop 0.46 → 0.30 s;
   a repeat visit on slow mobile is clickable at 0.34 s with no bundle download.
-- [ ] Optional: split the bundle by page (Leptos `#[lazy]` routes + `cargo leptos --split`).
-      Code tied to one page is about a quarter of the bundle, so the gain is smaller
+- Skipped (2026-10-29): splitting the bundle by page (Leptos `#[lazy]` routes +
+  `cargo leptos --split`). Only about a quarter of the code is tied to one page, and mobile
+  isn't the priority.
 
 ## Phase 6 — Rust tracking processing *(as needed)*
 - [ ] Identify logic that SQL handles poorly (possession chains, pressure/LPR metrics)
