@@ -187,6 +187,17 @@ gcloud dns record-sets create _acme-challenge.snakepuck.com. --zone=snakepuck-co
   --project=snakepuck --type=TXT --ttl=300 --rrdatas='"<value from the Firebase API>"'
 ```
 
+**www.snakepuck.com** (2026-10-29) is a permanent redirect to snakepuck.com, set on the
+Firebase custom domain, so the site has one address. Paths and queries carry over:
+
+```bash
+curl -X POST -H "Authorization: Bearer $T" -H "x-goog-user-project: snakepuck" \
+  -d '{"redirectTarget": "snakepuck.com"}' \
+  "https://firebasehosting.googleapis.com/v1beta1/projects/snakepuck/sites/snakepuck/customDomains?customDomainId=www.snakepuck.com"
+gcloud dns record-sets create www.snakepuck.com. --zone=snakepuck-com --project=snakepuck \
+  --type=CNAME --ttl=300 --rrdatas=snakepuck.web.app.
+```
+
 The Dash app and its database were deleted in Phase 7 (2026-10-28), so there's no
 rollback to Dash. A final database dump and the app's spec are kept outside the repo.
 
