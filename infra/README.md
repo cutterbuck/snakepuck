@@ -1,5 +1,9 @@
 # GCP setup (Phase 2)
 
+**Since 2026-10-29 the platform is defined in Terraform: see [`terraform/`](terraform/).**
+Make changes there. The commands below are how it was first set up by hand, kept as a record
+of what each piece is for.
+
 One-time setup for project `snakepuck`, recorded so it can be codified in
 Terraform later. Everything lives in `us-central1` (Iowa: the cheapest region, with every
 service) except the Cloud Run service, which runs in `us-east4` (N. Virginia), near the

@@ -338,9 +338,13 @@ when content appears.
 ---
 
 ## Open decisions
-- **Infrastructure as code:** Terraform now, or click-ops first and codify later?
 
 ## Decided
+- **Infrastructure as code (2026-10-29):** Terraform, in `infra/terraform/`. The setup done
+  by hand was imported (54 resources, no changes), with state in `gs://snakepuck-tfstate`.
+  The Cloud Run service's settings stay in `site/service.yaml` (CI deploys them with each
+  image), dbt's dev and CI datasets stay dbt's, and Firebase's routing rules stay in
+  `infra/firebase/`.
 - **Direct run.app requests (2026-10-29):** accepted that they can choose their rate-limit
   key. Firebase Hosting needs the run.app URL (disabling it broke a test deploy), the data
   is read-only and Cloud Run is capped at 2 instances. The fix, if ever needed, is in
