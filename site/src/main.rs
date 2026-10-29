@@ -20,6 +20,10 @@ use std::time::Instant;
 
 use anyhow::Result;
 use axum::Router;
+use axum::extract::Request;
+use axum::http::{HeaderValue, header};
+use axum::middleware::Next;
+use axum::response::Response;
 use leptos::prelude::*;
 use leptos_axum::{LeptosRoutes, generate_route_list};
 use snakepuck::app::{App, shell};
@@ -80,6 +84,7 @@ async fn main() -> Result<()> {
 
     let app = limit::RateLimit::from_env()
         .apply(api::router(store).merge(pages))
+        .layer(axum::middleware::from_fn(cache_static))
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http());
 
@@ -91,4 +96,26 @@ async fn main() -> Result<()> {
     )
     .await?;
     Ok(())
+}
+
+/// Browser and CDN caching for static files. `/pkg` holds the browser bundle and CSS under
+/// content-hashed names (`hash-files` in Cargo.toml), so a new build gets new URLs and the
+/// old ones can be cached for a year. Other static files (images, the favicon) keep their
+/// names, so a day. Pages and the API aren't cached: they're rendered per request.
+async fn cache_static(req: Request, next: Next) -> Response {
+    let path = req.uri().path();
+    let policy = if path.starts_with("/pkg/") {
+        Some("public, max-age=31536000, immutable")
+    } else if path.starts_with("/assets/") || path == "/favicon.ico" {
+        Some("public, max-age=86400")
+    } else {
+        None
+    };
+    let mut response = next.run(req).await;
+    if let Some(policy) = policy.filter(|_| response.status().is_success()) {
+        response
+            .headers_mut()
+            .insert(header::CACHE_CONTROL, HeaderValue::from_static(policy));
+    }
+    response
 }

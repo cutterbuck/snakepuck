@@ -15,7 +15,7 @@ mod stats_table;
 mod team_detail;
 
 use leptos::prelude::*;
-use leptos_meta::{Link, Meta, MetaTags, Stylesheet, provide_meta_context};
+use leptos_meta::{HashedStylesheet, Link, Meta, MetaTags, provide_meta_context};
 use leptos_router::components::{Route, Router, Routes};
 use leptos_router::{SsrMode, path};
 
@@ -45,6 +45,8 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                     rel="stylesheet"
                     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css"
                 />
+                // After Bootstrap, so ours wins. Its name carries a content hash (hash-files).
+                <HashedStylesheet options=options.clone() id="leptos" />
                 <AutoReload options=options.clone() />
                 <HydrationScripts options />
                 <MetaTags />
@@ -60,7 +62,6 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 pub fn App() -> impl IntoView {
     provide_meta_context();
     view! {
-        <Stylesheet id="leptos" href="/pkg/snakepuck.css" />
         <Link rel="icon" href="/favicon.ico" />
         <Meta property="og:title" content="MacNaughton HALO Project" />
         <Meta property="og:description" content=DESCRIPTION />

@@ -24,17 +24,22 @@ RUN set -eux; \
 
 WORKDIR /src/site
 COPY site/ ./
-RUN cargo leptos build --release
+# --precompress writes .br (brotli quality 11) and .gz beside each static file; the server
+# sends those instead of compressing on the fly (the bundle: about 509 KB -> 305 KB).
+RUN cargo leptos build --release --precompress
 
 FROM gcr.io/distroless/cc-debian13:nonroot
 COPY --from=build /src/site/target/release/snakepuck /snakepuck
 COPY --from=build /src/site/target/site /site
+# The content hashes of the /pkg files (hash-files); Leptos reads them beside the binary.
+COPY --from=build /src/site/target/release/hash.txt /hash.txt
 COPY content/blog /content/blog
 ENV DATA_DIR=/data/serving/prod \
     CONTENT_DIR=/content/blog \
     LEPTOS_OUTPUT_NAME=snakepuck \
     LEPTOS_SITE_ROOT=/site \
     LEPTOS_SITE_PKG_DIR=pkg \
+    LEPTOS_HASH_FILES=true \
     LEPTOS_SITE_ADDR=0.0.0.0:8080 \
     LEPTOS_ENV=PROD
 EXPOSE 8080

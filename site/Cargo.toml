@@ -100,3 +100,9 @@ bin-default-features = false
 lib-features = ["hydrate"]
 lib-default-features = false
 lib-profile-release = "wasm-release"
+# Release builds too: views type-erased to one shared copy of the rendering code rather
+# than one per view. The browser bundle is 20% smaller (measured 2026-10-29).
+always-erase-components = true
+# Content-hashed names for /pkg (the bundle and CSS), so browsers and the CDN can cache
+# them for a year (see cache_static in src/main.rs).
+hash-files = true
