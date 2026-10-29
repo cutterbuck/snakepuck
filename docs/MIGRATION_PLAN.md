@@ -303,17 +303,22 @@ calls the endpoint's function directly; navigation in the browser fetches the sa
 
 **Done when:** every page is served by Leptos.
 
-Follow-up, after the domain cutover: **shrink the browser bundle.** It grew from 346 KB
-(135 KB gzipped) with the app shell to 1.39 MB (533 KB gzipped) with every page
-(2026-10-28). Pages are server-rendered, so this only delays interactivity, not content.
-The size settings (`opt-level = "z"`, LTO, one codegen unit, `panic = "abort"`) and brotli
-are already on.
-- [ ] Measure first: Lighthouse on the live site, and `twiggy` for what's large in the WASM
-- [ ] Cheap tweaks: confirm `wasm-opt` runs on release builds, strip names, try Leptos's
-      `erase_components`
-- [ ] Split the bundle by page (Leptos 0.8 `#[lazy]` routes + `cargo leptos --split`), so
-      visitors download only the pages they open
-- [ ] Before the migration write-up or any published page-load numbers
+Follow-up, after the domain cutover: **shrink the browser bundle**, done 2026-10-29.
+Pages are server-rendered, so the bundle delays only interactivity. On slow 4G (Lighthouse's
+mobile profile) a page was visible at 1.5 s but ignored taps until 4.9 s, almost all of it
+spent downloading the bundle. Lighthouse already scored 98–100, because it mostly measures
+when content appears.
+- [x] Measure: Lighthouse, a slow-4G "time until clickable" test, and `twiggy`. Leptos's
+      per-view code was 43% of the WASM; code tied to one page only 26%
+- [x] `always-erase-components` (one shared copy of the view code): WASM 1.40 → 1.12 MB
+- [x] `--precompress` (brotli 11 at build time; `wasm-opt -Oz` was already on): on the wire
+      509 → 305 KB
+- [x] `hash-files` plus a one-year immutable cache for `/pkg` (images a day): Firebase's
+      CDN and browsers keep the bundle
+- Result, live: time until clickable on slow mobile 4.9 → 3.9 s, desktop 0.46 → 0.30 s;
+  a repeat visit on slow mobile is clickable at 0.34 s with no bundle download.
+- [ ] Optional: split the bundle by page (Leptos `#[lazy]` routes + `cargo leptos --split`).
+      Code tied to one page is about a quarter of the bundle, so the gain is smaller
 
 ## Phase 6 — Rust tracking processing *(as needed)*
 - [ ] Identify logic that SQL handles poorly (possession chains, pressure/LPR metrics)

@@ -98,6 +98,27 @@ period took 2.6 s (one observation, 2026-10-27). About 1 s of that is loading th
 over the Cloud Storage mount; the rest is starting the instance. A warm instance
 removes this wait (see Open decisions in `MIGRATION_PLAN.md`).
 
+## Front end: time until a page responds (2026-10-29)
+
+Pages are rendered on the server, so content appears before the browser bundle (Rust
+compiled to WASM) arrives. Until it's downloaded and started, clicks do nothing.
+Measured on snakepuck.com's Standings page: a script clicks a button every 50 ms from the
+start, and the page counts as clickable once the click works. Medians of 3–5 runs, cache
+disabled except for the repeat visit. Mobile is Lighthouse's profile: 150 ms RTT,
+1.6 Mbps down, CPU 4x slower.
+
+| | Content visible | Clickable | Bundle on the wire |
+|---|---|---|---|
+| Mobile, before | 1.53 s | 4.93 s | 509 KB |
+| Mobile, after | 1.51 s | **3.88 s** | 305 KB |
+| Mobile, repeat visit (after) | 0.24 s | **0.34 s** | 0 (cached) |
+| Desktop, before | 0.30 s | 0.46 s | 509 KB |
+| Desktop, after | 0.21 s | **0.30 s** | 305 KB |
+
+The changes: Leptos's `erase_components` in release builds (the WASM is 20% smaller),
+brotli-11 compression at build time instead of on the fly, and content-hashed file names
+cached for a year. Lighthouse scores 98–100 on mobile and desktop, before and after.
+
 ## Reproduce
 
 Phase 7 removed Dash (2026-10-28), so its side runs from the git tag `dash-final`
