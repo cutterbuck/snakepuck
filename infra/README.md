@@ -144,6 +144,14 @@ the app sees `"<client>, <Firebase edge>"`, so `TRUSTED_PROXY_HOPS` is 1 in
 `"<anything the client sent>, <client>"`, so callers there can choose their rate-limit
 key. Cloud Run's 2-instance cap bounds the cost.
 
+The run.app URL can't simply be turned off: tested 2026-10-29 with a copy of the service
+set to `run.googleapis.com/default-url-disabled: "true"`, and a Firebase deploy rewriting
+to it failed ("Requested entity was not found"), because Firebase Hosting reaches Cloud Run
+through that URL. The gap is accepted: the data is read-only and cost is capped. To close
+it, the limiter could skip the last X-Forwarded-For entry only when it's in Google's
+published IP ranges (what Firebase's edges use), so direct callers are keyed by an address
+they can't forge.
+
 **The domain** (cut over 2026-10-28). The registrar is GoDaddy. DNS is in **Cloud DNS**,
 zone `snakepuck-com` in this project (about $0.20 a month), with nameservers
 `ns-cloud-a{1..4}.googledomains.com` set at GoDaddy; DNSSEC is off. Until 2026-10-28 the

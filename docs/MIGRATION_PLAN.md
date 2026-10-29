@@ -341,6 +341,10 @@ when content appears.
 - **Infrastructure as code:** Terraform now, or click-ops first and codify later?
 
 ## Decided
+- **Direct run.app requests (2026-10-29):** accepted that they can choose their rate-limit
+  key. Firebase Hosting needs the run.app URL (disabling it broke a test deploy), the data
+  is read-only and Cloud Run is capped at 2 instances. The fix, if ever needed, is in
+  `infra/README.md`.
 - **Cloud Run region (2026-10-28):** `us-east4` (N. Virginia), near the East Coast visitors;
   BigQuery, the bucket and the image registry stay in `us-central1`. This was suggested
   in Phase 2 but never recorded, so Phase 4 deployed to `us-central1`. Measured before
